@@ -10,8 +10,8 @@ export function CarCard({ car, onDelete }) {
     "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
 
   return (
-    <div className="group relative bg-[#181818] rounded-2xl overflow-hidden border border-[#222] hover:border-red-600/50 transition-all shadow-xl flex flex-col">
-      <div className="relative h-48 w-full overflow-hidden bg-[#121212]">
+    <div className="group relative bg-white dark:bg-[#181818] rounded-2xl overflow-hidden border border-gray-200 dark:border-[#222] hover:border-red-600/50 transition-all shadow-xl dark:shadow-none flex flex-col">
+      <div className="relative h-48 w-full overflow-hidden bg-gray-100 dark:bg-[#121212]">
         <img
           src={car.image}
           alt={car.model}
@@ -24,7 +24,7 @@ export function CarCard({ car, onDelete }) {
         />
         <button
           onClick={onDelete}
-          className="absolute top-3 right-3 p-2 rounded-lg bg-black/50 text-gray-500 hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+          className="absolute top-3 right-3 p-2 rounded-lg bg-black/50 text-gray-200 hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm"
         >
           <Trash2 size={16} />
         </button>
@@ -35,16 +35,18 @@ export function CarCard({ car, onDelete }) {
           <p className="text-red-600 font-black italic text-[10px] tracking-widest">
             {car.brand?.toUpperCase()}
           </p>
-          <h3 className="text-2xl font-black text-white italic">{car.model}</h3>
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white italic">
+            {car.model}
+          </h3>
           <p className="text-gray-500 text-xs font-bold mb-4">{car.year}</p>
         </div>
 
-        <div className="mt-auto pt-4 border-t border-[#222]">
+        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-[#222]">
           <div className="flex justify-between text-[10px] font-bold mb-2 uppercase tracking-widest">
-            <span className="text-gray-500">Progress</span>
+            <span className="text-gray-400 dark:text-gray-500">Progress</span>
             <span className="text-red-500">{percentage}%</span>
           </div>
-          <div className="w-full h-1.5 bg-red-950/30 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-gray-200 dark:bg-red-950/30 rounded-full overflow-hidden">
             <div
               className="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)] transition-all duration-700"
               style={{ width: `${percentage}%` }}
@@ -54,10 +56,10 @@ export function CarCard({ car, onDelete }) {
 
         <div className="mt-4 flex justify-between items-end">
           <div>
-            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+            <p className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tighter">
               Remaining
             </p>
-            <p className="text-lg font-black text-white">
+            <p className="text-lg font-black text-slate-900 dark:text-white">
               R$ {(car.targetValue - car.savedValue).toLocaleString("pt-BR")}
             </p>
           </div>

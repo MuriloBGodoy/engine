@@ -14,7 +14,7 @@ export function Garagem({ cars, onOpenModal, onOpenDelete }) {
           </p>
         </div>
         <button
-          onClick={onOpenModal}
+          onClick={() => onOpenModal()}
           className="px-6 py-3 bg-red-600 text-white font-black italic rounded-lg hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
         >
           ADD CAR +
@@ -23,7 +23,19 @@ export function Garagem({ cars, onOpenModal, onOpenDelete }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {cars.map((car) => (
-          <CarCard key={car.id} car={car} onDelete={() => onOpenDelete(car)} />
+          <div
+            key={car.id}
+            onClick={() => onOpenModal(car)}
+            className="cursor-pointer active:scale-95 transition-transform"
+          >
+            <CarCard
+              car={car}
+              onDelete={(e) => {
+                e.stopPropagation();
+                onOpenDelete(car);
+              }}
+            />
+          </div>
         ))}
 
         {cars.length === 0 && (

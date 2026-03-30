@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { X, Save, Loader2, DollarSign } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Save, Loader2, Upload } from "lucide-react";
 import axios from "axios";
 import { getCarImage } from "../services/imageService";
 
-export function ModalNewCar({ isOpen, onClose, onSave }) {
+export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [years, setYears] = useState([]);
@@ -11,22 +11,61 @@ export function ModalNewCar({ isOpen, onClose, onSave }) {
   const [selectedModel, setSelectedModel] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [targetValue, setTargetValue] = useState(0);
+  const [savedValue, setSavedValue] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [customImage, setCustomImage] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const formatDisplayValue = (val) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(val);
+  };
+
+  const handleMoneyChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    setSavedValue(Number(rawValue) / 100);
+  };
 
   useEffect(() => {
-    if (isOpen) {
-      axios
-        .get("https://parallelum.com.br/fipe/api/v1/carros/marcas")
-        .then((res) => setBrands(res.data));
+    if (!isOpen) return;
+
+    axios
+      .get("https://parallelum.com.br/fipe/api/v1/carros/marcas")
+      .then((res) => setBrands(res.data))
+      .catch(() => {});
+
+    const timer = setTimeout(() => {
+      if (carToEdit) {
+        setSavedValue(carToEdit.savedValue || 0);
+        setTargetValue(carToEdit.targetValue || 0);
+        setCustomImage(carToEdit.image || null);
+      } else {
+        setSavedValue(0);
+        setTargetValue(0);
+        setCustomImage(null);
+        setSelectedBrand("");
+        setSelectedModel("");
+        setSelectedYear("");
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, carToEdit]);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setCustomImage(reader.result);
+      reader.readAsDataURL(file);
     }
-  }, [isOpen]);
+  };
 
   const handleBrandChange = (brandId) => {
     setSelectedBrand(brandId);
     setModels([]);
-    setYears([]);
-    setSelectedModel("");
-    setSelectedYear("");
     if (brandId) {
       setLoading(true);
       axios
@@ -43,7 +82,6 @@ export function ModalNewCar({ isOpen, onClose, onSave }) {
   const handleModelChange = (modelId) => {
     setSelectedModel(modelId);
     setYears([]);
-    setSelectedYear("");
     if (modelId) {
       setLoading(true);
       axios
@@ -57,7 +95,7 @@ export function ModalNewCar({ isOpen, onClose, onSave }) {
     }
   };
 
-  const handleYearChange = (yearId) => {
+  const handleYearSelection = (yearId) => {
     setSelectedYear(yearId);
     if (yearId) {
       setLoading(true);
@@ -73,146 +111,179 @@ export function ModalNewCar({ isOpen, onClose, onSave }) {
     }
   };
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    setLoading(true);
 
     const brandName =
-      brands.find((b) => b.codigo === selectedBrand)?.nome || "";
+      brands.find((b) => b.codigo === selectedBrand)?.nome ||
+      carToEdit?.brand ||
+      "";
     const modelName =
-      models.find((m) => m.codigo === selectedModel)?.nome || "";
+      models.find((m) => m.codigo === selectedModel)?.nome ||
+      carToEdit?.model ||
+      "";
 
-    const query = `${brandName} ${modelName}`;
-    const pexelsImage = await getCarImage(query);
+    let finalImage = customImage;
+    if (!finalImage && (!carToEdit || (carToEdit && !carToEdit.image))) {
+      const query = `${brandName} ${modelName}`;
+      finalImage = await getCarImage(query);
+    }
 
-    const newCar = {
-      id: Date.now(),
+    const carData = {
+      id: carToEdit ? carToEdit.id : Date.now(),
       brand: brandName,
       model: modelName,
-      year: years.find((y) => y.codigo === selectedYear)?.nome,
+      year:
+        years.find((y) => y.codigo === selectedYear)?.nome ||
+        carToEdit?.year ||
+        "",
       targetValue: targetValue,
-      savedValue: Number(formData.get("savedValue")),
+      savedValue: savedValue,
       image:
-        pexelsImage ||
+        finalImage ||
         "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600",
     };
 
-    onSave(newCar);
+    await onSave(carData);
+    setLoading(false);
     onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
-      <div className="bg-[#181818] w-full max-w-md rounded-2xl border border-red-600/20 p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <div className="flex justify-between items-center mb-6">
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[#181818] w-full max-w-md rounded-3xl border border-white/5 p-8 shadow-2xl overflow-y-auto max-h-[95vh]">
+        <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-black italic text-white tracking-tighter uppercase">
-            Tune Your Dream
+            {carToEdit ? "Edit Machine" : "Tune Your Dream"}
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">
-            <X size={24} />
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-white transition-colors"
+          >
+            <X size={28} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">
-              1. Brand
-            </label>
-            <select
-              onChange={(e) => handleBrandChange(e.target.value)}
-              required
-              className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none"
-            >
-              <option value="">Select Brand</option>
-              {brands.map((b) => (
-                <option key={b.codigo} value={b.codigo}>
-                  {b.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">
-              2. Model
-            </label>
-            <select
-              onChange={(e) => handleModelChange(e.target.value)}
-              disabled={!models.length}
-              required
-              className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none disabled:opacity-20"
-            >
-              <option value="">Select Model</option>
-              {models.map((m) => (
-                <option key={m.codigo} value={m.codigo}>
-                  {m.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">
-              3. Year
-            </label>
-            <select
-              onChange={(e) => handleYearChange(e.target.value)}
-              disabled={!years.length}
-              required
-              className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none disabled:opacity-20"
-            >
-              <option value="">Select Year</option>
-              {years.map((y) => (
-                <option key={y.codigo} value={y.codigo}>
-                  {y.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <div>
-              <label className="text-[9px] font-bold text-red-500 uppercase tracking-widest ml-1 underline">
-                Fipe Price
-              </label>
-              <div className="relative">
-                <input
-                  value={targetValue.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                  readOnly
-                  className="w-full bg-[#121212] border border-red-600/30 rounded-xl px-4 py-3 text-white font-bold outline-none cursor-not-allowed"
-                />
-                {loading && (
-                  <Loader2
-                    className="absolute right-3 top-3 animate-spin text-red-600"
-                    size={18}
-                  />
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">
-                I Already Have
-              </label>
-              <input
-                name="savedValue"
-                type="number"
-                required
-                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none"
-                placeholder="0"
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div
+            onClick={() => fileInputRef.current.click()}
+            className="w-full h-48 bg-[#121212] border-2 border-dashed border-[#222] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-red-600/40 transition-all overflow-hidden"
+          >
+            {customImage ? (
+              <img
+                src={customImage}
+                className="w-full h-full object-cover"
+                alt="Car preview"
               />
+            ) : (
+              <div className="text-center">
+                <Upload className="text-gray-600 mx-auto mb-2" size={32} />
+                <span className="text-[10px] text-gray-500 uppercase font-bold">
+                  Custom Photo (Click to Upload)
+                </span>
+              </div>
+            )}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileUpload}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-4">
+              <select
+                onChange={(e) => handleBrandChange(e.target.value)}
+                required={!carToEdit}
+                value={selectedBrand}
+                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none"
+              >
+                <option value="">
+                  {carToEdit ? `Brand: ${carToEdit.brand}` : "1. Select Brand"}
+                </option>
+                {brands.map((b) => (
+                  <option key={b.codigo} value={b.codigo}>
+                    {b.nome}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                onChange={(e) => handleModelChange(e.target.value)}
+                disabled={!models.length && !carToEdit}
+                required={!carToEdit}
+                value={selectedModel}
+                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none disabled:opacity-20"
+              >
+                <option value="">
+                  {carToEdit ? `Model: ${carToEdit.model}` : "2. Select Model"}
+                </option>
+                {models.map((m) => (
+                  <option key={m.codigo} value={m.codigo}>
+                    {m.nome}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                onChange={(e) => handleYearSelection(e.target.value)}
+                disabled={!years.length && !carToEdit}
+                required={!carToEdit}
+                value={selectedYear}
+                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none disabled:opacity-20"
+              >
+                <option value="">
+                  {carToEdit ? `Year: ${carToEdit.year}` : "3. Select Year"}
+                </option>
+                {years.map((y) => (
+                  <option key={y.codigo} value={y.codigo}>
+                    {y.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-red-500 uppercase tracking-widest ml-1">
+                  Fipe Price
+                </label>
+                <input
+                  value={formatDisplayValue(targetValue)}
+                  readOnly
+                  className="w-full bg-[#121212] border border-red-600/20 rounded-xl px-4 py-3 text-white font-bold outline-none cursor-not-allowed"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">
+                  I Already Have
+                </label>
+                <input
+                  type="text"
+                  value={formatDisplayValue(savedValue)}
+                  onChange={handleMoneyChange}
+                  className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none"
+                />
+              </div>
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-black italic py-4 rounded-xl mt-4 flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-red-900/20"
+            disabled={loading}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-black italic py-4 rounded-xl mt-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-red-900/10 disabled:opacity-50"
           >
-            <Save size={18} /> CONFIRM TO GARAGE
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Save size={20} />
+            )}
+            {carToEdit ? "UPDATE GARAGE" : "CONFIRM TO GARAGE"}
           </button>
         </form>
       </div>

@@ -1,25 +1,28 @@
-import { get, set } from "idb-keyval";
-
-const DB_KEY = "@Engine:database_v1";
+import { get, set, del } from "idb-keyval";
 
 export const engineDB = {
-  getCars: async () => {
-    try {
-      const data = await get(DB_KEY);
-      // Se não tiver nada, retorna array vazio direto, sem tentar dar JSON.parse
-      if (!data) return [];
-      return JSON.parse(data);
-    } catch (error) {
-      console.error("Erro ao ler IndexedDB:", error);
-      return []; // Retorna vazio em caso de erro para não travar o App
-    }
+  async getCars() {
+    return (await get("engine_cars")) || [];
   },
 
-  saveCars: async (cars) => {
-    try {
-      await set(DB_KEY, JSON.stringify(cars));
-    } catch (error) {
-      console.error("Erro ao salvar no IndexedDB:", error);
+  async saveCar(car) {
+    const cars = await this.getCars();
+    const index = cars.findIndex((c) => c.id === car.id);
+    if (index !== -1) {
+      cars[index] = car;
+    } else {
+      cars.push(car);
     }
+    await set("engine_cars", cars);
+  },
+
+  async deleteCar(id) {
+    const cars = await this.getCars();
+    const updatedCars = cars.filter((c) => c.id !== id);
+    await set("engine_cars", updatedCars);
+  },
+
+  async resetDatabase() {
+    await del("engine_cars");
   },
 };
