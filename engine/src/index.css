@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Ajuste da variante dark para o Tailwind v4 ler a classe .dark injetada pelo seu hook */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  background-color: #f9fafb;
+  /* Removemos o 'color' travado daqui para o Tailwind e o MUI controlarem livremente */
+}
+
+:root.dark {
+  background-color: #080808; /* Alinhado com o preto absoluto do seu App.jsx */
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  min-height: 100vh;
+}
