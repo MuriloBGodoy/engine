@@ -8,7 +8,7 @@ import { useThemeMode } from "./hooks/useThemeMode";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
-import { Topbar } from "./components/Topbar"; // Importando em .jsx
+import { Topbar } from "./components/TopBar"; // Importando em .jsx
 import { ModalNewCar } from "./components/ModalNewCar";
 import { DeleteModal } from "./components/DeleteModal";
 import { Home } from "./pages/Home";
@@ -179,7 +179,9 @@ function App() {
                 />
                 <Route
                   path="/community"
-                  element={<Community cars={cars} settings={settings} user={user} />}
+                  element={
+                    <Community cars={cars} settings={settings} user={user} />
+                  }
                 />
                 <Route
                   path="/settings"
