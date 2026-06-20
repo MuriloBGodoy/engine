@@ -30,108 +30,8 @@ import { engineDB } from "../services/db";
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=900";
 
-const seedGoals = [
-  {
-    id: "seed-01",
-    author: "Marina A.",
-    username: "@marina.rpm",
-    avatar: "MA",
-    city: "Sao Paulo, BR",
-    title: "Porsche 718 Cayman",
-    brand: "Porsche",
-    model: "718 Cayman",
-    year: "2024",
-    image:
-      "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?q=80&w=900",
-    savedValue: 184000,
-    targetValue: 525000,
-    streak: 18,
-    likes: 428,
-    comments: ["Disciplina absurda nesse ritmo.", "Vou acompanhar essa chegada."],
-    rating: 4.8,
-    verified: true,
-    tagKey: "community.seed.premium",
-    noteKey: "community.seed.marina",
-    isMine: false,
-  },
-  {
-    id: "seed-02",
-    author: "Leo Nascimento",
-    username: "@leo.track",
-    avatar: "LN",
-    city: "Curitiba, BR",
-    title: "Toyota GR Corolla",
-    brand: "Toyota",
-    model: "GR Corolla",
-    year: "2025",
-    image:
-      "https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=900",
-    savedValue: 112000,
-    targetValue: 416000,
-    streak: 27,
-    likes: 311,
-    comments: ["Plano realista demais.", "Esse progresso motiva."],
-    rating: 4.6,
-    verified: false,
-    tagKey: "community.seed.consistency",
-    noteKey: "community.seed.leo",
-    isMine: false,
-  },
-  {
-    id: "seed-03",
-    author: "Rafa Costa",
-    username: "@rafacars",
-    avatar: "RC",
-    city: "Belo Horizonte, BR",
-    title: "BMW M2",
-    brand: "BMW",
-    model: "M2",
-    year: "2023",
-    image:
-      "https://images.unsplash.com/photo-1556189250-72ba954cfc2b?q=80&w=900",
-    savedValue: 248000,
-    targetValue: 480000,
-    streak: 42,
-    likes: 687,
-    comments: ["Meta forte.", "O ranking ja era seu."],
-    rating: 4.9,
-    verified: true,
-    tagKey: "community.seed.top",
-    noteKey: "community.seed.rafa",
-    isMine: false,
-  },
-];
-
-const videoPosts = [
-  {
-    id: "video-01",
-    author: "Marina A.",
-    username: "@marina.rpm",
-    titleKey: "community.videos.planning",
-    captionKey: "community.videos.planningCaption",
-    poster:
-      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=900",
-    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    likes: 184,
-  },
-  {
-    id: "video-02",
-    author: "Leo Nascimento",
-    username: "@leo.track",
-    titleKey: "community.videos.progress",
-    captionKey: "community.videos.progressCaption",
-    poster:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=900",
-    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
-    likes: 96,
-  },
-];
-
-const friendSuggestions = [
-  { name: "Nina Volk", handle: "@nina.v12", matchKey: "community.suggestions.match" },
-  { name: "Caio Mendes", handle: "@caio.shift", matchKey: "community.suggestions.saver" },
-  { name: "Bia Torres", handle: "@bia.garage", matchKey: "community.suggestions.sameGoal" },
-];
+const videoPosts = [];
+const friendSuggestions = [];
 
 const emptyInteraction = {
   liked: false,
@@ -273,7 +173,7 @@ function GoalCard({
         )}
       </div>
 
-      <div className="relative h-72 bg-gray-100 dark:bg-[#101010]">
+      <div className="relative h-56 bg-gray-100 sm:h-72 dark:bg-[#101010]">
         <img
           src={goal.image}
           alt={goal.title}
@@ -485,7 +385,7 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
 function ShareModal({ goals, sharedGoalIds, t, onClose, onShare }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-[#222] dark:bg-[#111]">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6 dark:border-[#222] dark:bg-[#111]">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
@@ -559,6 +459,7 @@ export function Community({ cars = [], settings, user }) {
   const [communityState, setCommunityState] = useState(
     engineDB.getDefaultCommunityState(),
   );
+  const [communityGoals, setCommunityGoals] = useState([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -567,10 +468,7 @@ export function Community({ cars = [], settings, user }) {
     [cars, settings, user],
   );
 
-  const goals = useMemo(
-    () => [...personalGoals, ...seedGoals],
-    [personalGoals],
-  );
+  const goals = communityGoals;
 
   useEffect(() => {
     let alive = true;
@@ -585,6 +483,11 @@ export function Community({ cars = [], settings, user }) {
     return () => {
       alive = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = engineDB.subscribeCommunityGoals(setCommunityGoals);
+    return () => unsubscribe();
   }, []);
 
   const persistState = async (updater) => {
@@ -650,25 +553,24 @@ export function Community({ cars = [], settings, user }) {
   };
 
   const handleLike = (goalId) => {
-    updateInteraction(goalId, (previous) => ({
-      ...previous,
-      liked: !previous.liked,
-    }));
+    const goal = goals.find((item) => item.id === goalId);
+    const liked = Boolean(goal?.likesBy?.[user?.uid]);
+    engineDB.toggleCommunityLike(goalId, !liked, user?.uid).catch((error) =>
+      console.error(error),
+    );
   };
 
   const handleComment = (goalId, comment) => {
-    updateInteraction(goalId, (previous) => ({
-      ...previous,
-      comments: [...previous.comments, comment],
-    }));
+    engineDB.addCommunityComment(goalId, comment, user?.uid).catch((error) =>
+      console.error(error),
+    );
     flash(t("community.commentSaved"));
   };
 
   const handleRate = (goalId, rating) => {
-    updateInteraction(goalId, (previous) => ({
-      ...previous,
-      rating,
-    }));
+    engineDB.rateCommunityGoal(goalId, rating, user?.uid).catch((error) =>
+      console.error(error),
+    );
     flash(t("community.ratingSaved"));
   };
 
@@ -689,14 +591,16 @@ export function Community({ cars = [], settings, user }) {
       goal,
     ).toFixed(1)}%`;
 
-    persistState((current) => ({
-      ...current,
-      sharedGoalIds: current.sharedGoalIds.includes(goal.id)
-        ? current.sharedGoalIds
-        : [...current.sharedGoalIds, goal.id],
-    }));
-
     try {
+      await engineDB.shareCommunityGoal(goal, settings, user?.uid);
+
+      persistState((current) => ({
+        ...current,
+        sharedGoalIds: current.sharedGoalIds.includes(goal.id)
+          ? current.sharedGoalIds
+          : [...current.sharedGoalIds, goal.id],
+      }));
+
       if (navigator.share) {
         await navigator.share({
           title: "Engine Social",
@@ -740,13 +644,13 @@ export function Community({ cars = [], settings, user }) {
   return (
     <section className="space-y-8 pb-10">
       {notice && (
-        <div className="fixed right-6 top-6 z-50 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black uppercase tracking-widest text-white shadow-2xl dark:bg-red-600">
+        <div className="fixed inset-x-4 top-4 z-50 rounded-xl bg-slate-950 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-2xl sm:left-auto sm:right-6 sm:top-6 sm:text-sm dark:bg-red-600">
           {notice}
         </div>
       )}
 
       <header className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-slate-950 shadow-xl dark:border-[#222] dark:bg-[#111] dark:text-white dark:shadow-none">
-        <div className="grid gap-8 p-8 lg:grid-cols-[1.35fr_0.65fr] lg:p-10">
+        <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.35fr_0.65fr] lg:p-10">
           <div className="flex flex-col justify-between gap-8">
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -758,7 +662,7 @@ export function Community({ cars = [], settings, user }) {
                   {t("community.kicker")}
                 </span>
               </div>
-              <h1 className="max-w-3xl text-5xl font-black uppercase italic tracking-tight md:text-6xl">
+              <h1 className="max-w-3xl text-3xl font-black uppercase italic tracking-tight sm:text-5xl md:text-6xl">
                 {t("community.title")}
               </h1>
               <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-gray-600 dark:text-gray-300">
@@ -782,7 +686,7 @@ export function Community({ cars = [], settings, user }) {
               {t("community.publishTitle")}
             </p>
             <div className="space-y-4">
-              {(personalGoals.length ? personalGoals.slice(0, 3) : seedGoals.slice(0, 3)).map(
+              {personalGoals.slice(0, 3).map(
                 (goal) => {
                   const progress = getProgress(goal);
                   const shared = communityState.sharedGoalIds.includes(goal.id);
@@ -814,6 +718,14 @@ export function Community({ cars = [], settings, user }) {
                   );
                 },
               )}
+              {!personalGoals.length && (
+                <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center dark:border-[#333]">
+                  <Car className="mx-auto mb-3 text-red-500" size={30} />
+                  <p className="text-xs font-black uppercase italic text-gray-500">
+                    {t("community.noPersonalGoals")}
+                  </p>
+                </div>
+              )}
             </div>
             <button
               type="button"
@@ -828,7 +740,7 @@ export function Community({ cars = [], settings, user }) {
       </header>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex w-fit rounded-xl border border-gray-200 bg-white p-1 dark:border-[#222] dark:bg-[#111]">
+        <div className="flex w-full overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 sm:w-fit dark:border-[#222] dark:bg-[#111]">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -837,7 +749,7 @@ export function Community({ cars = [], settings, user }) {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 rounded-lg px-5 py-3 text-xs font-black uppercase tracking-widest transition ${
+                className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-3 text-xs font-black uppercase tracking-widest transition sm:px-5 ${
                   isActive
                     ? "bg-red-600 text-white"
                     : "text-gray-500 hover:text-red-600"
@@ -864,30 +776,40 @@ export function Community({ cars = [], settings, user }) {
       {activeTab === "feed" && (
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-            {filteredGoals.map((goal) => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
+            {filteredGoals.length ? (
+              filteredGoals.map((goal) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
                 t={t}
-                interactions={communityState.interactions[goal.id] || emptyInteraction}
-                following={communityState.following}
-                shared={communityState.sharedGoalIds.includes(goal.id)}
-                onLike={handleLike}
-                onComment={handleComment}
-                onRate={handleRate}
-                onShare={handleShare}
-                onFollow={handleFollow}
-              />
-            ))}
+                interactions={{
+                  ...emptyInteraction,
+                  liked: Boolean(goal.likesBy?.[user?.uid]),
+                  rating: goal.ratingsBy?.[user?.uid] || goal.rating,
+                }}
+                  following={communityState.following}
+                  shared={communityState.sharedGoalIds.includes(goal.id)}
+                  onLike={handleLike}
+                  onComment={handleComment}
+                  onRate={handleRate}
+                  onShare={handleShare}
+                  onFollow={handleFollow}
+                />
+              ))
+            ) : (
+              <EmptyFeed t={t} />
+            )}
           </div>
 
           <aside className="space-y-6">
             <SidebarRanking ranking={ranking} t={t} />
-            <Suggestions
-              t={t}
-              following={communityState.following}
-              onFollow={handleFollow}
-            />
+            {friendSuggestions.length > 0 && (
+              <Suggestions
+                t={t}
+                following={communityState.following}
+                onFollow={handleFollow}
+              />
+            )}
           </aside>
         </div>
       )}
@@ -941,6 +863,20 @@ function HeroStat({ icon, value, label }) {
       <p className="text-2xl font-black text-slate-950 dark:text-white">{value}</p>
       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
         {label}
+      </p>
+    </div>
+  );
+}
+
+function EmptyFeed({ t }) {
+  return (
+    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center lg:col-span-2 xl:col-span-1 2xl:col-span-2 dark:border-[#333] dark:bg-[#151515]">
+      <Search className="mb-4 text-red-500" size={40} />
+      <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+        {t("community.noSearchResults")}
+      </h2>
+      <p className="mt-3 max-w-sm text-sm font-medium text-gray-500 dark:text-gray-400">
+        {t("community.noSearchResultsCopy")}
       </p>
     </div>
   );

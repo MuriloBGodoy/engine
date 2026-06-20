@@ -82,6 +82,7 @@ const resources = {
         update: "Atualizar garagem",
         confirm: "Adicionar à garagem",
         imageError: "Envie uma imagem válida de até 4 MB.",
+        saveError: "Não foi possível salvar o carro agora.",
       },
       deleteModal: {
         title: "Espere um segundo",
@@ -138,6 +139,9 @@ const resources = {
         shareModalCopy:
           "Sua meta aparece com porcentagem e faixa do objetivo. Valores absolutos ficam privados.",
         noPersonalGoals: "Crie uma meta na garagem para compartilhar.",
+        noSearchResults: "Nenhuma meta encontrada",
+        noSearchResultsCopy:
+          "Ajuste a busca ou limpe o campo para voltar ao feed completo.",
         save: "Salvar",
         saved: "Salvo",
         videoShort: "Short",
@@ -360,6 +364,7 @@ const resources = {
         update: "Update garage",
         confirm: "Add to garage",
         imageError: "Upload a valid image up to 4 MB.",
+        saveError: "We could not save the car right now.",
       },
       deleteModal: {
         title: "Wait a second",
@@ -416,6 +421,9 @@ const resources = {
         shareModalCopy:
           "Your goal appears with percentage and target range. Exact amounts stay private.",
         noPersonalGoals: "Create a garage goal to share.",
+        noSearchResults: "No goals found",
+        noSearchResultsCopy:
+          "Adjust the search or clear the field to return to the full feed.",
         save: "Save",
         saved: "Saved",
         videoShort: "Short",
@@ -635,6 +643,7 @@ const resources = {
         update: "Actualizar garaje",
         confirm: "Agregar al garaje",
         imageError: "Sube una imagen válida de hasta 4 MB.",
+        saveError: "No pudimos guardar el auto ahora.",
       },
       deleteModal: {
         title: "Espera un segundo",
@@ -691,6 +700,9 @@ const resources = {
         shareModalCopy:
           "Tu meta aparece con porcentaje y rango del objetivo. Los valores exactos quedan privados.",
         noPersonalGoals: "Crea una meta en el garaje para compartir.",
+        noSearchResults: "No se encontraron metas",
+        noSearchResultsCopy:
+          "Ajusta la busqueda o limpia el campo para volver al feed completo.",
         save: "Guardar",
         saved: "Guardado",
         videoShort: "Short",

@@ -32,6 +32,7 @@ function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [carToDelete, setCarToDelete] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState("");
+  const userId = user?.uid;
 
   useThemeMode(settings.preferences.theme);
 
@@ -46,7 +47,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       engineDB.setCurrentUser(null);
       setCars([]);
       setSettings(engineDB.getDefaultSettings());
@@ -55,24 +56,26 @@ function App() {
     }
 
     (async () => {
-      setDbLoading(true);
+        setDbLoading(true);
       try {
-        engineDB.setCurrentUser(user.uid);
-        await engineDB.migrateLegacyData(user.uid);
+        engineDB.setCurrentUser(userId);
+        await engineDB.migrateLegacyData(userId);
         const [savedCars, savedSettings] = await Promise.all([
           engineDB.getCars(),
           engineDB.getSettings(),
         ]);
         setCars(savedCars);
         setSettings(savedSettings);
-        i18n.changeLanguage(savedSettings.preferences.language);
+        if (i18n.language !== savedSettings.preferences.language) {
+          i18n.changeLanguage(savedSettings.preferences.language);
+        }
       } catch (error) {
         console.error(error);
       } finally {
         setDbLoading(false);
       }
     })();
-  }, [i18n, user]);
+  }, [i18n, userId]);
 
   const handleOpenModal = (car = null) => {
     setCarToEdit(car);

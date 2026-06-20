@@ -4,6 +4,17 @@ import axios from "axios";
 import { getCarImage } from "../services/imageService";
 import { useTranslation } from "react-i18next";
 
+const fallbackImage =
+  "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
+
+const withTimeout = (promise, ms = 6000) =>
+  Promise.race([
+    promise,
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(""), ms);
+    }),
+  ]);
+
 export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const { i18n, t } = useTranslation();
   const [brands, setBrands] = useState([]);
@@ -127,7 +138,10 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
+    setError("");
 
     const brandName =
       brands.find((b) => b.codigo === selectedBrand)?.nome ||
@@ -141,7 +155,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
     let finalImage = customImage;
     if (!finalImage && (!carToEdit || (carToEdit && !carToEdit.image))) {
       const query = `${brandName} ${modelName}`;
-      finalImage = await getCarImage(query);
+      finalImage = await withTimeout(getCarImage(query));
     }
 
     const carData = {
@@ -154,14 +168,17 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
         "",
       targetValue: targetValue,
       savedValue: savedValue,
-      image:
-        finalImage ||
-        "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600",
+      image: finalImage || fallbackImage,
     };
 
-    await onSave(carData);
+    const saved = await onSave(carData);
     setLoading(false);
-    onClose();
+
+    if (saved) {
+      onClose();
+    } else {
+      setError(t("modalCar.saveError"));
+    }
   };
 
   if (!isOpen) return null;
