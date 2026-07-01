@@ -68,7 +68,7 @@ const USERNAMES_COLLECTION = "usernames";
 const COMMUNITY_COLLECTION = "communityGoals";
 const PUBLIC_PROFILES_COLLECTION = "publicProfiles";
 const FIRESTORE_TIMEOUT_MS = 7000;
-const ENGINE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const ENGINE_API_URL = import.meta.env.VITE_API_URL || "";
 const defaultCommunityState = {
   interactions: {},
   following: [],
