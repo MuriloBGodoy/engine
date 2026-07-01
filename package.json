@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm --prefix engine run dev",
     "build": "node node_modules/vite/bin/vite.js build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "api:dev": ".\\tools\\apache-maven-3.9.16\\bin\\mvn.cmd -f engine-api\\pom.xml spring-boot:run",
+    "api:build": ".\\tools\\apache-maven-3.9.16\\bin\\mvn.cmd -f engine-api\\pom.xml test"
   },
   "dependencies": {
     "echarts": "^6.0.0",

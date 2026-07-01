@@ -96,6 +96,10 @@ const resources = {
         empty: "Nenhum carro na garagem para iniciar a corrida.",
         progress: "Progresso",
       },
+      notifications: {
+        title: "Notificações",
+        empty: "Nenhuma notificação ainda.",
+      },
       community: {
         kicker: "metas publicas / videos / ranking",
         title: "A garagem agora tambem e uma rede.",
@@ -114,6 +118,7 @@ const resources = {
         privateDraft: "Privada",
         following: "Seguindo",
         follow: "Seguir",
+        member: "Membro",
         goalProgress: "Progresso da meta",
         privacyLine:
           "Valores privados ocultos. A comunidade ve apenas progresso e faixa.",
@@ -128,6 +133,14 @@ const resources = {
         commentPlaceholder: "Comente sobre essa meta",
         commentSaved: "Comentario salvo",
         ratingSaved: "Avaliacao salva",
+        profileTitle: "Perfil publico",
+        profileGoals: "Metas compartilhadas",
+        profileEmpty: "Este usuario ainda nao compartilhou metas.",
+        profileStats: {
+          goals: "metas",
+          likes: "curtidas",
+          avg: "media",
+        },
         sharedNotice: "Meta compartilhada",
         sharedDraftNotice: "Meta marcada como compartilhada",
         shareText: "Minha meta no Engine esta em",
@@ -378,6 +391,10 @@ const resources = {
         empty: "No cars in the garage yet.",
         progress: "Progress",
       },
+      notifications: {
+        title: "Notifications",
+        empty: "No notifications yet.",
+      },
       community: {
         kicker: "public goals / videos / ranking",
         title: "The garage is a network now.",
@@ -396,6 +413,7 @@ const resources = {
         privateDraft: "Private",
         following: "Following",
         follow: "Follow",
+        member: "Member",
         goalProgress: "Goal progress",
         privacyLine:
           "Private amounts are hidden. The community only sees progress and range.",
@@ -410,6 +428,14 @@ const resources = {
         commentPlaceholder: "Comment on this goal",
         commentSaved: "Comment saved",
         ratingSaved: "Rating saved",
+        profileTitle: "Public profile",
+        profileGoals: "Shared goals",
+        profileEmpty: "This user has not shared goals yet.",
+        profileStats: {
+          goals: "goals",
+          likes: "likes",
+          avg: "average",
+        },
         sharedNotice: "Goal shared",
         sharedDraftNotice: "Goal marked as shared",
         shareText: "My Engine goal is at",
@@ -657,6 +683,10 @@ const resources = {
         empty: "Todavía no hay autos en el garaje.",
         progress: "Progreso",
       },
+      notifications: {
+        title: "Notificaciones",
+        empty: "Sin notificaciones todavia.",
+      },
       community: {
         kicker: "metas publicas / videos / ranking",
         title: "El garaje ahora tambien es una red.",
@@ -675,6 +705,7 @@ const resources = {
         privateDraft: "Privada",
         following: "Siguiendo",
         follow: "Seguir",
+        member: "Miembro",
         goalProgress: "Progreso de la meta",
         privacyLine:
           "Los valores privados estan ocultos. La comunidad solo ve progreso y rango.",
@@ -689,6 +720,14 @@ const resources = {
         commentPlaceholder: "Comenta esta meta",
         commentSaved: "Comentario guardado",
         ratingSaved: "Evaluacion guardada",
+        profileTitle: "Perfil publico",
+        profileGoals: "Metas compartidas",
+        profileEmpty: "Este usuario todavia no compartio metas.",
+        profileStats: {
+          goals: "metas",
+          likes: "likes",
+          avg: "media",
+        },
         sharedNotice: "Meta compartida",
         sharedDraftNotice: "Meta marcada como compartida",
         shareText: "Mi meta en Engine esta en",

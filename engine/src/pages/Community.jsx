@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Award,
+  AtSign,
   Bookmark,
   Car,
   Check,
@@ -10,7 +11,7 @@ import {
   EyeOff,
   Flame,
   Heart,
-  MessageCircle,
+  MapPin,
   Play,
   Plus,
   Search,
@@ -50,6 +51,9 @@ const getInitials = (name = "U") =>
     .toUpperCase()
     .slice(0, 2);
 
+const isImageUrl = (value) =>
+  typeof value === "string" && (value.startsWith("http") || value.startsWith("data:"));
+
 const getGoalRangeKey = (value) => {
   if (value >= 500000) return "community.ranges.elite";
   if (value >= 250000) return "community.ranges.performance";
@@ -57,15 +61,37 @@ const getGoalRangeKey = (value) => {
   return "community.ranges.entry";
 };
 
+function AvatarButton({ person, onClick, size = "md" }) {
+  const label = person?.author || person?.name || "Usuario Engine";
+  const avatar = person?.avatar || person?.avatarInitials || getInitials(label);
+  const sizeClass = size === "sm" ? "h-8 w-8 text-xs" : "h-11 w-11";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 font-black italic text-white transition hover:ring-2 hover:ring-red-500/40`}
+      title={label}
+    >
+      {isImageUrl(avatar) ? (
+        <img src={avatar} alt={label} className="h-full w-full object-cover" />
+      ) : (
+        avatar
+      )}
+    </button>
+  );
+}
+
 const buildUserGoals = (cars, settings, user) => {
   const displayName = settings.profile.displayName || user?.displayName || "Voce";
   const username = settings.profile.username || "@sua.garagem";
 
   return cars.map((car, index) => ({
     id: `user-${car.id}`,
+    ownerId: user?.uid || "",
     author: displayName,
     username,
-    avatar: getInitials(displayName),
+    avatar: settings.profile.avatar || getInitials(displayName),
     city: settings.profile.location || "Engine Garage",
     title: `${car.brand} ${car.model}`,
     brand: car.brand,
@@ -118,13 +144,14 @@ function GoalCard({
   onRate,
   onShare,
   onFollow,
+  onOpenProfile,
 }) {
   const [draft, setDraft] = useState("");
   const progress = getProgress(goal);
   const comments = [...goal.comments, ...interactions.comments];
   const liked = interactions.liked;
   const rating = interactions.rating || goal.rating;
-  const isFollowing = following.includes(goal.username);
+  const isFollowing = following.includes(goal.ownerId || goal.username);
 
   const submitComment = (event) => {
     event.preventDefault();
@@ -138,14 +165,16 @@ function GoalCard({
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl transition-all hover:border-red-600/40 dark:border-[#222] dark:bg-[#151515] dark:shadow-none">
       <div className="flex items-center justify-between gap-4 border-b border-gray-100 p-5 dark:border-[#222]">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-600 font-black italic text-white">
-            {goal.avatar}
-          </div>
+          <AvatarButton person={goal} onClick={() => onOpenProfile(goal.ownerId, goal)} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
+              <button
+                type="button"
+                onClick={() => onOpenProfile(goal.ownerId, goal)}
+                className="truncate text-left text-sm font-black uppercase italic text-slate-950 transition hover:text-red-600 dark:text-white"
+              >
                 {goal.author}
-              </h2>
+              </button>
               {goal.verified && <ShieldCheck size={15} className="text-red-500" />}
             </div>
             <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -160,7 +189,7 @@ function GoalCard({
         ) : (
           <button
             type="button"
-            onClick={() => onFollow(goal.username)}
+            onClick={() => onFollow(goal)}
             className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
               isFollowing
                 ? "bg-red-600 text-white"
@@ -229,7 +258,7 @@ function GoalCard({
           <Metric
             icon={Heart}
             label={t("community.likes")}
-            value={goal.likes + (liked ? 1 : 0)}
+            value={goal.likes}
           />
           <Metric icon={Star} label={t("community.rating")} value={rating.toFixed(1)} />
         </div>
@@ -256,14 +285,46 @@ function GoalCard({
         </div>
 
         <div className="space-y-3">
-          {comments.slice(-3).map((comment, index) => (
+          {comments.slice(-3).map((comment, index) => {
+            const commentText =
+              typeof comment === "string" ? comment : comment.text;
+            const commentAuthor =
+              typeof comment === "string" ? t("community.member") : comment.author;
+            const commentUsername =
+              typeof comment === "string" ? "" : comment.username;
+            const commentPerson =
+              typeof comment === "string"
+                ? { author: commentAuthor, username: commentUsername }
+                : {
+                    author: commentAuthor,
+                    username: commentUsername,
+                    avatar: comment.avatar,
+                    avatarInitials: comment.avatarInitials,
+                    userId: comment.userId,
+                  };
+            return (
             <div key={`${goal.id}-comment-${index}`} className="flex gap-2 text-sm">
-              <MessageCircle size={16} className="mt-0.5 shrink-0 text-gray-400" />
-              <p className="font-medium text-gray-600 dark:text-gray-300">
-                {comment}
-              </p>
+              <AvatarButton
+                person={commentPerson}
+                size="sm"
+                onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
+              />
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
+                  className="text-left text-xs font-black uppercase tracking-widest text-slate-700 transition hover:text-red-600 dark:text-white"
+                >
+                  {commentAuthor}{" "}
+                  <span className="text-gray-400">{commentUsername}</span>
+                </button>
+                <p className="font-medium text-gray-600 dark:text-gray-300">
+                  {commentText}
+                </p>
+              </div>
             </div>
-          ))}
+          );
+          })}
           {!comments.length && (
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
               {t("community.noComments")}
@@ -452,6 +513,106 @@ function ShareModal({ goals, sharedGoalIds, t, onClose, onShare }) {
   );
 }
 
+function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
+  const goals = profile?.goals || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#222] dark:bg-[#111]">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5 dark:border-[#222]">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 text-xl font-black italic text-white">
+              {isImageUrl(profile?.avatar) ? (
+                <img src={profile.avatar} alt={profile.author} className="h-full w-full object-cover" />
+              ) : (
+                profile?.avatarInitials || profile?.avatar || getInitials(profile?.author)
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+                {t("community.profileTitle")}
+              </p>
+              <h2 className="truncate text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+                {loading ? t("common.loading") : profile?.author || "Usuario Engine"}
+              </h2>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs font-bold uppercase tracking-widest text-gray-400">
+                <span className="inline-flex items-center gap-1">
+                  <AtSign size={14} />
+                  {profile?.username || "@engine"}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={14} />
+                  {profile?.city || "Engine Garage"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:text-red-600 dark:bg-[#191919]"
+            title={t("common.cancel")}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-5 p-5">
+          {profile?.note && (
+            <p className="rounded-xl bg-gray-50 p-4 text-sm font-medium leading-6 text-gray-600 dark:bg-[#101010] dark:text-gray-300">
+              {profile.note}
+            </p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Metric icon={Car} label={t("community.profileStats.goals")} value={profile?.goalsCount || 0} />
+            <Metric icon={Heart} label={t("community.profileStats.likes")} value={profile?.likesCount || 0} />
+            <Metric icon={Award} label={t("community.profileStats.avg")} value={`${Number(profile?.averageProgress || 0).toFixed(0)}%`} />
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
+              {t("community.profileGoals")}
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {goals.map((goal) => (
+                <button
+                  key={goal.id}
+                  type="button"
+                  onClick={() => onOpenGoal(goal.id)}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 text-left transition hover:border-red-500 dark:border-[#222]"
+                >
+                  <img
+                    src={goal.image || fallbackImage}
+                    alt={goal.title}
+                    className="h-16 w-20 rounded-lg object-cover"
+                    onError={(event) => {
+                      event.currentTarget.src = fallbackImage;
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black italic text-slate-950 dark:text-white">
+                      {goal.title}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      {getProgress(goal).toFixed(0)}% / {goal.likes} likes
+                    </p>
+                  </div>
+                </button>
+              ))}
+              {!loading && !goals.length && (
+                <p className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-xs font-black uppercase italic text-gray-400 dark:border-[#333]">
+                  {t("community.profileEmpty")}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Community({ cars = [], settings, user }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("feed");
@@ -461,6 +622,11 @@ export function Community({ cars = [], settings, user }) {
   );
   const [communityGoals, setCommunityGoals] = useState([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [profileModal, setProfileModal] = useState({
+    open: false,
+    loading: false,
+    profile: null,
+  });
   const [notice, setNotice] = useState("");
 
   const personalGoals = useMemo(
@@ -530,8 +696,7 @@ export function Community({ cars = [], settings, user }) {
   const stats = goals.reduce(
     (acc, goal) => {
       acc.progress += getProgress(goal);
-      acc.likes +=
-        goal.likes + (communityState.interactions[goal.id]?.liked ? 1 : 0);
+      acc.likes += goal.likes;
       return acc;
     },
     { progress: 0, likes: 0 },
@@ -574,16 +739,66 @@ export function Community({ cars = [], settings, user }) {
     flash(t("community.ratingSaved"));
   };
 
-  const handleFollow = (username) => {
+  const handleFollow = (goal) => {
+    const followId = goal.ownerId || goal.username;
+    const wasFollowing = communityState.following.includes(followId);
     persistState((current) => {
-      const isFollowing = current.following.includes(username);
+      const isFollowing = current.following.includes(followId);
       return {
         ...current,
         following: isFollowing
-          ? current.following.filter((item) => item !== username)
-          : [...current.following, username],
+          ? current.following.filter((item) => item !== followId)
+          : [...current.following, followId],
       };
     });
+
+    if (!wasFollowing && goal.ownerId && goal.ownerId !== user?.uid) {
+      engineDB
+        .notifyFollow(goal.ownerId)
+        .catch((error) => console.error(error));
+    }
+  };
+
+  const handleOpenProfile = async (profileUserId, fallback = {}) => {
+    const fallbackProfile = {
+      id: profileUserId,
+      userId: profileUserId,
+      author: fallback.author || fallback.name || "Usuario Engine",
+      username: fallback.username || "@engine",
+      avatar: fallback.avatar || "",
+      avatarInitials: fallback.avatarInitials || getInitials(fallback.author),
+      city: fallback.city || "Engine Garage",
+      note: fallback.note || "",
+      goals: goals.filter((goal) => goal.ownerId === profileUserId),
+    };
+
+    setProfileModal({
+      open: true,
+      loading: Boolean(profileUserId),
+      profile: fallbackProfile,
+    });
+    if (!profileUserId) return;
+
+    try {
+      const profile = await engineDB.getPublicProfile(profileUserId);
+      setProfileModal({
+        open: true,
+        loading: false,
+        profile: { ...fallbackProfile, ...profile },
+      });
+    } catch (error) {
+      console.error(error);
+      setProfileModal((current) => ({ ...current, loading: false }));
+    }
+  };
+
+  const handleOpenProfileGoal = (goalId) => {
+    const goal = goals.find((item) => item.id === goalId);
+    setProfileModal({ open: false, loading: false, profile: null });
+    if (goal) {
+      setActiveTab("feed");
+      setQuery(goal.title);
+    }
   };
 
   const handleShare = async (goal) => {
@@ -794,6 +1009,7 @@ export function Community({ cars = [], settings, user }) {
                   onRate={handleRate}
                   onShare={handleShare}
                   onFollow={handleFollow}
+                  onOpenProfile={handleOpenProfile}
                 />
               ))
             ) : (
@@ -848,6 +1064,16 @@ export function Community({ cars = [], settings, user }) {
           t={t}
           onClose={() => setShareModalOpen(false)}
           onShare={handleShare}
+        />
+      )}
+
+      {profileModal.open && (
+        <UserProfileModal
+          profile={profileModal.profile}
+          loading={profileModal.loading}
+          t={t}
+          onClose={() => setProfileModal({ open: false, loading: false, profile: null })}
+          onOpenGoal={handleOpenProfileGoal}
         />
       )}
     </section>

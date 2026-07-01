@@ -153,7 +153,7 @@ function App() {
         <main className="flex h-screen flex-1 flex-col overflow-y-auto p-10">
           {/* Renderiza a Topbar rápida global após carregar o banco */}
           {!dbLoading && (
-            <Topbar settings={settings} onSettingsUpdate={setSettings} />
+            <Topbar settings={settings} onSettingsUpdate={setSettings} user={user} />
           )}
 
           {dbLoading ? (

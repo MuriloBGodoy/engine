@@ -1,5 +1,6 @@
 import { get, set, del } from "idb-keyval";
 import {
+  addDoc,
   arrayUnion,
   collection,
   deleteDoc,
@@ -14,9 +15,10 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
-import { firestore } from "./firebase";
+import { auth, firestore } from "./firebase";
 
 const defaultSettings = {
   profile: {
@@ -64,7 +66,9 @@ const LEGACY_SETTINGS_KEY = "engine_settings";
 const USERS_COLLECTION = "users";
 const USERNAMES_COLLECTION = "usernames";
 const COMMUNITY_COLLECTION = "communityGoals";
+const PUBLIC_PROFILES_COLLECTION = "publicProfiles";
 const FIRESTORE_TIMEOUT_MS = 7000;
+const ENGINE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 const defaultCommunityState = {
   interactions: {},
   following: [],
@@ -72,6 +76,39 @@ const defaultCommunityState = {
   savedVideos: [],
 };
 let currentUserId = null;
+
+const apiEnabled = () => Boolean(ENGINE_API_URL && auth.currentUser);
+
+const apiRequest = async (path, options = {}) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Usuario nao autenticado.");
+  }
+
+  const response = await fetch(`${ENGINE_API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.message || "Falha ao chamar Engine API.");
+  }
+
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+};
+
+const apiJson = (method, path, body) =>
+  apiRequest(path, {
+    method,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
 
 const scopedKey = (name, userId = currentUserId) => {
   if (!userId) {
@@ -202,26 +239,56 @@ const userSettingsDoc = (userId = currentUserId) =>
 const userCommunityDoc = (userId = currentUserId) =>
   doc(userDoc(userId), "private", "community");
 
+const userNotificationsCollection = (userId = currentUserId) =>
+  collection(userDoc(userId), "notifications");
+
+const publicProfileDoc = (userId) =>
+  doc(firestore, PUBLIC_PROFILES_COLLECTION, String(userId));
+
 const usernameDocId = (username) => normalizeUsername(username).replace(/^@/, "");
 
-const buildCommunityGoal = (goal, userId, settings = {}) => {
+const getProfileSnapshot = (settings = {}, userId = currentUserId) => {
   const profile = settings.profile || {};
   const author = profile.displayName || "Usuario Engine";
   const username = normalizeUsername(profile.username) || `@engine.${userId.slice(0, 6)}`;
 
   return {
-    id: `goal-${userId}-${goal.id}`,
-    ownerId: userId,
-    carId: String(goal.id),
     author,
     username,
-    avatar: author
+    avatar: profile.avatar || "",
+    avatarInitials: author
       .split(" ")
       .map((part) => part[0])
       .join("")
       .toUpperCase()
       .slice(0, 2),
     city: profile.location || "Engine Garage",
+    note: profile.bio || "",
+  };
+};
+
+const buildPublicProfile = (settings = {}, userId = currentUserId) => {
+  const profile = getProfileSnapshot(settings, userId);
+  return {
+    id: userId,
+    userId,
+    ...profile,
+    updatedAt: serverTimestamp(),
+  };
+};
+
+const buildCommunityGoal = (goal, userId, settings = {}) => {
+  const profile = getProfileSnapshot(settings, userId);
+
+  return {
+    id: `goal-${userId}-${goal.id}`,
+    ownerId: userId,
+    carId: String(goal.id),
+    author: profile.author,
+    username: profile.username,
+    avatar: profile.avatar,
+    avatarInitials: profile.avatarInitials,
+    city: profile.city,
     title: `${goal.brand} ${goal.model}`,
     brand: goal.brand,
     model: goal.model,
@@ -229,7 +296,7 @@ const buildCommunityGoal = (goal, userId, settings = {}) => {
     image: goal.image,
     savedValue: goal.savedValue,
     targetValue: goal.targetValue,
-    note: profile.bio || "",
+    note: profile.note,
     verified: true,
     likesBy: {},
     comments: [],
@@ -252,6 +319,7 @@ const normalizeCommunityGoal = (goal = {}) => {
     username: goal.username || "@engine",
     avatar:
       goal.avatar ||
+      goal.avatarInitials ||
       author
         .split(" ")
         .map((part) => part[0])
@@ -269,7 +337,17 @@ const normalizeCommunityGoal = (goal = {}) => {
     streak: Number(goal.streak) || 1,
     likes: Object.keys(goal.likesBy || {}).length,
     comments: (goal.comments || []).map((comment) =>
-      typeof comment === "string" ? comment : comment.text,
+      typeof comment === "string"
+        ? { text: comment, author: "Engine", username: "@engine" }
+        : {
+            text: comment.text,
+            author: comment.author || "Usuario Engine",
+            username: comment.username || "@engine",
+            avatar: comment.avatar || comment.avatarInitials || "",
+            avatarInitials: comment.avatarInitials || "",
+            userId: comment.userId || "",
+            createdAt: comment.createdAt || "",
+          },
     ),
     rating: rating || 0,
     verified: Boolean(goal.verified),
@@ -351,6 +429,12 @@ export const engineDB = {
   async getCars() {
     if (!currentUserId) return getLocalCars();
 
+    if (apiEnabled()) {
+      const cars = await apiRequest("/cars");
+      await setLocalCars(cars);
+      return cars;
+    }
+
     try {
       const snapshot = await withTimeout(getDocs(userCarsCollection()), "buscar carros");
       return snapshot.docs
@@ -375,6 +459,19 @@ export const engineDB = {
       }
       await setLocalCars(cars);
       return normalizedCar;
+    }
+
+    if (apiEnabled()) {
+      const savedCar = await apiJson("POST", "/cars", normalizedCar);
+      const localCars = await getLocalCars();
+      const index = localCars.findIndex((c) => c.id === savedCar.id);
+      if (index !== -1) {
+        localCars[index] = savedCar;
+      } else {
+        localCars.push(savedCar);
+      }
+      await setLocalCars(localCars);
+      return savedCar;
     }
 
     try {
@@ -410,6 +507,13 @@ export const engineDB = {
       return;
     }
 
+    if (apiEnabled()) {
+      await apiRequest(`/cars/${id}`, { method: "DELETE" });
+      const cars = await getLocalCars();
+      await setLocalCars(cars.filter((c) => c.id !== String(id)));
+      return;
+    }
+
     try {
       await Promise.all([
         withTimeout(deleteDoc(userCarDoc(id)), "excluir carro"),
@@ -432,6 +536,12 @@ export const engineDB = {
       return;
     }
 
+    if (apiEnabled()) {
+      await apiRequest("/cars", { method: "DELETE" });
+      await setLocalCars([]);
+      return;
+    }
+
     const [carsSnapshot, communitySnapshot] = await Promise.all([
       getDocs(userCarsCollection()),
       getDocs(query(collection(firestore, COMMUNITY_COLLECTION))),
@@ -450,6 +560,10 @@ export const engineDB = {
       return normalizeCommunityState(state);
     }
 
+    if (apiEnabled()) {
+      return normalizeCommunityState(await apiRequest("/community/state"));
+    }
+
     const snapshot = await getDoc(userCommunityDoc());
     const state = snapshot.exists() ? snapshot.data() : {};
     return normalizeCommunityState(state);
@@ -462,6 +576,12 @@ export const engineDB = {
       return normalizedState;
     }
 
+    if (apiEnabled()) {
+      return normalizeCommunityState(
+        await apiJson("PUT", "/community/state", normalizedState),
+      );
+    }
+
     await setDoc(userCommunityDoc(), serializeForFirestore(normalizedState), {
       merge: true,
     });
@@ -469,6 +589,25 @@ export const engineDB = {
   },
 
   subscribeCommunityGoals(callback) {
+    if (apiEnabled()) {
+      let active = true;
+      const load = async () => {
+        try {
+          const goals = await apiRequest("/community/goals");
+          if (active) callback(goals);
+        } catch (error) {
+          warnFirestoreFallback("subscribeCommunityGoals", error);
+          if (active) callback([]);
+        }
+      };
+      load();
+      const interval = window.setInterval(load, 10000);
+      return () => {
+        active = false;
+        window.clearInterval(interval);
+      };
+    }
+
     const communityQuery = query(
       collection(firestore, COMMUNITY_COLLECTION),
       orderBy("updatedAt", "desc"),
@@ -493,6 +632,11 @@ export const engineDB = {
   async shareCommunityGoal(goal, settings, userId = currentUserId) {
     if (!userId) throw new Error("Usuario nao identificado.");
 
+    if (apiEnabled()) {
+      const response = await apiJson("POST", "/community/goals", goal);
+      return response.id;
+    }
+
     const payload = buildCommunityGoal(goal, userId, settings);
     const goalRef = doc(firestore, COMMUNITY_COLLECTION, payload.id);
     const existing = await getDoc(goalRef);
@@ -514,38 +658,270 @@ export const engineDB = {
     return payload.id;
   },
 
+  async syncCommunityProfile(settings, userId = currentUserId) {
+    if (!userId) return;
+    if (apiEnabled()) return;
+
+    const profile = getProfileSnapshot(settings, userId);
+    const snapshot = await getDocs(
+      query(collection(firestore, COMMUNITY_COLLECTION), where("ownerId", "==", userId)),
+    );
+    const batch = writeBatch(firestore);
+
+    snapshot.docs.forEach((item) => {
+      batch.update(item.ref, {
+        author: profile.author,
+        username: profile.username,
+        avatar: profile.avatar,
+        avatarInitials: profile.avatarInitials,
+        city: profile.city,
+        note: profile.note,
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    if (!snapshot.empty) await batch.commit();
+  },
+
+  async syncPublicProfile(settings, userId = currentUserId) {
+    if (!userId || apiEnabled()) return;
+
+    await setDoc(publicProfileDoc(userId), buildPublicProfile(settings, userId), {
+      merge: true,
+    });
+  },
+
+  async getPublicProfile(userId) {
+    if (!userId) return null;
+
+    if (apiEnabled()) {
+      return apiRequest(`/community/users/${userId}`);
+    }
+
+    const [profileSnapshot, goalsSnapshot] = await Promise.all([
+      getDoc(publicProfileDoc(userId)),
+      getDocs(query(collection(firestore, COMMUNITY_COLLECTION), where("ownerId", "==", userId))),
+    ]);
+
+    const goals = goalsSnapshot.docs.map((item) =>
+      normalizeCommunityGoal({ id: item.id, ...item.data() }),
+    );
+    const totalProgress = goals.reduce((sum, goal) => {
+      const target = Number(goal.targetValue) || 0;
+      return sum + (target ? Math.min((Number(goal.savedValue) / target) * 100, 100) : 0);
+    }, 0);
+
+    return {
+      id: userId,
+      userId,
+      author: "Usuario Engine",
+      username: "@engine",
+      avatar: "",
+      avatarInitials: "UE",
+      city: "Engine Garage",
+      note: "",
+      ...(profileSnapshot.exists() ? profileSnapshot.data() : {}),
+      goals,
+      goalsCount: goals.length,
+      likesCount: goals.reduce((sum, goal) => sum + Object.keys(goal.likesBy || {}).length, 0),
+      averageProgress: goals.length ? totalProgress / goals.length : 0,
+    };
+  },
+
+  async notifyUser(userId, notification) {
+    if (!userId || userId === currentUserId) return;
+
+    await addDoc(userNotificationsCollection(userId), {
+      ...notification,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
+  },
+
+  async notifyFollow(userId) {
+    if (!userId || userId === currentUserId) return;
+
+    if (apiEnabled()) {
+      await apiRequest(`/community/users/${userId}/follow`, { method: "POST" });
+      return;
+    }
+
+    const actorSettings = await this.getSettings();
+    const actor = getProfileSnapshot(actorSettings, currentUserId);
+    await this.notifyUser(userId, {
+      type: "follow",
+      actorId: currentUserId,
+      actorName: actor.author,
+      actorUsername: actor.username,
+      text: `${actor.author} comecou a seguir sua garagem.`,
+    });
+  },
+
+  subscribeNotifications(userId = currentUserId, callback) {
+    if (!userId) return () => {};
+
+    if (apiEnabled()) {
+      let active = true;
+      const load = async () => {
+        try {
+          const notifications = await apiRequest("/notifications");
+          if (active) callback(notifications);
+        } catch (error) {
+          warnFirestoreFallback("subscribeNotifications", error);
+          if (active) callback([]);
+        }
+      };
+      load();
+      const interval = window.setInterval(load, 10000);
+      return () => {
+        active = false;
+        window.clearInterval(interval);
+      };
+    }
+
+    return onSnapshot(
+      query(userNotificationsCollection(userId), orderBy("createdAt", "desc")),
+      (snapshot) => {
+        callback(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+      },
+      (error) => {
+        warnFirestoreFallback("subscribeNotifications", error);
+        callback([]);
+      },
+    );
+  },
+
+  async markNotificationsRead(userId = currentUserId) {
+    if (!userId) return;
+
+    if (apiEnabled()) {
+      await apiRequest("/notifications/read", { method: "PATCH" });
+      return;
+    }
+
+    const snapshot = await getDocs(userNotificationsCollection(userId));
+    const batch = writeBatch(firestore);
+    snapshot.docs
+      .filter((item) => !item.data().read)
+      .forEach((item) => batch.update(item.ref, { read: true }));
+
+    if (!snapshot.empty) await batch.commit();
+  },
+
   async toggleCommunityLike(goalId, liked, userId = currentUserId) {
     if (!userId) return;
+
+    if (apiEnabled()) {
+      await apiJson("PATCH", `/community/goals/${goalId}/like`, { liked });
+      return;
+    }
+
+    const goalRef = doc(firestore, COMMUNITY_COLLECTION, goalId);
+    const goal = await getDoc(goalRef);
+    const goalData = goal.exists() ? goal.data() : null;
+
     await updateDoc(doc(firestore, COMMUNITY_COLLECTION, goalId), {
       [`likesBy.${userId}`]: liked ? true : deleteField(),
       updatedAt: serverTimestamp(),
     });
+
+    if (liked && goalData) {
+      const actorSettings = await this.getSettings();
+      const actor = getProfileSnapshot(actorSettings, userId);
+      await this.notifyUser(goalData.ownerId, {
+        type: "like",
+        actorId: userId,
+        actorName: actor.author,
+        actorUsername: actor.username,
+        goalId,
+        goalTitle: goalData.title,
+        text: `${actor.author} curtiu sua meta ${goalData.title}.`,
+      });
+    }
   },
 
   async addCommunityComment(goalId, comment, userId = currentUserId) {
     if (!userId) return;
-    await updateDoc(doc(firestore, COMMUNITY_COLLECTION, goalId), {
+
+    if (apiEnabled()) {
+      await apiJson("POST", `/community/goals/${goalId}/comments`, { comment });
+      return;
+    }
+
+    const goalRef = doc(firestore, COMMUNITY_COLLECTION, goalId);
+    const goal = await getDoc(goalRef);
+    const goalData = goal.exists() ? goal.data() : null;
+    const actorSettings = await this.getSettings();
+    const actor = getProfileSnapshot(actorSettings, userId);
+
+    await updateDoc(goalRef, {
       comments: arrayUnion({
         userId,
+        author: actor.author,
+        username: actor.username,
+        avatar: actor.avatar,
+        avatarInitials: actor.avatarInitials,
         text: String(comment).trim().slice(0, 180),
         createdAt: new Date().toISOString(),
       }),
       updatedAt: serverTimestamp(),
     });
+
+    if (goalData) {
+      await this.notifyUser(goalData.ownerId, {
+        type: "comment",
+        actorId: userId,
+        actorName: actor.author,
+        actorUsername: actor.username,
+        goalId,
+        goalTitle: goalData.title,
+        text: `${actor.author} comentou na sua meta ${goalData.title}.`,
+      });
+    }
   },
 
   async rateCommunityGoal(goalId, rating, userId = currentUserId) {
     if (!userId) return;
-    await updateDoc(doc(firestore, COMMUNITY_COLLECTION, goalId), {
+
+    if (apiEnabled()) {
+      await apiJson("PATCH", `/community/goals/${goalId}/rating`, { rating });
+      return;
+    }
+
+    const goalRef = doc(firestore, COMMUNITY_COLLECTION, goalId);
+    const goal = await getDoc(goalRef);
+    const goalData = goal.exists() ? goal.data() : null;
+
+    await updateDoc(goalRef, {
       [`ratingsBy.${userId}`]: Math.max(1, Math.min(Number(rating) || 1, 5)),
       updatedAt: serverTimestamp(),
     });
+
+    if (goalData && goalData.ownerId !== userId) {
+      const actorSettings = await this.getSettings();
+      const actor = getProfileSnapshot(actorSettings, userId);
+      await this.notifyUser(goalData.ownerId, {
+        type: "rating",
+        actorId: userId,
+        actorName: actor.author,
+        actorUsername: actor.username,
+        goalId,
+        goalTitle: goalData.title,
+        text: `${actor.author} avaliou sua meta ${goalData.title}.`,
+      });
+    }
   },
 
   async getSettings() {
     if (!currentUserId) {
       const settings = await getLocalSettings();
       return normalizeSettings(settings);
+    }
+
+    if (apiEnabled()) {
+      const settings = normalizeSettings(await apiRequest("/settings"));
+      await setLocalSettings(settings);
+      return settings;
     }
 
     try {
@@ -566,11 +942,22 @@ export const engineDB = {
 
   async saveSettings(settings, userId = currentUserId) {
     const mergedSettings = normalizeSettings(settings);
-    await this.reserveUsername(mergedSettings.profile.username, userId);
+
     if (!userId) {
+      await this.reserveUsername(mergedSettings.profile.username, userId);
       await setLocalSettings(mergedSettings, userId);
       return mergedSettings;
     }
+
+    if (apiEnabled()) {
+      const savedSettings = normalizeSettings(
+        await apiJson("PUT", "/settings", mergedSettings),
+      );
+      await setLocalSettings(savedSettings, userId);
+      return savedSettings;
+    }
+
+    await this.reserveUsername(mergedSettings.profile.username, userId);
 
     try {
       await withTimeout(
@@ -584,6 +971,12 @@ export const engineDB = {
     }
 
     await setLocalSettings(mergedSettings, userId);
+    await this.syncPublicProfile(mergedSettings, userId).catch((error) =>
+      warnFirestoreFallback("syncPublicProfile", error),
+    );
+    await this.syncCommunityProfile(mergedSettings, userId).catch((error) =>
+      warnFirestoreFallback("syncCommunityProfile", error),
+    );
     return mergedSettings;
   },
 
@@ -591,6 +984,10 @@ export const engineDB = {
     if (!currentUserId) {
       await del(LEGACY_SETTINGS_KEY);
       return defaultSettings;
+    }
+
+    if (apiEnabled()) {
+      return normalizeSettings(await apiRequest("/settings", { method: "DELETE" }));
     }
 
     await deleteDoc(userSettingsDoc());

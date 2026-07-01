@@ -257,7 +257,10 @@ export function Settings({ user, settings, onSettingsUpdate }) {
       await updateProfile(user, {
         displayName:
           settingsToSave.profile.displayName || user.displayName || "",
-        photoURL: avatarUrl || user.photoURL || "",
+        photoURL:
+          avatarUrl && avatarUrl.startsWith("http")
+            ? avatarUrl
+            : user.photoURL || "",
       });
 
       const savedSettings = await engineDB.saveSettings(
