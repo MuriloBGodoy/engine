@@ -74,6 +74,13 @@ public class CommunityController {
     engineFirestoreService.deleteCommunityGoal(user.uid(), goalId);
   }
 
+  @DeleteMapping("/goals")
+  @Operation(summary = "Remove todas as metas compartilhadas do usuario")
+  void deleteMyCommunityGoals(HttpServletRequest request) throws Exception {
+    AuthenticatedUser user = AuthContext.requireUser(request);
+    engineFirestoreService.deleteMyCommunityGoals(user.uid());
+  }
+
   @PatchMapping("/goals/{goalId}/like")
   @Operation(summary = "Curte ou remove curtida")
   void toggleCommunityLike(

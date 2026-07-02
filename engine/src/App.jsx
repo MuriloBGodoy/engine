@@ -32,6 +32,7 @@ function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [carToDelete, setCarToDelete] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const userId = user?.uid;
 
   useThemeMode(settings.preferences.theme);
@@ -146,11 +147,13 @@ function App() {
     <BrowserRouter>
       <div className="flex min-h-screen flex-col overflow-hidden bg-gray-50 font-sans text-slate-950 transition-colors lg:flex-row dark:bg-[#080808] dark:text-white">
         <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
           profileSettings={settings.profile}
           privacySettings={settings.privacy}
         />
 
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6 lg:h-screen lg:p-10">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6 lg:h-screen lg:p-10">
           {/* Renderiza a Topbar rápida global após carregar o banco */}
           {!dbLoading && (
             <Topbar settings={settings} onSettingsUpdate={setSettings} user={user} />

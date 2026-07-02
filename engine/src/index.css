@@ -16,4 +16,14 @@ body {
   margin: 0;
   font-family: sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -47,6 +47,8 @@ const resources = {
         community: "Comunidade",
         settings: "Configurações",
         logout: "Sair",
+        collapse: "Recolher menu",
+        expand: "Abrir menu",
       },
       home: {
         title: "Engine Garage",
@@ -147,6 +149,11 @@ const resources = {
         unshare: "Remover publicação",
         unsharedNotice: "Meta removida do perfil",
         unshareError: "Não foi possível remover a publicação",
+        clearPublished: "Limpar publicações",
+        clearPublishedConfirm:
+          "Remover todas as metas publicadas do seu perfil?",
+        clearPublishedNotice: "Publicações removidas",
+        clearPublishedError: "Não foi possível limpar as publicações",
         linkCopied: "Link copiado",
         linkCopyError: "Não foi possível copiar o link",
         copyPrompt: "Copie o link da meta",
@@ -349,6 +356,8 @@ const resources = {
         community: "Community",
         settings: "Settings",
         logout: "Log out",
+        collapse: "Collapse menu",
+        expand: "Expand menu",
       },
       home: {
         title: "Engine Garage",
@@ -449,6 +458,11 @@ const resources = {
         unshare: "Remove publication",
         unsharedNotice: "Goal removed from profile",
         unshareError: "Could not remove publication",
+        clearPublished: "Clear publications",
+        clearPublishedConfirm:
+          "Remove all goals published from your profile?",
+        clearPublishedNotice: "Publications removed",
+        clearPublishedError: "Could not clear publications",
         linkCopied: "Link copied",
         linkCopyError: "Could not copy link",
         copyPrompt: "Copy the goal link",
@@ -648,6 +662,8 @@ const resources = {
         community: "Comunidad",
         settings: "Configuración",
         logout: "Salir",
+        collapse: "Contraer menú",
+        expand: "Abrir menú",
       },
       home: {
         title: "Engine Garage",
@@ -748,6 +764,11 @@ const resources = {
         unshare: "Quitar publicación",
         unsharedNotice: "Meta quitada del perfil",
         unshareError: "No fue posible quitar la publicación",
+        clearPublished: "Limpiar publicaciones",
+        clearPublishedConfirm:
+          "¿Quitar todas las metas publicadas de tu perfil?",
+        clearPublishedNotice: "Publicaciones quitadas",
+        clearPublishedError: "No fue posible limpiar las publicaciones",
         linkCopied: "Link copiado",
         linkCopyError: "No fue posible copiar el link",
         copyPrompt: "Copia el link de la meta",

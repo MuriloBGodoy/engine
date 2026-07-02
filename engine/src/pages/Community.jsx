@@ -1008,6 +1008,22 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
+  const handleClearMyPublications = async () => {
+    if (!window.confirm(t("community.clearPublishedConfirm"))) return;
+
+    try {
+      await engineDB.resetMyCommunityPublications(user?.uid);
+      persistState((current) => ({
+        ...current,
+        sharedGoalIds: [],
+      }));
+      flash(t("community.clearPublishedNotice"));
+    } catch (error) {
+      console.error(error);
+      flash(t("community.clearPublishedError"));
+    }
+  };
+
   const handleSaveVideo = (videoId) => {
     persistState((current) => {
       const saved = current.savedVideos.includes(videoId);
@@ -1127,12 +1143,20 @@ export function Community({ cars = [], settings, user }) {
               <Plus size={18} />
               {t("community.shareNewGoal")}
             </button>
+            <button
+              type="button"
+              onClick={handleClearMyPublications}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-600/25 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 transition hover:border-red-600 hover:bg-red-600 hover:text-white"
+            >
+              <Trash2 size={16} />
+              {t("community.clearPublished")}
+            </button>
           </div>
         </div>
       </header>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex w-full overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 sm:w-fit dark:border-[#222] dark:bg-[#111]">
+        <div className="hide-scrollbar flex w-full overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 sm:w-fit dark:border-[#222] dark:bg-[#111]">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

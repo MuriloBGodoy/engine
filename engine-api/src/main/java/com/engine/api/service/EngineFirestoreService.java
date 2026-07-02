@@ -154,6 +154,18 @@ public class EngineFirestoreService {
     goalRef.delete().get();
   }
 
+  public void deleteMyCommunityGoals(String userId) throws Exception {
+    WriteBatch batch = firestore.batch();
+    List<QueryDocumentSnapshot> docs =
+        firestore.collection(COMMUNITY).whereEqualTo("ownerId", userId).get().get().getDocuments();
+    for (QueryDocumentSnapshot snapshot : docs) {
+      batch.delete(snapshot.getReference());
+    }
+    if (!docs.isEmpty()) {
+      batch.commit().get();
+    }
+  }
+
   public void toggleCommunityLike(String userId, String goalId, boolean liked) throws Exception {
     DocumentReference goalRef = firestore.collection(COMMUNITY).document(goalId);
     DocumentSnapshot goal = goalRef.get().get();

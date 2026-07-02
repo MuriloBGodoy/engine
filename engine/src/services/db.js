@@ -712,6 +712,22 @@ export const engineDB = {
     ]);
   },
 
+  async resetMyCommunityPublications(userId = currentUserId) {
+    if (!userId) return;
+
+    if (apiEnabled()) {
+      await apiRequest("/community/goals", { method: "DELETE" });
+      return;
+    }
+
+    const snapshot = await getDocs(
+      query(collection(firestore, COMMUNITY_COLLECTION), where("ownerId", "==", userId)),
+    );
+    const batch = writeBatch(firestore);
+    snapshot.docs.forEach((item) => batch.delete(item.ref));
+    if (!snapshot.empty) await batch.commit();
+  },
+
   async syncCommunityProfile(settings, userId = currentUserId) {
     if (!userId) return;
     if (apiEnabled()) return;
