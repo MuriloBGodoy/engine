@@ -16,6 +16,7 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
   const [notifications, setNotifications] = useState([]);
 
   const currentTheme = settings.preferences.theme;
+  const isDark = currentTheme === "dark";
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   useEffect(() => {
@@ -115,10 +116,18 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
           paper: {
             className:
               "mt-2 w-[min(92vw,420px)] max-h-[70vh] overflow-y-auto bg-white dark:bg-[#080808] text-slate-950 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg",
+            sx: {
+              backgroundColor: isDark ? "#080808" : "#ffffff",
+              color: isDark ? "#ffffff" : "#0f172a",
+              border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`,
+            },
           },
         }}
       >
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+        <div
+          className="border-b px-4 py-3"
+          style={{ borderColor: isDark ? "#1e293b" : "#f1f5f9" }}
+        >
           <p className="text-xs font-black uppercase tracking-widest text-red-600">
             {t("notifications.title")}
           </p>
@@ -129,8 +138,20 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
               key={notification.id}
               onClick={() => setNotificationsAnchor(null)}
               className="block whitespace-normal border-b border-slate-100 px-4 py-3 dark:border-slate-900"
+              sx={{
+                display: "block",
+                whiteSpace: "normal",
+                backgroundColor: isDark ? "#080808" : "#ffffff",
+                borderBottom: `1px solid ${isDark ? "#111827" : "#f1f5f9"}`,
+                "&:hover": {
+                  backgroundColor: isDark ? "#141414" : "#f8fafc",
+                },
+              }}
             >
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
+              <p
+                className="text-sm font-bold"
+                style={{ color: isDark ? "#ffffff" : "#0f172a" }}
+              >
                 {notification.text}
               </p>
               <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
@@ -154,6 +175,11 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
           paper: {
             className:
               "mt-1 rounded-xl border border-slate-200 bg-white text-slate-950 shadow-lg dark:border-slate-800 dark:bg-[#080808] dark:text-white",
+            sx: {
+              backgroundColor: isDark ? "#080808" : "#ffffff",
+              color: isDark ? "#ffffff" : "#0f172a",
+              border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`,
+            },
           },
         }}
       >

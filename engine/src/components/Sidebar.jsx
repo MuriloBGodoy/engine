@@ -56,29 +56,29 @@ export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
   ];
 
   return (
-    <aside className="w-72 bg-white dark:bg-[#080808] border-r border-gray-200 dark:border-[#181818] p-8 flex flex-col transition-colors duration-300">
-      <div className="text-3xl font-black italic mb-12 text-slate-900 dark:text-white uppercase tracking-tighter flex items-center gap-2">
+    <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white p-3 transition-colors duration-300 lg:h-screen lg:w-72 lg:border-b-0 lg:border-r lg:p-8 dark:border-[#181818] dark:bg-[#080808]">
+      <div className="mb-3 flex items-center gap-2 text-xl font-black uppercase italic tracking-tighter text-slate-900 lg:mb-12 lg:text-3xl dark:text-white">
         <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center italic text-sm text-white">
           E
         </div>
         ENGINE
       </div>
 
-      <nav className="flex-1 space-y-2">
+      <nav className="flex gap-2 overflow-x-auto lg:block lg:flex-1 lg:space-y-2">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-4 px-4 py-4 rounded-xl font-bold transition-all duration-300 ${
+              className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 font-bold transition-all duration-300 lg:gap-4 lg:px-4 lg:py-4 ${
                 isActive
                   ? "bg-red-600 text-white shadow-[0_10px_20px_rgba(220,38,38,0.2)] scale-105"
                   : "text-gray-500 hover:text-slate-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#222]"
               }`}
             >
               {item.icon}
-              <span className="text-sm uppercase tracking-widest">
+              <span className="text-xs uppercase tracking-widest lg:text-sm">
                 {item.name}
               </span>
             </Link>
@@ -86,7 +86,7 @@ export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
         })}
       </nav>
 
-      <div className="mt-auto pt-8 border-t border-gray-200 dark:border-[#222] flex items-center justify-between">
+      <div className="mt-auto hidden items-center justify-between border-t border-gray-200 pt-8 lg:flex dark:border-[#222]">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 bg-red-600 rounded-full flex shrink-0 items-center justify-center font-black text-white italic overflow-hidden">
             {avatar ? (

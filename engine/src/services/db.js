@@ -82,7 +82,7 @@ const apiEnabled = () => Boolean(ENGINE_API_URL && auth.currentUser);
 const apiRequest = async (path, options = {}) => {
   const token = await auth.currentUser?.getIdToken();
   if (!token) {
-    throw new Error("Usuario nao autenticado.");
+    throw new Error("Usuário não autenticado.");
   }
 
   const response = await fetch(`${ENGINE_API_URL}${path}`, {
@@ -112,7 +112,7 @@ const apiJson = (method, path, body) =>
 
 const scopedKey = (name, userId = currentUserId) => {
   if (!userId) {
-    throw new Error("Usuario nao identificado.");
+    throw new Error("Usuário não identificado.");
   }
   return `engine_users:${userId}:${name}`;
 };
@@ -222,7 +222,7 @@ const warnFirestoreFallback = (operation, error) => {
 
 const userDoc = (userId = currentUserId) => {
   if (!userId) {
-    throw new Error("Usuario nao identificado.");
+    throw new Error("Usuário não identificado.");
   }
   return doc(firestore, USERS_COLLECTION, userId);
 };
@@ -242,6 +242,8 @@ const userCommunityDoc = (userId = currentUserId) =>
 const userNotificationsCollection = (userId = currentUserId) =>
   collection(userDoc(userId), "notifications");
 
+const publicProfilesCollection = () => collection(firestore, PUBLIC_PROFILES_COLLECTION);
+
 const publicProfileDoc = (userId) =>
   doc(firestore, PUBLIC_PROFILES_COLLECTION, String(userId));
 
@@ -249,7 +251,7 @@ const usernameDocId = (username) => normalizeUsername(username).replace(/^@/, ""
 
 const getProfileSnapshot = (settings = {}, userId = currentUserId) => {
   const profile = settings.profile || {};
-  const author = profile.displayName || "Usuario Engine";
+  const author = profile.displayName || "Usuário Engine";
   const username = normalizeUsername(profile.username) || `@engine.${userId.slice(0, 6)}`;
 
   return {
@@ -306,12 +308,28 @@ const buildCommunityGoal = (goal, userId, settings = {}) => {
   };
 };
 
+const communityGoalId = (goal, userId = currentUserId) => {
+  const goalId = String(goal?.id || "");
+  if (goalId.startsWith("goal-")) return goalId;
+
+  const carId = String(goal?.carId || goalId.replace(/^user-/, ""));
+  return `goal-${userId}-${carId}`;
+};
+
+const legacyCommunityGoalId = (goal, userId = currentUserId) => {
+  const goalId = String(goal?.id || "");
+  if (goalId.startsWith("goal-")) return goalId;
+
+  const carId = String(goal?.carId || goalId.replace(/^user-/, ""));
+  return `goal-${userId}-user-${carId}`;
+};
+
 const normalizeCommunityGoal = (goal = {}) => {
   const ratings = Object.values(goal.ratingsBy || {}).map(Number).filter(Boolean);
   const rating = ratings.length
     ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length
     : 0;
-  const author = goal.author || "Usuario Engine";
+  const author = goal.author || "Usuário Engine";
 
   return {
     id: goal.id,
@@ -341,7 +359,7 @@ const normalizeCommunityGoal = (goal = {}) => {
         ? { text: comment, author: "Engine", username: "@engine" }
         : {
             text: comment.text,
-            author: comment.author || "Usuario Engine",
+            author: comment.author || "Usuário Engine",
             username: comment.username || "@engine",
             avatar: comment.avatar || comment.avatarInitials || "",
             avatarInitials: comment.avatarInitials || "",
@@ -629,8 +647,29 @@ export const engineDB = {
     );
   },
 
+  subscribePublicProfiles(callback) {
+    if (apiEnabled()) return () => {};
+
+    return onSnapshot(
+      publicProfilesCollection(),
+      (snapshot) => {
+        const profiles = {};
+        snapshot.docs.forEach((item) => {
+          const data = { id: item.id, ...item.data() };
+          profiles[item.id] = data;
+          if (data.userId) profiles[data.userId] = data;
+        });
+        callback(profiles);
+      },
+      (error) => {
+        warnFirestoreFallback("subscribePublicProfiles", error);
+        callback({});
+      },
+    );
+  },
+
   async shareCommunityGoal(goal, settings, userId = currentUserId) {
-    if (!userId) throw new Error("Usuario nao identificado.");
+    if (!userId) throw new Error("Usuário não identificado.");
 
     if (apiEnabled()) {
       const response = await apiJson("POST", "/community/goals", goal);
@@ -656,6 +695,21 @@ export const engineDB = {
     );
 
     return payload.id;
+  },
+
+  async deleteCommunityGoal(goal, userId = currentUserId) {
+    if (!userId) return;
+    const goalId = communityGoalId(goal, userId);
+
+    if (apiEnabled()) {
+      await apiRequest(`/community/goals/${goalId}`, { method: "DELETE" });
+      return;
+    }
+
+    await Promise.all([
+      deleteDoc(doc(firestore, COMMUNITY_COLLECTION, goalId)),
+      deleteDoc(doc(firestore, COMMUNITY_COLLECTION, legacyCommunityGoalId(goal, userId))),
+    ]);
   },
 
   async syncCommunityProfile(settings, userId = currentUserId) {
@@ -714,7 +768,7 @@ export const engineDB = {
     return {
       id: userId,
       userId,
-      author: "Usuario Engine",
+      author: "Usuário Engine",
       username: "@engine",
       avatar: "",
       avatarInitials: "UE",
@@ -1003,7 +1057,7 @@ export const engineDB = {
       const owner = registry[normalized];
 
       if (owner && owner !== userId && owner !== "pending") {
-        throw new Error("Este usuario ja esta em uso.");
+        throw new Error("Este usuário já está em uso.");
       }
 
       await set(USERNAME_REGISTRY_KEY, {
@@ -1020,7 +1074,7 @@ export const engineDB = {
       const owner = snapshot.exists() ? snapshot.data().userId : null;
 
       if (owner && owner !== userId) {
-        throw new Error("Este usuario ja esta em uso.");
+        throw new Error("Este usuário já está em uso.");
       }
 
       transaction.set(usernameRef, {

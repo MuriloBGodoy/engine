@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   Clapperboard,
+  Copy,
   EyeOff,
   Flame,
   Heart,
@@ -21,6 +22,7 @@ import {
   Sparkles,
   Star,
   Trophy,
+  Trash2,
   UserCheck,
   UserPlus,
   Users,
@@ -61,8 +63,86 @@ const getGoalRangeKey = (value) => {
   return "community.ranges.entry";
 };
 
+const communityGoalId = (goal, userId = "") => {
+  const goalId = String(goal?.id || "");
+  if (goalId.startsWith("goal-")) return goalId;
+  return `goal-${userId || goal?.ownerId || ""}-${String(goal?.carId || goalId).replace(/^user-/, "")}`;
+};
+
+const legacyCommunityGoalId = (goal, userId = "") => {
+  const goalId = String(goal?.id || "");
+  if (goalId.startsWith("goal-")) return goalId;
+  return `goal-${userId || goal?.ownerId || ""}-user-${String(goal?.carId || goalId).replace(/^user-/, "")}`;
+};
+
+const buildShareUrl = (goal) => {
+  const url = new URL(window.location.href);
+  url.pathname = "/community";
+  url.searchParams.set("goal", goal.id);
+  return url.toString();
+};
+
+const profileFromSettings = (settings, user) => {
+  const name = settings.profile.displayName || user?.displayName || "Usuário Engine";
+  return {
+    id: user?.uid || "",
+    userId: user?.uid || "",
+    author: name,
+    username: settings.profile.username || `@engine.${String(user?.uid || "").slice(0, 6)}`,
+    avatar: settings.profile.avatar || user?.photoURL || "",
+    avatarInitials: getInitials(name),
+    city: settings.profile.location || "Engine Garage",
+    note: settings.profile.bio || "",
+  };
+};
+
+const withProfile = (person = {}, profiles = {}) => {
+  const profile = profiles[person.userId] || profiles[person.ownerId];
+  if (!profile) return person;
+  return {
+    ...person,
+    author: profile.author || person.author,
+    username: profile.username || person.username,
+    avatar: profile.avatar || person.avatar,
+    avatarInitials: profile.avatarInitials || person.avatarInitials,
+    city: profile.city || person.city,
+    note: profile.note ?? person.note,
+  };
+};
+
+const enrichGoalProfiles = (goal, profiles) => {
+  const enriched = withProfile(goal, profiles);
+  return {
+    ...enriched,
+    comments: (enriched.comments || []).map((comment) =>
+      typeof comment === "string" ? comment : withProfile(comment, profiles),
+    ),
+  };
+};
+
+const getProfileStats = (profile = {}) => {
+  const goals = profile.goals || [];
+  const progress = goals.reduce((sum, goal) => sum + getProgress(goal), 0);
+  return {
+    goalsCount: profile.goalsCount ?? goals.length,
+    likesCount:
+      profile.likesCount ??
+      goals.reduce((sum, goal) => sum + (Number(goal.likes) || 0), 0),
+    averageProgress:
+      profile.averageProgress ?? (goals.length ? progress / goals.length : 0),
+  };
+};
+
+const isGoalShared = (goal, sharedGoalIds, userId = "") => {
+  const goalId = communityGoalId(goal, userId || goal.ownerId);
+  const legacyGoalId = legacyCommunityGoalId(goal, userId || goal.ownerId);
+  return [goal.id, `user-${goal.id}`, goalId, legacyGoalId].some((id) =>
+    sharedGoalIds.includes(id),
+  );
+};
+
 function AvatarButton({ person, onClick, size = "md" }) {
-  const label = person?.author || person?.name || "Usuario Engine";
+  const label = person?.author || person?.name || "Usuário Engine";
   const avatar = person?.avatar || person?.avatarInitials || getInitials(label);
   const sizeClass = size === "sm" ? "h-8 w-8 text-xs" : "h-11 w-11";
 
@@ -83,11 +163,12 @@ function AvatarButton({ person, onClick, size = "md" }) {
 }
 
 const buildUserGoals = (cars, settings, user) => {
-  const displayName = settings.profile.displayName || user?.displayName || "Voce";
+  const displayName = settings.profile.displayName || user?.displayName || "Você";
   const username = settings.profile.username || "@sua.garagem";
 
   return cars.map((car, index) => ({
-    id: `user-${car.id}`,
+    id: String(car.id),
+    carId: String(car.id),
     ownerId: user?.uid || "",
     author: displayName,
     username,
@@ -143,6 +224,7 @@ function GoalCard({
   onComment,
   onRate,
   onShare,
+  onUnshare,
   onFollow,
   onOpenProfile,
 }) {
@@ -274,8 +356,15 @@ function GoalCard({
             <ActionButton
               title={t("community.share")}
               onClick={() => onShare(goal)}
-              icon={<Share2 size={18} />}
+              icon={<Copy size={18} />}
             />
+            {goal.isMine && (
+              <ActionButton
+                title={t("community.unshare")}
+                onClick={() => onUnshare(goal)}
+                icon={<Trash2 size={18} />}
+              />
+            )}
           </div>
           <RatingControl
             value={rating}
@@ -443,7 +532,7 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
   );
 }
 
-function ShareModal({ goals, sharedGoalIds, t, onClose, onShare }) {
+function ShareModal({ goals, sharedGoalIds, t, onClose, onShare, onUnshare }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6 dark:border-[#222] dark:bg-[#111]">
@@ -468,35 +557,50 @@ function ShareModal({ goals, sharedGoalIds, t, onClose, onShare }) {
 
         <div className="space-y-3">
           {goals.map((goal) => {
-            const shared = sharedGoalIds.includes(goal.id);
+            const shared = isGoalShared(goal, sharedGoalIds, goal.ownerId);
             return (
-              <button
+              <div
                 key={goal.id}
-                type="button"
-                onClick={() => onShare(goal)}
-                className="flex w-full items-center gap-4 rounded-xl border border-gray-200 p-3 text-left transition hover:border-red-500 dark:border-[#222]"
+                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 transition hover:border-red-500 dark:border-[#222]"
               >
-                <img
-                  src={goal.image}
-                  alt={goal.title}
-                  className="h-16 w-20 rounded-lg object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-black italic text-slate-950 dark:text-white">
-                    {goal.title}
-                  </p>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                    {getProgress(goal).toFixed(1)}% / {t(getGoalRangeKey(goal.targetValue))}
-                  </p>
-                </div>
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                    shared ? "bg-red-600 text-white" : "bg-gray-100 text-gray-400"
-                  }`}
+                <button
+                  type="button"
+                  onClick={() => onShare(goal)}
+                  className="flex min-w-0 flex-1 items-center gap-4 text-left"
                 >
-                  {shared ? <Check size={17} /> : <Share2 size={17} />}
-                </span>
-              </button>
+                  <img
+                    src={goal.image}
+                    alt={goal.title}
+                    className="h-16 w-20 rounded-lg object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-black italic text-slate-950 dark:text-white">
+                      {goal.title}
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                      {getProgress(goal).toFixed(1)}% / {t(getGoalRangeKey(goal.targetValue))}
+                    </p>
+                  </div>
+                  <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                      shared ? "bg-red-600 text-white" : "bg-gray-100 text-gray-400"
+                    }`}
+                    title={shared ? t("community.shared") : t("community.publishGoal")}
+                  >
+                    {shared ? <Check size={17} /> : <Share2 size={17} />}
+                  </span>
+                </button>
+                {shared && (
+                  <button
+                    type="button"
+                    onClick={() => onUnshare(goal)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919]"
+                    title={t("community.unshare")}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
             );
           })}
           {!goals.length && (
@@ -515,6 +619,7 @@ function ShareModal({ goals, sharedGoalIds, t, onClose, onShare }) {
 
 function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
   const goals = profile?.goals || [];
+  const stats = getProfileStats(profile);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -533,7 +638,7 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
                 {t("community.profileTitle")}
               </p>
               <h2 className="truncate text-2xl font-black uppercase italic text-slate-950 dark:text-white">
-                {loading ? t("common.loading") : profile?.author || "Usuario Engine"}
+                {loading ? t("common.loading") : profile?.author || "Usuário Engine"}
               </h2>
               <div className="mt-2 flex flex-wrap gap-3 text-xs font-bold uppercase tracking-widest text-gray-400">
                 <span className="inline-flex items-center gap-1">
@@ -565,9 +670,9 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
           )}
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <Metric icon={Car} label={t("community.profileStats.goals")} value={profile?.goalsCount || 0} />
-            <Metric icon={Heart} label={t("community.profileStats.likes")} value={profile?.likesCount || 0} />
-            <Metric icon={Award} label={t("community.profileStats.avg")} value={`${Number(profile?.averageProgress || 0).toFixed(0)}%`} />
+            <Metric icon={Car} label={t("community.profileStats.goals")} value={stats.goalsCount} />
+            <Metric icon={Heart} label={t("community.profileStats.likes")} value={stats.likesCount} />
+            <Metric icon={Award} label={t("community.profileStats.avg")} value={`${Number(stats.averageProgress || 0).toFixed(0)}%`} />
           </div>
 
           <div>
@@ -621,6 +726,7 @@ export function Community({ cars = [], settings, user }) {
     engineDB.getDefaultCommunityState(),
   );
   const [communityGoals, setCommunityGoals] = useState([]);
+  const [publicProfiles, setPublicProfiles] = useState({});
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState({
     open: false,
@@ -634,7 +740,18 @@ export function Community({ cars = [], settings, user }) {
     [cars, settings, user],
   );
 
-  const goals = communityGoals;
+  const profiles = useMemo(
+    () => ({
+      ...publicProfiles,
+      ...(user?.uid ? { [user.uid]: profileFromSettings(settings, user) } : {}),
+    }),
+    [publicProfiles, settings, user],
+  );
+
+  const goals = useMemo(
+    () => communityGoals.map((goal) => enrichGoalProfiles(goal, profiles)),
+    [communityGoals, profiles],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -655,6 +772,25 @@ export function Community({ cars = [], settings, user }) {
     const unsubscribe = engineDB.subscribeCommunityGoals(setCommunityGoals);
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = engineDB.subscribePublicProfiles(setPublicProfiles);
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const goalId = new URLSearchParams(window.location.search).get("goal");
+    if (!goalId || !goals.length) return;
+    const goal = goals.find((item) => item.id === goalId);
+    if (!goal) return;
+
+    const timer = window.setTimeout(() => {
+      setActiveTab("feed");
+      setQuery(goal.title);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [goals]);
 
   const persistState = async (updater) => {
     setCommunityState((current) => {
@@ -760,16 +896,21 @@ export function Community({ cars = [], settings, user }) {
   };
 
   const handleOpenProfile = async (profileUserId, fallback = {}) => {
+    const profileGoals = goals.filter((goal) => goal.ownerId === profileUserId);
+    const profileProgress = profileGoals.reduce((sum, goal) => sum + getProgress(goal), 0);
     const fallbackProfile = {
       id: profileUserId,
       userId: profileUserId,
-      author: fallback.author || fallback.name || "Usuario Engine",
+      author: fallback.author || fallback.name || "Usuário Engine",
       username: fallback.username || "@engine",
       avatar: fallback.avatar || "",
       avatarInitials: fallback.avatarInitials || getInitials(fallback.author),
       city: fallback.city || "Engine Garage",
       note: fallback.note || "",
-      goals: goals.filter((goal) => goal.ownerId === profileUserId),
+      goals: profileGoals,
+      goalsCount: profileGoals.length,
+      likesCount: profileGoals.reduce((sum, goal) => sum + (Number(goal.likes) || 0), 0),
+      averageProgress: profileGoals.length ? profileProgress / profileGoals.length : 0,
     };
 
     setProfileModal({
@@ -801,33 +942,69 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
-  const handleShare = async (goal) => {
+  const handleCopyShareLink = async (goal) => {
     const shareText = `${t("community.shareText")} ${goal.title} - ${getProgress(
       goal,
     ).toFixed(1)}%`;
+    const shareUrl = buildShareUrl(goal);
 
     try {
-      await engineDB.shareCommunityGoal(goal, settings, user?.uid);
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      } else {
+        window.prompt(t("community.copyPrompt"), `${shareText} ${shareUrl}`);
+      }
+      flash(t("community.linkCopied"));
+    } catch {
+      flash(t("community.linkCopyError"));
+    }
+  };
 
+  const handlePublishGoal = async (goal) => {
+    if (!goal.isMine || goal.ownerId !== user?.uid) {
+      await handleCopyShareLink(goal);
+      return;
+    }
+
+    if (isGoalShared(goal, communityState.sharedGoalIds, user?.uid)) {
+      await handleCopyShareLink({
+        ...goal,
+        id: communityGoalId(goal, user?.uid),
+      });
+      return;
+    }
+
+    try {
+      const publishedGoalId = await engineDB.shareCommunityGoal(goal, settings, user?.uid);
       persistState((current) => ({
         ...current,
-        sharedGoalIds: current.sharedGoalIds.includes(goal.id)
-          ? current.sharedGoalIds
-          : [...current.sharedGoalIds, goal.id],
+        sharedGoalIds: Array.from(
+          new Set([...current.sharedGoalIds, goal.id, publishedGoalId].filter(Boolean)),
+        ),
       }));
-
-      if (navigator.share) {
-        await navigator.share({
-          title: "Engine Social",
-          text: shareText,
-          url: window.location.href,
-        });
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`${shareText} ${window.location.href}`);
-      }
       flash(t("community.sharedNotice"));
     } catch {
       flash(t("community.sharedDraftNotice"));
+    }
+  };
+
+  const handleUnshareGoal = async (goal) => {
+    if (!goal.isMine && goal.ownerId !== user?.uid) return;
+
+    try {
+      await engineDB.deleteCommunityGoal(goal, user?.uid);
+      const goalId = communityGoalId(goal, user?.uid);
+      const legacyGoalId = legacyCommunityGoalId(goal, user?.uid);
+      persistState((current) => ({
+        ...current,
+        sharedGoalIds: current.sharedGoalIds.filter(
+          (item) => ![goal.id, `user-${goal.id}`, goalId, legacyGoalId].includes(item),
+        ),
+      }));
+      flash(t("community.unsharedNotice"));
+    } catch (error) {
+      console.error(error);
+      flash(t("community.unshareError"));
     }
   };
 
@@ -904,7 +1081,7 @@ export function Community({ cars = [], settings, user }) {
               {personalGoals.slice(0, 3).map(
                 (goal) => {
                   const progress = getProgress(goal);
-                  const shared = communityState.sharedGoalIds.includes(goal.id);
+                  const shared = isGoalShared(goal, communityState.sharedGoalIds, user?.uid);
                   return (
                     <div
                       key={goal.id}
@@ -1003,11 +1180,12 @@ export function Community({ cars = [], settings, user }) {
                   rating: goal.ratingsBy?.[user?.uid] || goal.rating,
                 }}
                   following={communityState.following}
-                  shared={communityState.sharedGoalIds.includes(goal.id)}
+                  shared={isGoalShared(goal, communityState.sharedGoalIds, user?.uid)}
                   onLike={handleLike}
                   onComment={handleComment}
                   onRate={handleRate}
-                  onShare={handleShare}
+                  onShare={handleCopyShareLink}
+                  onUnshare={handleUnshareGoal}
                   onFollow={handleFollow}
                   onOpenProfile={handleOpenProfile}
                 />
@@ -1063,7 +1241,8 @@ export function Community({ cars = [], settings, user }) {
           sharedGoalIds={communityState.sharedGoalIds}
           t={t}
           onClose={() => setShareModalOpen(false)}
-          onShare={handleShare}
+          onShare={handlePublishGoal}
+          onUnshare={handleUnshareGoal}
         />
       )}
 

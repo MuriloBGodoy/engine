@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,6 +65,13 @@ public class CommunityController {
       HttpServletRequest request, @RequestBody Map<String, Object> goal) throws Exception {
     AuthenticatedUser user = AuthContext.requireUser(request);
     return engineFirestoreService.shareCommunityGoal(user.uid(), goal);
+  }
+
+  @DeleteMapping("/goals/{goalId}")
+  @Operation(summary = "Remove meta compartilhada")
+  void deleteCommunityGoal(HttpServletRequest request, @PathVariable String goalId) throws Exception {
+    AuthenticatedUser user = AuthContext.requireUser(request);
+    engineFirestoreService.deleteCommunityGoal(user.uid(), goalId);
   }
 
   @PatchMapping("/goals/{goalId}/like")

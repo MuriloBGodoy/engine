@@ -144,6 +144,16 @@ public class EngineFirestoreService {
     return Map.of("id", goalId);
   }
 
+  public void deleteCommunityGoal(String userId, String goalId) throws Exception {
+    DocumentReference goalRef = firestore.collection(COMMUNITY).document(goalId);
+    DocumentSnapshot goal = goalRef.get().get();
+    if (!goal.exists()) return;
+    if (!userId.equals(goal.getString("ownerId"))) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você só pode remover metas do seu perfil.");
+    }
+    goalRef.delete().get();
+  }
+
   public void toggleCommunityLike(String userId, String goalId, boolean liked) throws Exception {
     DocumentReference goalRef = firestore.collection(COMMUNITY).document(goalId);
     DocumentSnapshot goal = goalRef.get().get();
@@ -269,7 +279,7 @@ public class EngineFirestoreService {
               DocumentSnapshot snapshot = transaction.get(usernameRef).get();
               String owner = snapshot.exists() ? snapshot.getString("userId") : null;
               if (owner != null && !owner.equals(userId)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Este usuario ja esta em uso.");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Este usuário já está em uso.");
               }
               transaction.set(
                   usernameRef,
@@ -361,7 +371,7 @@ public class EngineFirestoreService {
         ratingsBy.values().stream().mapToDouble(EngineNormalizer::positiveNumber).filter(value -> value > 0).average().orElse(0);
     Map<String, Object> likesBy = EngineNormalizer.mutableMap(goal.get("likesBy"));
     List<Object> comments = goal.get("comments") instanceof List<?> list ? new ArrayList<>(list) : List.of();
-    String author = EngineNormalizer.string(goal.get("author")).isBlank() ? "Usuario Engine" : EngineNormalizer.string(goal.get("author"));
+    String author = EngineNormalizer.string(goal.get("author")).isBlank() ? "Usuário Engine" : EngineNormalizer.string(goal.get("author"));
 
     Map<String, Object> normalized = new LinkedHashMap<>(goal);
     normalized.put("author", author);

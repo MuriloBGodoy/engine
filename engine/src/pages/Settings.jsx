@@ -260,7 +260,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
         photoURL:
           avatarUrl && avatarUrl.startsWith("http")
             ? avatarUrl
-            : user.photoURL || "",
+            : "",
       });
 
       const savedSettings = await engineDB.saveSettings(

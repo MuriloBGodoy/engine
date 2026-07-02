@@ -117,7 +117,7 @@ final class EngineNormalizer {
 
   static Map<String, Object> profileSnapshot(Map<String, Object> settings, String userId) {
     Map<String, Object> profile = mutableMap(settings.get("profile"));
-    String author = string(profile.get("displayName")).isBlank() ? "Usuario Engine" : string(profile.get("displayName"));
+    String author = string(profile.get("displayName")).isBlank() ? "Usuário Engine" : string(profile.get("displayName"));
     String username = normalizeUsername(string(profile.get("username")));
     if (username.isBlank()) {
       username = "@engine." + userId.substring(0, Math.min(6, userId.length()));
