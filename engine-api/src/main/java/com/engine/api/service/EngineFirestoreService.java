@@ -44,6 +44,7 @@ public class EngineFirestoreService {
   public Map<String, Object> saveCar(String userId, Map<String, Object> car) throws Exception {
     Map<String, Object> normalized = EngineNormalizer.normalizeCar(car);
     userCar(userId, String.valueOf(normalized.get("id"))).set(normalized, SetOptions.merge()).get();
+    syncCommunityCar(userId, normalized);
     return normalized;
   }
 
@@ -51,6 +52,7 @@ public class EngineFirestoreService {
     WriteBatch batch = firestore.batch();
     batch.delete(userCar(userId, carId));
     batch.delete(firestore.collection(COMMUNITY).document("goal-" + userId + "-" + carId));
+    batch.delete(firestore.collection(COMMUNITY).document("goal-" + userId + "-user-" + carId));
     batch.commit().get();
   }
 
@@ -320,6 +322,36 @@ public class EngineFirestoreService {
               "updatedAt", FieldValue.serverTimestamp()));
     }
     if (!docs.isEmpty()) {
+      batch.commit().get();
+    }
+  }
+
+  private void syncCommunityCar(String userId, Map<String, Object> car) throws Exception {
+    String carId = String.valueOf(car.get("id"));
+    List<DocumentReference> goalRefs =
+        List.of(
+            firestore.collection(COMMUNITY).document("goal-" + userId + "-" + carId),
+            firestore.collection(COMMUNITY).document("goal-" + userId + "-user-" + carId));
+    Map<String, Object> patch = new LinkedHashMap<>();
+    patch.put("carId", carId);
+    patch.put("title", (String.valueOf(car.get("brand")) + " " + String.valueOf(car.get("model"))).trim());
+    patch.put("brand", car.get("brand"));
+    patch.put("model", car.get("model"));
+    patch.put("year", car.get("year"));
+    patch.put("image", car.get("image"));
+    patch.put("savedValue", car.get("savedValue"));
+    patch.put("targetValue", car.get("targetValue"));
+    patch.put("updatedAt", FieldValue.serverTimestamp());
+
+    WriteBatch batch = firestore.batch();
+    boolean hasUpdates = false;
+    for (DocumentReference goalRef : goalRefs) {
+      if (goalRef.get().get().exists()) {
+        batch.update(goalRef, patch);
+        hasUpdates = true;
+      }
+    }
+    if (hasUpdates) {
       batch.commit().get();
     }
   }

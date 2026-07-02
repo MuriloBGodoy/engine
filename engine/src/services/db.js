@@ -361,6 +361,18 @@ const legacyCommunityGoalId = (goal, userId = currentUserId) => {
   return `goal-${userId}-user-${carId}`;
 };
 
+const communityCarPatch = (car) => ({
+  carId: String(car.id),
+  title: `${car.brand} ${car.model}`.trim(),
+  brand: car.brand,
+  model: car.model,
+  year: car.year,
+  image: car.image,
+  savedValue: car.savedValue,
+  targetValue: car.targetValue,
+  updatedAt: serverTimestamp(),
+});
+
 const normalizeCommunityGoal = (goal = {}) => {
   const ratings = Object.values(goal.ratingsBy || {}).map(Number).filter(Boolean);
   const rating = ratings.length
@@ -538,6 +550,9 @@ export const engineDB = {
         ),
         "salvar carro",
       );
+      await this.syncCommunityCar(normalizedCar).catch((error) =>
+        warnFirestoreFallback("syncCommunityCar", error),
+      );
     } catch (error) {
       warnFirestoreFallback("saveCar", error);
     }
@@ -575,6 +590,10 @@ export const engineDB = {
         withTimeout(
           deleteDoc(doc(firestore, COMMUNITY_COLLECTION, `goal-${currentUserId}-${id}`)),
           "excluir post da comunidade",
+        ),
+        withTimeout(
+          deleteDoc(doc(firestore, COMMUNITY_COLLECTION, `goal-${currentUserId}-user-${id}`)),
+          "excluir post legado da comunidade",
         ),
       ]);
     } catch (error) {
@@ -788,6 +807,29 @@ export const engineDB = {
     });
 
     if (!snapshot.empty) await batch.commit();
+  },
+
+  async syncCommunityCar(car, userId = currentUserId) {
+    if (!userId || apiEnabled()) return;
+
+    const goalIds = [
+      communityGoalId(car, userId),
+      legacyCommunityGoalId(car, userId),
+    ];
+    const batch = writeBatch(firestore);
+    let hasUpdates = false;
+
+    await Promise.all(
+      goalIds.map(async (goalId) => {
+        const goalRef = doc(firestore, COMMUNITY_COLLECTION, goalId);
+        const snapshot = await getDoc(goalRef);
+        if (!snapshot.exists()) return;
+        batch.update(goalRef, communityCarPatch(car));
+        hasUpdates = true;
+      }),
+    );
+
+    if (hasUpdates) await batch.commit();
   },
 
   async syncPublicProfile(settings, userId = currentUserId) {
