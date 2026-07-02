@@ -164,6 +164,43 @@ const normalizeSettings = (settings = {}) => {
   };
 };
 
+const recoverSettingsAvatar = async (settings = {}, userId = currentUserId) => {
+  const normalized = normalizeSettings(settings);
+  if (normalized.profile.avatar || !userId) return normalized;
+
+  const localSettings = await getLocalSettings(userId);
+  const localAvatar = localSettings?.profile?.avatar || "";
+  if (localAvatar) {
+    return {
+      ...normalized,
+      profile: { ...normalized.profile, avatar: localAvatar },
+    };
+  }
+
+  try {
+    const profileSnapshot = await getDoc(publicProfileDoc(userId));
+    const publicAvatar = profileSnapshot.exists()
+      ? profileSnapshot.data()?.avatar || ""
+      : "";
+    if (publicAvatar) {
+      return {
+        ...normalized,
+        profile: { ...normalized.profile, avatar: publicAvatar },
+      };
+    }
+  } catch (error) {
+    warnFirestoreFallback("recoverSettingsAvatar", error);
+  }
+
+  const authAvatar = auth.currentUser?.photoURL || "";
+  return authAvatar
+    ? {
+        ...normalized,
+        profile: { ...normalized.profile, avatar: authAvatar },
+      }
+    : normalized;
+};
+
 const normalizeCar = (car) => ({
   id: String(car.id || crypto.randomUUID()),
   brand: String(car.brand || "").trim().slice(0, 80),
@@ -989,7 +1026,7 @@ export const engineDB = {
     }
 
     if (apiEnabled()) {
-      const settings = normalizeSettings(await apiRequest("/settings"));
+      const settings = await recoverSettingsAvatar(await apiRequest("/settings"));
       await setLocalSettings(settings);
       return settings;
     }
@@ -1000,13 +1037,20 @@ export const engineDB = {
         "buscar configuracoes",
       );
       const settings = snapshot.exists() ? snapshot.data() : {};
-      const normalized = normalizeSettings(settings);
+      const normalized = await recoverSettingsAvatar(settings);
       await setLocalSettings(normalized);
+      if (!settings?.profile?.avatar && normalized.profile.avatar) {
+        setDoc(
+          userSettingsDoc(),
+          { profile: { avatar: normalized.profile.avatar } },
+          { merge: true },
+        ).catch((error) => warnFirestoreFallback("persistRecoveredAvatar", error));
+      }
       return normalized;
     } catch (error) {
       warnFirestoreFallback("getSettings", error);
       const settings = await getLocalSettings();
-      return normalizeSettings(settings);
+      return recoverSettingsAvatar(settings);
     }
   },
 
