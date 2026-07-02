@@ -836,10 +836,13 @@ export const engineDB = {
   },
 
   async notifyUser(userId, notification) {
-    if (!userId || userId === currentUserId) return;
+    const actorId = notification?.actorId || currentUserId;
+    if (!userId || userId === actorId) return;
 
     await addDoc(userNotificationsCollection(userId), {
       ...notification,
+      actorId,
+      recipientId: userId,
       read: false,
       createdAt: serverTimestamp(),
     });

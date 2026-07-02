@@ -101,11 +101,11 @@ const withProfile = (person = {}, profiles = {}) => {
   if (!profile) return person;
   return {
     ...person,
-    author: profile.author || person.author,
-    username: profile.username || person.username,
-    avatar: profile.avatar || person.avatar,
-    avatarInitials: profile.avatarInitials || person.avatarInitials,
-    city: profile.city || person.city,
+    author: profile.author ?? person.author,
+    username: profile.username ?? person.username,
+    avatar: profile.avatar ?? person.avatar,
+    avatarInitials: profile.avatarInitials ?? person.avatarInitials,
+    city: profile.city ?? person.city,
     note: profile.note ?? person.note,
   };
 };

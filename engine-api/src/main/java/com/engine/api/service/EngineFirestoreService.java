@@ -262,6 +262,7 @@ public class EngineFirestoreService {
             Map.of(
                 "type", "follow",
                 "actorId", actorId,
+                "recipientId", ownerId,
                 "actorName", actor.get("author"),
                 "actorUsername", actor.get("username"),
                 "text", actor.get("author") + " comecou a seguir sua garagem.",
@@ -366,6 +367,7 @@ public class EngineFirestoreService {
             Map.of(
                 "type", type,
                 "actorId", actorId,
+                "recipientId", ownerId,
                 "actorName", actor.get("author"),
                 "actorUsername", actor.get("username"),
                 "goalId", goalData.get("id"),

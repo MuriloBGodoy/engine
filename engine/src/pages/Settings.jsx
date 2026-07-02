@@ -111,7 +111,7 @@ async function imageToDataUrl(file) {
     img.src = dataUrl;
   });
 
-  const size = 512;
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -135,17 +135,17 @@ async function imageToDataUrl(file) {
       (result) =>
         result ? resolve(result) : reject(new Error("invalid-image")),
       "image/jpeg",
-      0.86,
+      0.78,
     );
   });
 
   return {
     blob,
-    dataUrl: canvas.toDataURL("image/jpeg", 0.86),
+    dataUrl: canvas.toDataURL("image/jpeg", 0.78),
   };
 }
 
-const withTimeout = (promise, label, ms = 9000) =>
+const withTimeout = (promise, label, ms = 4500) =>
   Promise.race([
     promise,
     new Promise((_, reject) => {
@@ -248,10 +248,12 @@ export function Settings({ user, settings, onSettingsUpdate }) {
               contentType: "image/jpeg",
             }),
             "avatar-upload-timeout",
+            3500,
           );
           avatarUrl = await withTimeout(
             getDownloadURL(avatarRef),
             "avatar-url-timeout",
+            2500,
           );
         } catch (error) {
           console.warn("Avatar upload fallback:", error);
