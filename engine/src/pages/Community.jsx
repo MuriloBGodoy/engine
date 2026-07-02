@@ -532,7 +532,7 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
   );
 }
 
-function ShareModal({ goals, sharedGoalIds, t, onClose, onShare, onUnshare }) {
+function ShareModal({ goals, sharedGoalIds, userId, t, onClose, onShare, onUnshare }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6 dark:border-[#222] dark:bg-[#111]">
@@ -557,7 +557,7 @@ function ShareModal({ goals, sharedGoalIds, t, onClose, onShare, onUnshare }) {
 
         <div className="space-y-3">
           {goals.map((goal) => {
-            const shared = isGoalShared(goal, sharedGoalIds, goal.ownerId);
+            const shared = isGoalShared(goal, sharedGoalIds, userId);
             return (
               <div
                 key={goal.id}
@@ -966,14 +966,6 @@ export function Community({ cars = [], settings, user }) {
       return;
     }
 
-    if (isGoalShared(goal, communityState.sharedGoalIds, user?.uid)) {
-      await handleCopyShareLink({
-        ...goal,
-        id: communityGoalId(goal, user?.uid),
-      });
-      return;
-    }
-
     try {
       const publishedGoalId = await engineDB.shareCommunityGoal(goal, settings, user?.uid);
       persistState((current) => ({
@@ -1263,6 +1255,7 @@ export function Community({ cars = [], settings, user }) {
         <ShareModal
           goals={personalGoals}
           sharedGoalIds={communityState.sharedGoalIds}
+          userId={user?.uid}
           t={t}
           onClose={() => setShareModalOpen(false)}
           onShare={handlePublishGoal}
