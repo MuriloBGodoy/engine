@@ -145,6 +145,14 @@ async function imageToDataUrl(file) {
   };
 }
 
+const withTimeout = (promise, label, ms = 9000) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(label)), ms);
+    }),
+  ]);
+
 export function Settings({ user, settings, onSettingsUpdate }) {
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
@@ -235,10 +243,16 @@ export function Settings({ user, settings, onSettingsUpdate }) {
             storage,
             `users/${user.uid}/profile/avatar.jpg`,
           );
-          await uploadBytes(avatarRef, pendingAvatarBlob, {
-            contentType: "image/jpeg",
-          });
-          avatarUrl = await getDownloadURL(avatarRef);
+          await withTimeout(
+            uploadBytes(avatarRef, pendingAvatarBlob, {
+              contentType: "image/jpeg",
+            }),
+            "avatar-upload-timeout",
+          );
+          avatarUrl = await withTimeout(
+            getDownloadURL(avatarRef),
+            "avatar-url-timeout",
+          );
         } catch (error) {
           console.warn("Avatar upload fallback:", error);
         }
