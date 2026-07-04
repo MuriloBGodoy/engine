@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Car,
+  BriefcaseBusiness,
   Home,
   LayoutDashboard,
   LogOut,
@@ -59,6 +60,7 @@ export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
     { name: t("nav.dashboard"), path: "/dashboard", icon: <LayoutDashboard size={20} /> },
     { name: t("nav.garage"), path: "/garagem", icon: <Car size={20} /> },
     { name: t("nav.community"), path: "/community", icon: <Users size={20} /> },
+    { name: t("nav.services"), path: "/services", icon: <BriefcaseBusiness size={20} /> },
     { name: t("nav.settings"), path: "/settings", icon: <Settings size={20} /> },
   ];
 
@@ -96,7 +98,7 @@ export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
         </div>
       </header>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-gray-200 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden dark:border-[#181818] dark:bg-[#080808]/95">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-gray-200 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden dark:border-[#181818] dark:bg-[#080808]/95">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (

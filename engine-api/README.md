@@ -16,14 +16,6 @@ $env:GOOGLE_APPLICATION_CREDENTIALS="C:\caminho\para\service-account.json"
 $env:FIREBASE_PROJECT_ID="engine-garage"
 ```
 
-Para imagem via Pexels:
-
-```powershell
-cd engine-api
-$env:PEXELS_API_KEY="sua-chave"
-mvn spring-boot:run
-```
-
 A API sobe em `http://localhost:8080`.
 
 Swagger UI:
@@ -52,7 +44,6 @@ npm run api:build
 - `GET /api/fipe/brands/{brandId}/models`
 - `GET /api/fipe/brands/{brandId}/models/{modelId}/years`
 - `GET /api/fipe/brands/{brandId}/models/{modelId}/years/{yearId}/price`
-- `GET /api/images/car?query=Ferrari`
 
 ## Frontend
 
@@ -63,4 +54,4 @@ $env:VITE_API_URL="http://localhost:8080/api"
 npm run dev
 ```
 
-Quando `VITE_API_URL` nao estiver configurado, o frontend continua usando Firebase/FIPE/Pexels diretamente como antes.
+Quando `VITE_API_URL` nao estiver configurado, o frontend continua usando Firebase/FIPE diretamente como antes.

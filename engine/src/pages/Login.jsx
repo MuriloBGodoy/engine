@@ -1,25 +1,26 @@
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { auth } from "../services/firebase";
-
-const inputClass =
-  "w-full rounded-xl border border-[#222] bg-[#181818] px-5 py-4 text-white outline-none transition-all focus:border-red-600";
+import { AuthShell } from "../components/AuthShell";
 
 export function Login() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -31,61 +32,83 @@ export function Login() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#080808] p-4">
-      <div className="w-full max-w-md rounded-[2rem] border border-white/5 bg-[#121212] p-10 shadow-2xl">
-        <div className="mb-8 flex flex-col items-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]">
-            <span className="text-lg font-black italic">E</span>
-          </div>
-          <h1 className="text-center text-3xl font-black uppercase italic tracking-tight text-white">
-            {t("auth.loginTitle")}
-          </h1>
-        </div>
+  const handleForgotPassword = async () => {
+    const cleanEmail = email.trim();
 
-        <form onSubmit={handleLogin} className="space-y-4">
+    if (!cleanEmail) {
+      setError(t("auth.resetEmailRequired"));
+      return;
+    }
+
+    setResetLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail, {
+        url: `${window.location.origin}/reset-password`,
+      });
+      setMessage(t("auth.resetEmailSent"));
+    } catch {
+      setError(t("auth.resetEmailError"));
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  return (
+    <AuthShell
+      kicker={t("auth.loginKicker")}
+      title={t("auth.loginTitle")}
+      subtitle={t("auth.loginSubtitle")}
+    >
+      <form onSubmit={handleLogin} className="auth-form">
+        <label className="auth-field">
+          <span>{t("common.email")}</span>
           <input
             type="email"
-            placeholder={t("common.email")}
+            placeholder={t("auth.loginEmailPlaceholder")}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className={inputClass}
             autoComplete="email"
             required
           />
+        </label>
+        <label className="auth-field">
+          <span>{t("common.password")}</span>
           <input
             type="password"
-            placeholder={t("common.password")}
+            placeholder={t("auth.passwordPlaceholder")}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className={inputClass}
             autoComplete="current-password"
             required
           />
+        </label>
 
-          {error && (
-            <p className="text-center text-xs font-bold uppercase italic text-red-500">
-              {error}
-            </p>
-          )}
+        <button
+          type="button"
+          disabled={resetLoading}
+          className="auth-text-button"
+          onClick={handleForgotPassword}
+        >
+          {resetLoading ? <Loader2 className="animate-spin" size={16} /> : <Mail size={16} />}
+          {t("auth.forgotPassword")}
+        </button>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-red-600 py-4 font-black uppercase italic text-white shadow-xl shadow-red-900/20 transition-all hover:bg-red-700 active:scale-95 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : <Lock size={18} />}
-            {t("auth.loginButton")}
-          </button>
-        </form>
+        {error && <p className="auth-feedback auth-feedback-error">{error}</p>}
+        {message && <p className="auth-feedback auth-feedback-success">{message}</p>}
 
-        <p className="mt-8 text-center text-sm font-bold uppercase tracking-tight text-gray-500">
-          {t("auth.noAccount")}{" "}
-          <Link to="/register" className="text-red-600 hover:underline">
-            {t("auth.createAccount")}
-          </Link>
-        </p>
-      </div>
-    </div>
+        <button type="submit" disabled={loading} className="auth-submit">
+          {loading ? <Loader2 className="animate-spin" /> : <Lock size={18} />}
+          {t("auth.loginButton")}
+        </button>
+      </form>
+
+      <p className="auth-switch-copy">
+        {t("auth.noAccount")}{" "}
+        <Link to="/register">{t("auth.createAccount")}</Link>
+      </p>
+    </AuthShell>
   );
 }

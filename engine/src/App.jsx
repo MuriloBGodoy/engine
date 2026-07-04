@@ -16,9 +16,11 @@ import { Garagem } from "./pages/Garagem";
 import { DashboardPage } from "./pages/DashboardPage";
 import { Settings } from "./pages/Settings";
 import { Community } from "./pages/Community";
+import { Services } from "./pages/Services";
 
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { ResetPassword } from "./pages/ResetPassword";
 
 function App() {
   const { i18n, t } = useTranslation();
@@ -137,6 +139,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
@@ -190,6 +193,10 @@ function App() {
                   }
                 />
                 <Route
+                  path="/services"
+                  element={<Services settings={settings} user={user} />}
+                />
+                <Route
                   path="/settings"
                   element={
                     <Settings
@@ -199,6 +206,7 @@ function App() {
                     />
                   }
                 />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </div>

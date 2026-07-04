@@ -1,19 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Save, Loader2, Upload } from "lucide-react";
 import axios from "axios";
-import { getCarImage } from "../services/imageService";
 import { useTranslation } from "react-i18next";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
-
-const withTimeout = (promise, ms = 6000) =>
-  Promise.race([
-    promise,
-    new Promise((resolve) => {
-      window.setTimeout(() => resolve(""), ms);
-    }),
-  ]);
 
 export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const { i18n, t } = useTranslation();
@@ -152,11 +143,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       carToEdit?.model ||
       "";
 
-    let finalImage = customImage;
-    if (!finalImage && (!carToEdit || (carToEdit && !carToEdit.image))) {
-      const query = `${brandName} ${modelName}`;
-      finalImage = await withTimeout(getCarImage(query));
-    }
+    const finalImage = customImage || carToEdit?.image || fallbackImage;
 
     const carData = {
       id: carToEdit ? carToEdit.id : Date.now(),
@@ -168,7 +155,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
         "",
       targetValue: targetValue,
       savedValue: savedValue,
-      image: finalImage || fallbackImage,
+      image: finalImage,
     };
 
     const saved = await onSave(carData);

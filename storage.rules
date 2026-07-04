@@ -16,5 +16,12 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+
+    match /users/{userId}/services/{fileName} {
+      allow read: if signedIn();
+      allow write: if isOwner(userId)
+        && request.resource.size < 6 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
   }
 }

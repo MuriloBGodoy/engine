@@ -7,7 +7,7 @@
 ## 🚀 Key Features
 
 - **Real-time FIPE Integration:** Automatically fetches the latest market prices for cars directly from the FIPE Table.
-- **Dynamic Visuals:** Uses the **Pexels API** to automatically find and display high-quality images based on the selected car model.
+- **Custom Visuals:** Lets users add their own car images and falls back to a default image when none is provided.
 - **Financial Progress Tracking:** Interactive progress bars that calculate how close you are to your goal.
 - **Local Persistence:** Powered by **IndexedDB** (via `idb-keyval`) to ensure your garage data is saved safely in your browser.
 - **Motivational UX:** Custom delete modals with dynamic messages based on your current progress percentage.

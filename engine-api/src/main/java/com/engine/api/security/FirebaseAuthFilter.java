@@ -20,7 +20,6 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
       List.of(
           "/api/health",
           "/api/fipe",
-          "/api/images",
           "/swagger-ui",
           "/v3/api-docs",
           "/swagger-resources");

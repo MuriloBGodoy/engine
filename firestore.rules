@@ -10,6 +10,12 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    function isServiceAdmin() {
+      return signedIn() && request.auth.token.email in [
+        "muxdtuber@gmail.com"
+      ];
+    }
+
     match /users/{userId}/cars/{carId} {
       allow read, write: if isOwner(userId);
     }
@@ -40,6 +46,27 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if signedIn();
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /serviceListings/{listingId} {
+      allow read: if signedIn()
+        && (
+          resource.data.moderationStatus == "approved"
+          || resource.data.ownerId == request.auth.uid
+          || isServiceAdmin()
+        );
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.moderationStatus == "pending";
+      allow update: if isServiceAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == request.auth.uid
+          && request.resource.data.moderationStatus == "pending"
+        );
+      allow delete: if isServiceAdmin()
+        || (signedIn() && resource.data.ownerId == request.auth.uid);
     }
   }
 }

@@ -67,6 +67,9 @@ const USERS_COLLECTION = "users";
 const USERNAMES_COLLECTION = "usernames";
 const COMMUNITY_COLLECTION = "communityGoals";
 const PUBLIC_PROFILES_COLLECTION = "publicProfiles";
+const SERVICE_LISTINGS_COLLECTION = "serviceListings";
+const SERVICE_STATUS_APPROVED = "approved";
+const SERVICE_STATUS_PENDING = "pending";
 const FIRESTORE_TIMEOUT_MS = 7000;
 const ENGINE_API_URL = import.meta.env.VITE_API_URL || "";
 const defaultCommunityState = {
@@ -436,6 +439,74 @@ const normalizeCommunityState = (state = {}) => ({
   savedVideos: Array.isArray(state.savedVideos) ? state.savedVideos : [],
 });
 
+const normalizeServiceListing = (listing = {}) => {
+  const title = String(listing.title || "").trim().slice(0, 90);
+  const providerName = String(listing.providerName || "").trim().slice(0, 80);
+  const city = String(listing.city || "").trim().slice(0, 80);
+  const address = String(listing.address || "").trim().slice(0, 160);
+  const whatsappCountry = String(listing.whatsappCountry || "+55")
+    .trim()
+    .replace(/[^\d+]/g, "")
+    .slice(0, 6);
+  const whatsapp = normalizePhone(
+    listing.whatsapp && !String(listing.whatsapp).trim().startsWith("+")
+      ? `${whatsappCountry} ${listing.whatsapp}`
+      : listing.whatsapp || "",
+  );
+  const email = String(listing.email || "")
+    .trim()
+    .toLowerCase()
+    .slice(0, 120);
+
+  return {
+    id: String(listing.id || crypto.randomUUID()),
+    ownerId: String(listing.ownerId || currentUserId || ""),
+    title,
+    providerName,
+    category: String(listing.category || "").trim().slice(0, 60),
+    description: String(listing.description || "").trim().slice(0, 900),
+    price: String(listing.price || "").trim().slice(0, 80),
+    serviceMode: ["place", "mobile", "hybrid"].includes(listing.serviceMode)
+      ? listing.serviceMode
+      : "hybrid",
+    city,
+    address,
+    serviceArea: String(listing.serviceArea || "").trim().slice(0, 160),
+    whatsappCountry,
+    whatsapp,
+    email,
+    website: String(listing.website || "").trim().slice(0, 160),
+    availability: String(listing.availability || "").trim().slice(0, 180),
+    experience: String(listing.experience || "").trim().slice(0, 180),
+    photos: Array.isArray(listing.photos)
+      ? listing.photos
+          .map((photo) => String(photo || "").trim())
+          .filter(Boolean)
+          .slice(0, 6)
+      : [],
+    moderationStatus: ["approved", "pending", "rejected"].includes(
+      listing.moderationStatus,
+    )
+      ? listing.moderationStatus
+      : SERVICE_STATUS_PENDING,
+    moderationNote: String(listing.moderationNote || "").trim().slice(0, 280),
+    reviewedBy: String(listing.reviewedBy || "").trim(),
+    reviewedAt: listing.reviewedAt || "",
+    submittedAt: listing.submittedAt || listing.createdAt || new Date().toISOString(),
+    tags: Array.isArray(listing.tags)
+      ? listing.tags.map((tag) => String(tag).trim().slice(0, 28)).filter(Boolean).slice(0, 8)
+      : String(listing.tags || "")
+          .split(",")
+          .map((tag) => tag.trim().slice(0, 28))
+          .filter(Boolean)
+          .slice(0, 8),
+    subscriptionStatus: listing.subscriptionStatus || "preview_unlocked",
+    active: listing.active !== false,
+    createdAt: listing.createdAt || new Date().toISOString(),
+    updatedAt: listing.updatedAt || new Date().toISOString(),
+  };
+};
+
 export const engineDB = {
   setCurrentUser(userId) {
     currentUserId = userId || null;
@@ -721,6 +792,181 @@ export const engineDB = {
         warnFirestoreFallback("subscribePublicProfiles", error);
         callback({});
       },
+    );
+  },
+
+  subscribeServiceListings(callback, options = {}) {
+    const isAdmin = Boolean(options.isAdmin);
+    const userId = options.userId || currentUserId;
+    const listingsQuery = isAdmin
+      ? query(
+          collection(firestore, SERVICE_LISTINGS_COLLECTION),
+          orderBy("updatedAt", "desc"),
+        )
+      : query(
+          collection(firestore, SERVICE_LISTINGS_COLLECTION),
+          where("moderationStatus", "==", SERVICE_STATUS_APPROVED),
+        );
+
+    return onSnapshot(
+      listingsQuery,
+      (snapshot) => {
+        const publicListings = snapshot.docs
+          .map((item) => normalizeServiceListing({ id: item.id, ...item.data() }))
+          .filter((listing) => listing.active)
+          .sort((a, b) =>
+            String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")),
+          );
+
+        if (isAdmin || !userId) {
+          callback(publicListings);
+          return;
+        }
+
+        const ownerQuery = query(
+          collection(firestore, SERVICE_LISTINGS_COLLECTION),
+          where("ownerId", "==", userId),
+        );
+
+        getDocs(ownerQuery)
+          .then((ownerSnapshot) => {
+            const byId = new Map(publicListings.map((listing) => [listing.id, listing]));
+            ownerSnapshot.docs
+              .map((item) => normalizeServiceListing({ id: item.id, ...item.data() }))
+              .filter((listing) => listing.active)
+              .forEach((listing) => byId.set(listing.id, listing));
+            callback(
+              Array.from(byId.values()).sort((a, b) =>
+                String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")),
+              ),
+            );
+          })
+          .catch((error) => {
+            warnFirestoreFallback("subscribeServiceListingsOwner", error);
+            callback(publicListings);
+          });
+      },
+      async (error) => {
+        warnFirestoreFallback("subscribeServiceListings", error);
+        const localListings = (await get("engine_service_listings")) || [];
+        callback(
+          localListings
+            .map(normalizeServiceListing)
+            .filter((listing) => listing.active)
+            .filter(
+              (listing) =>
+                isAdmin ||
+                listing.ownerId === userId ||
+                listing.moderationStatus === SERVICE_STATUS_APPROVED,
+            ),
+        );
+      },
+    );
+  },
+
+  async saveServiceListing(listing, settings = {}, userId = currentUserId, options = {}) {
+    if (!userId) throw new Error("Usuario nao identificado.");
+
+    const isAdmin = Boolean(options.isAdmin);
+    const profile = getProfileSnapshot(settings, userId);
+    const existingStatus = listing.moderationStatus || SERVICE_STATUS_PENDING;
+    const moderationStatus = isAdmin && existingStatus === SERVICE_STATUS_APPROVED
+      ? SERVICE_STATUS_APPROVED
+      : SERVICE_STATUS_PENDING;
+    const normalized = normalizeServiceListing({
+      ...listing,
+      ownerId: userId,
+      providerName: listing.providerName || profile.author,
+      city: listing.city || profile.city,
+      email: listing.email || auth.currentUser?.email || "",
+      moderationStatus,
+      moderationNote: moderationStatus === SERVICE_STATUS_PENDING ? "" : listing.moderationNote,
+      reviewedAt: moderationStatus === SERVICE_STATUS_PENDING ? "" : listing.reviewedAt,
+      reviewedBy: moderationStatus === SERVICE_STATUS_PENDING ? "" : listing.reviewedBy,
+      submittedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    try {
+      await withTimeout(
+        setDoc(
+          doc(firestore, SERVICE_LISTINGS_COLLECTION, normalized.id),
+          {
+            ...serializeForFirestore(normalized),
+            updatedAt: serverTimestamp(),
+            createdAt: listing.createdAt || serverTimestamp(),
+          },
+          { merge: true },
+        ),
+        "salvar anuncio de servico",
+      );
+    } catch (error) {
+      warnFirestoreFallback("saveServiceListing", error);
+    }
+
+    const localListings = (await get("engine_service_listings")) || [];
+    const index = localListings.findIndex((item) => item.id === normalized.id);
+    if (index >= 0) {
+      localListings[index] = normalized;
+    } else {
+      localListings.unshift(normalized);
+    }
+    await set("engine_service_listings", localListings);
+    return normalized;
+  },
+
+  async moderateServiceListing(listingId, status, note = "", reviewerId = currentUserId) {
+    if (!listingId || !reviewerId) return;
+    if (!["approved", "rejected"].includes(status)) {
+      throw new Error("Status de moderacao invalido.");
+    }
+
+    const listingRef = doc(firestore, SERVICE_LISTINGS_COLLECTION, String(listingId));
+    const listingSnapshot = await getDoc(listingRef);
+    const listing = listingSnapshot.exists()
+      ? normalizeServiceListing({ id: listingSnapshot.id, ...listingSnapshot.data() })
+      : null;
+    const patch = {
+      moderationStatus: status,
+      moderationNote: String(note || "").trim().slice(0, 280),
+      reviewedBy: reviewerId,
+      reviewedAt: new Date().toISOString(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await updateDoc(listingRef, patch);
+
+    if (listing?.ownerId) {
+      await this.notifyUser(listing.ownerId, {
+        type: status === "approved" ? "service_approved" : "service_rejected",
+        actorId: reviewerId,
+        serviceId: String(listingId),
+        serviceTitle: listing.title,
+        moderationNote: patch.moderationNote,
+        text:
+          status === "approved"
+            ? `Seu anuncio ${listing.title} foi aprovado e publicado.`
+            : `Seu anuncio ${listing.title} precisa de ajustes.`,
+      });
+    }
+  },
+
+  async deleteServiceListing(listingId, userId = currentUserId) {
+    if (!listingId || !userId) return;
+
+    try {
+      await withTimeout(
+        deleteDoc(doc(firestore, SERVICE_LISTINGS_COLLECTION, String(listingId))),
+        "excluir anuncio de servico",
+      );
+    } catch (error) {
+      warnFirestoreFallback("deleteServiceListing", error);
+    }
+
+    const localListings = (await get("engine_service_listings")) || [];
+    await set(
+      "engine_service_listings",
+      localListings.filter((item) => item.id !== String(listingId)),
     );
   },
 

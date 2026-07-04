@@ -9,6 +9,15 @@ import {
 import { Bell } from "lucide-react";
 import { engineDB } from "../services/db";
 
+const notificationLabels = {
+  follow: "Novo seguidor",
+  like: "Curtida",
+  comment: "Comentário",
+  rating: "Avaliação",
+  service_approved: "Anúncio aprovado",
+  service_rejected: "Ajustes no anúncio",
+};
+
 export function Topbar({ settings, onSettingsUpdate, user }) {
   const { i18n, t } = useTranslation();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -154,9 +163,21 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
               >
                 {notification.text}
               </p>
-              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                {notification.actorUsername || notification.type}
-              </p>
+              {notification.moderationNote && (
+                <p className="mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold leading-5 text-red-500">
+                  {notification.moderationNote}
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-red-600/10 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-red-500">
+                  {notificationLabels[notification.type] || notification.type}
+                </span>
+                {notification.actorUsername && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    {notification.actorUsername}
+                  </span>
+                )}
+              </div>
             </MenuItem>
           ))
         ) : (
