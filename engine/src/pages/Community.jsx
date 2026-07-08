@@ -10,9 +10,11 @@ import {
   Clapperboard,
   Copy,
   EyeOff,
+  Edit3,
   Flame,
   Heart,
   MapPin,
+  MoreHorizontal,
   Play,
   Plus,
   Search,
@@ -21,6 +23,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  MessageCircle,
   Trophy,
   Trash2,
   UserCheck,
@@ -61,6 +64,42 @@ const getGoalRangeKey = (value) => {
   if (value >= 250000) return "community.ranges.performance";
   if (value >= 120000) return "community.ranges.premium";
   return "community.ranges.entry";
+};
+
+const normalizeVehicleText = (value = "") =>
+  String(value).replace(/\s+/g, " ").trim();
+
+const removeVehicleBrand = (title = "", brand = "") => {
+  let label = normalizeVehicleText(title);
+  const brandParts = normalizeVehicleText(brand)
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  [normalizeVehicleText(brand), ...brandParts].forEach((part) => {
+    if (part && label.toLowerCase().startsWith(part.toLowerCase())) {
+      label = label.slice(part.length).trim();
+    }
+  });
+
+  return label.replace(/^[-/|]+/, "").trim();
+};
+
+const getRankingVehicleLabel = (goal = {}) => {
+  const brand = normalizeVehicleText(goal.brand);
+  const model = removeVehicleBrand(goal.model, brand);
+  const titleModel = removeVehicleBrand(goal.title, brand);
+  const brandLower = brand.toLowerCase();
+
+  if (model && model.toLowerCase() !== brandLower) {
+    return model;
+  }
+
+  if (titleModel && titleModel.toLowerCase() !== brandLower) {
+    return titleModel;
+  }
+
+  return model || normalizeVehicleText(goal.title) || brand || "Meta";
 };
 
 const communityGoalId = (goal, userId = "") => {
@@ -227,10 +266,18 @@ function GoalCard({
   onUnshare,
   onFollow,
   onOpenProfile,
+  onEditComment,
+  onDeleteComment,
+  currentUserId,
 }) {
   const [draft, setDraft] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState("");
+  const [editingDraft, setEditingDraft] = useState("");
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentMenuId, setCommentMenuId] = useState("");
   const progress = getProgress(goal);
   const comments = [...goal.comments, ...interactions.comments];
+  const previewComments = comments.slice(-2);
   const liked = interactions.liked;
   const rating = interactions.rating || goal.rating;
   const isFollowing = following.includes(goal.ownerId || goal.username);
@@ -243,17 +290,31 @@ function GoalCard({
     setDraft("");
   };
 
+  const startEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditingDraft(comment.text || "");
+  };
+
+  const submitEditComment = (event, comment) => {
+    event.preventDefault();
+    const cleanDraft = editingDraft.trim().slice(0, 180);
+    if (!cleanDraft) return;
+    onEditComment(goal.id, comment.id, cleanDraft);
+    setEditingCommentId("");
+    setEditingDraft("");
+  };
+
   return (
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl transition-all hover:border-red-600/40 dark:border-[#222] dark:bg-[#151515] dark:shadow-none">
-      <div className="flex items-center justify-between gap-4 border-b border-gray-100 p-5 dark:border-[#222]">
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-[#222] sm:gap-4 sm:p-5">
         <div className="flex min-w-0 items-center gap-3">
           <AvatarButton person={goal} onClick={() => onOpenProfile(goal.ownerId, goal)} />
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
                 onClick={() => onOpenProfile(goal.ownerId, goal)}
-                className="truncate text-left text-sm font-black uppercase italic text-slate-950 transition hover:text-red-600 dark:text-white"
+                className="min-w-0 truncate text-left text-sm font-black uppercase italic text-slate-950 transition hover:text-red-600 dark:text-white"
               >
                 {goal.author}
               </button>
@@ -265,14 +326,14 @@ function GoalCard({
           </div>
         </div>
         {goal.isMine ? (
-          <span className="rounded-full border border-red-600/20 bg-red-600/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600">
+          <span className="shrink-0 rounded-full border border-red-600/20 bg-red-600/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 sm:px-3 sm:text-[10px]">
             {shared ? t("community.shared") : t("community.privateDraft")}
           </span>
         ) : (
           <button
             type="button"
             onClick={() => onFollow(goal)}
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-2 text-[9px] font-black uppercase tracking-widest transition sm:gap-2 sm:px-3 sm:text-[10px] ${
               isFollowing
                 ? "bg-red-600 text-white"
                 : "border border-gray-200 text-gray-500 hover:border-red-500 hover:text-red-600 dark:border-[#333]"
@@ -284,7 +345,7 @@ function GoalCard({
         )}
       </div>
 
-      <div className="relative h-56 bg-gray-100 sm:h-72 dark:bg-[#101010]">
+      <div className="relative aspect-[4/3] bg-gray-100 sm:aspect-auto sm:h-72 dark:bg-[#101010]">
         <img
           src={goal.image}
           alt={goal.title}
@@ -293,17 +354,17 @@ function GoalCard({
           }}
           className="h-full w-full object-cover"
         />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-white">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white sm:p-5">
           <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-300">
             {goal.brand} / {goal.year}
           </p>
-          <h3 className="mt-1 text-3xl font-black italic tracking-tight">
+          <h3 className="mt-1 line-clamp-2 text-2xl font-black italic tracking-tight sm:text-3xl">
             {goal.model}
           </h3>
         </div>
       </div>
 
-      <div className="space-y-5 p-5">
+      <div className="space-y-4 p-4 sm:space-y-5 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-red-600/20 bg-red-600/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600">
             {t(goal.tagKey)}
@@ -335,7 +396,7 @@ function GoalCard({
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Metric icon={Flame} label={t("community.streak")} value={`${goal.streak}d`} />
           <Metric
             icon={Heart}
@@ -346,12 +407,17 @@ function GoalCard({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-y border-gray-100 py-3 dark:border-[#222]">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ActionButton
               active={liked}
               title={t("community.like")}
               onClick={() => onLike(goal.id)}
               icon={<Heart size={18} fill={liked ? "currentColor" : "none"} />}
+            />
+            <ActionButton
+              title="Comentários"
+              onClick={() => setCommentsOpen(true)}
+              icon={<MessageCircle size={18} />}
             />
             <ActionButton
               title={t("community.share")}
@@ -374,7 +440,16 @@ function GoalCard({
         </div>
 
         <div className="space-y-3">
-          {comments.slice(-3).map((comment, index) => {
+          {comments.length > 2 && (
+            <button
+              type="button"
+              onClick={() => setCommentsOpen(true)}
+              className="text-xs font-black uppercase tracking-widest text-gray-400 transition hover:text-red-600"
+            >
+              Ver todos os {comments.length} comentários
+            </button>
+          )}
+          {previewComments.map((comment, index) => {
             const commentText =
               typeof comment === "string" ? comment : comment.text;
             const commentAuthor =
@@ -391,25 +466,101 @@ function GoalCard({
                     avatarInitials: comment.avatarInitials,
                     userId: comment.userId,
                   };
+            const canEdit =
+              typeof comment !== "string" &&
+              comment.id &&
+              comment.userId === currentUserId;
+            const canDelete =
+              typeof comment !== "string" &&
+              comment.id &&
+              (comment.userId === currentUserId || goal.ownerId === currentUserId);
+            const isEditing = canEdit && editingCommentId === comment.id;
             return (
-            <div key={`${goal.id}-comment-${index}`} className="flex gap-2 text-sm">
+            <div
+              key={`${goal.id}-comment-${comment.id || index}`}
+              className="group flex gap-3 rounded-xl px-1 py-1.5 text-sm transition hover:bg-gray-50 dark:hover:bg-[#101010]"
+            >
               <AvatarButton
                 person={commentPerson}
                 size="sm"
                 onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
               />
-              <div>
-                <button
-                  type="button"
-                  onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
-                  className="text-left text-xs font-black uppercase tracking-widest text-slate-700 transition hover:text-red-600 dark:text-white"
-                >
-                  {commentAuthor}{" "}
-                  <span className="text-gray-400">{commentUsername}</span>
-                </button>
-                <p className="font-medium text-gray-600 dark:text-gray-300">
-                  {commentText}
-                </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
+                    className="min-w-0 truncate text-left text-xs font-black uppercase tracking-widest text-slate-700 transition hover:text-red-600 dark:text-white"
+                  >
+                    {commentAuthor}{" "}
+                    <span className="text-gray-400">{commentUsername}</span>
+                  </button>
+                  {(canEdit || canDelete) && !isEditing && (
+                    <div className="flex shrink-0 items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => startEditComment(comment)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-red-600 dark:hover:bg-[#181818]"
+                          title="Editar comentário"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteComment(goal.id, comment.id)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-red-600 dark:hover:bg-[#181818]"
+                          title="Excluir comentário"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {isEditing ? (
+                  <form
+                    onSubmit={(event) => submitEditComment(event, comment)}
+                    className="mt-2 grid gap-2"
+                  >
+                    <input
+                      value={editingDraft}
+                      onChange={(event) => setEditingDraft(event.target.value)}
+                      className="min-h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                      >
+                        Salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCommentId("");
+                          setEditingDraft("");
+                        }}
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <p className="font-medium text-gray-600 dark:text-gray-300">
+                      {commentText}
+                    </p>
+                    {typeof comment !== "string" && comment.editedAt && (
+                      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        editado
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           );
@@ -437,7 +588,279 @@ function GoalCard({
           </button>
         </form>
       </div>
+
+      {commentsOpen && (
+        <CommentsModal
+          goal={goal}
+          comments={comments}
+          draft={draft}
+          editingCommentId={editingCommentId}
+          editingDraft={editingDraft}
+          commentMenuId={commentMenuId}
+          currentUserId={currentUserId}
+          t={t}
+          onClose={() => setCommentsOpen(false)}
+          onDraftChange={setDraft}
+          onSubmitComment={submitComment}
+          onOpenProfile={onOpenProfile}
+          onStartEditComment={startEditComment}
+          onEditingDraftChange={setEditingDraft}
+          onSubmitEditComment={submitEditComment}
+          onCancelEdit={() => {
+            setEditingCommentId("");
+            setEditingDraft("");
+          }}
+          onDeleteComment={onDeleteComment}
+          onCommentMenuChange={setCommentMenuId}
+        />
+      )}
     </article>
+  );
+}
+
+function CommentsModal({
+  goal,
+  comments,
+  draft,
+  editingCommentId,
+  editingDraft,
+  commentMenuId,
+  currentUserId,
+  t,
+  onClose,
+  onDraftChange,
+  onSubmitComment,
+  onOpenProfile,
+  onStartEditComment,
+  onEditingDraftChange,
+  onSubmitEditComment,
+  onCancelEdit,
+  onDeleteComment,
+  onCommentMenuChange,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5">
+      <section className="flex h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-gray-200 bg-white text-slate-950 shadow-2xl dark:border-[#222] dark:bg-[#111] dark:text-white sm:h-[78vh] sm:rounded-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-[#222] sm:gap-4 sm:px-5 sm:py-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+              Comentários
+            </p>
+            <h2 className="mt-1 line-clamp-2 text-base font-black uppercase italic sm:truncate sm:text-lg">
+              {goal.title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300 sm:h-10 sm:w-10"
+            title="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+          {comments.length ? (
+            <div className="space-y-4">
+              {comments.map((comment, index) => (
+                <CommentRow
+                  key={`${goal.id}-modal-comment-${comment.id || index}`}
+                  goal={goal}
+                  comment={comment}
+                  index={index}
+                  currentUserId={currentUserId}
+                  editingCommentId={editingCommentId}
+                  editingDraft={editingDraft}
+                  commentMenuId={commentMenuId}
+                  t={t}
+                  onOpenProfile={onOpenProfile}
+                  onStartEditComment={onStartEditComment}
+                  onEditingDraftChange={onEditingDraftChange}
+                  onSubmitEditComment={onSubmitEditComment}
+                  onCancelEdit={onCancelEdit}
+                  onDeleteComment={onDeleteComment}
+                  onCommentMenuChange={onCommentMenuChange}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full min-h-64 flex-col items-center justify-center text-center">
+              <MessageCircle className="mb-3 text-gray-400" size={34} />
+              <p className="text-sm font-black uppercase italic text-slate-950 dark:text-white">
+                {t("community.noComments")}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <form
+          onSubmit={onSubmitComment}
+          className="flex gap-2 border-t border-gray-200 p-3 dark:border-[#222] sm:p-4"
+        >
+          <input
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            placeholder={t("community.commentPlaceholder")}
+            className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-bold outline-none transition focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white sm:px-4"
+          />
+          <button
+            type="submit"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white transition hover:bg-red-700"
+            title={t("community.send")}
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function CommentRow({
+  goal,
+  comment,
+  index,
+  currentUserId,
+  editingCommentId,
+  editingDraft,
+  commentMenuId,
+  t,
+  onOpenProfile,
+  onStartEditComment,
+  onEditingDraftChange,
+  onSubmitEditComment,
+  onCancelEdit,
+  onDeleteComment,
+  onCommentMenuChange,
+}) {
+  const commentText = typeof comment === "string" ? comment : comment.text;
+  const commentAuthor =
+    typeof comment === "string" ? t("community.member") : comment.author;
+  const commentUsername = typeof comment === "string" ? "" : comment.username;
+  const commentPerson =
+    typeof comment === "string"
+      ? { author: commentAuthor, username: commentUsername }
+      : {
+          author: commentAuthor,
+          username: commentUsername,
+          avatar: comment.avatar,
+          avatarInitials: comment.avatarInitials,
+          userId: comment.userId,
+        };
+  const canEdit =
+    typeof comment !== "string" &&
+    comment.id &&
+    comment.userId === currentUserId;
+  const canDelete =
+    typeof comment !== "string" &&
+    comment.id &&
+    (comment.userId === currentUserId || goal.ownerId === currentUserId);
+  const isEditing = canEdit && editingCommentId === comment.id;
+
+  return (
+    <div className="group flex gap-3 rounded-xl px-1 py-1.5 text-sm transition hover:bg-gray-50 dark:hover:bg-[#101010]">
+      <AvatarButton
+        person={commentPerson}
+        size="sm"
+        onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
+            className="min-w-0 truncate text-left text-xs font-black uppercase tracking-widest text-slate-700 transition hover:text-red-600 dark:text-white"
+          >
+            {commentAuthor} <span className="text-gray-400">{commentUsername}</span>
+          </button>
+          {(canEdit || canDelete) && !isEditing && (
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() =>
+                  onCommentMenuChange((current) =>
+                    current === comment.id ? "" : comment.id,
+                  )
+                }
+                className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-slate-900 dark:hover:bg-[#181818] dark:hover:text-white"
+                title="Opções"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {commentMenuId === comment.id && (
+                <div className="absolute right-0 top-8 z-20 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl dark:border-[#2a2a2a] dark:bg-[#111]">
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onStartEditComment(comment);
+                        onCommentMenuChange("");
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-[#1a1a1a]"
+                    >
+                      <Edit3 size={14} />
+                      Editar
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDeleteComment(goal.id, comment.id);
+                        onCommentMenuChange("");
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-[#1a1a1a]"
+                    >
+                      <Trash2 size={14} />
+                      Excluir
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {isEditing ? (
+          <form
+            onSubmit={(event) => onSubmitEditComment(event, comment)}
+            className="mt-2 grid gap-2"
+          >
+            <input
+              value={editingDraft}
+              onChange={(event) => onEditingDraftChange(event.target.value)}
+              className="min-h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                className="rounded-lg bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+              >
+                Salvar
+              </button>
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <p className="font-medium text-gray-600 dark:text-gray-300">
+              {commentText}
+            </p>
+            {typeof comment !== "string" && comment.editedAt && (
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                editado
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -748,9 +1171,33 @@ export function Community({ cars = [], settings, user }) {
     [publicProfiles, settings, user],
   );
 
+  const carsById = useMemo(
+    () => new Map(cars.map((car) => [String(car.id), car])),
+    [cars],
+  );
+
   const goals = useMemo(
-    () => communityGoals.map((goal) => enrichGoalProfiles(goal, profiles)),
-    [communityGoals, profiles],
+    () =>
+      communityGoals.map((goal) => {
+        const currentCar =
+          goal.ownerId === user?.uid ? carsById.get(String(goal.carId)) : null;
+        const mergedGoal =
+          currentCar?.model
+            ? {
+                ...goal,
+                title: `${currentCar.brand} ${currentCar.model}`.trim(),
+                brand: currentCar.brand || goal.brand,
+                model: currentCar.model || goal.model,
+                year: currentCar.year || goal.year,
+                image: currentCar.image || goal.image,
+                savedValue: currentCar.savedValue ?? goal.savedValue,
+                targetValue: currentCar.targetValue ?? goal.targetValue,
+              }
+            : goal;
+
+        return enrichGoalProfiles(mergedGoal, profiles);
+      }),
+    [carsById, communityGoals, profiles, user?.uid],
   );
 
   useEffect(() => {
@@ -815,17 +1262,15 @@ export function Community({ cars = [], settings, user }) {
     .sort((a, b) => {
       const aInteractions = communityState.interactions[a.id] || emptyInteraction;
       const bInteractions = communityState.interactions[b.id] || emptyInteraction;
-      const scoreA =
-        getProgress(a) * 2 +
-        (a.likes + (aInteractions.liked ? 1 : 0)) / 12 +
-        (aInteractions.rating || a.rating) * 8 +
-        a.streak;
-      const scoreB =
-        getProgress(b) * 2 +
-        (b.likes + (bInteractions.liked ? 1 : 0)) / 12 +
-        (bInteractions.rating || b.rating) * 8 +
-        b.streak;
-      return scoreB - scoreA;
+      const likesA = Number(a.likes) + (aInteractions.liked ? 1 : 0);
+      const likesB = Number(b.likes) + (bInteractions.liked ? 1 : 0);
+      if (likesB !== likesA) return likesB - likesA;
+
+      const ratingA = aInteractions.rating || a.rating;
+      const ratingB = bInteractions.rating || b.rating;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+
+      return getProgress(b) - getProgress(a);
     })
     .slice(0, 5);
 
@@ -866,6 +1311,21 @@ export function Community({ cars = [], settings, user }) {
       console.error(error),
     );
     flash(t("community.commentSaved"));
+  };
+
+  const handleEditComment = (goalId, commentId, text) => {
+    engineDB.updateCommunityComment(goalId, commentId, text, user?.uid).catch((error) =>
+      console.error(error),
+    );
+    flash("Comentário atualizado.");
+  };
+
+  const handleDeleteComment = (goalId, commentId) => {
+    if (!window.confirm("Excluir este comentário?")) return;
+    engineDB.deleteCommunityComment(goalId, commentId, user?.uid).catch((error) =>
+      console.error(error),
+    );
+    flash("Comentário excluído.");
   };
 
   const handleRate = (goalId, rating) => {
@@ -1204,6 +1664,9 @@ export function Community({ cars = [], settings, user }) {
                   onUnshare={handleUnshareGoal}
                   onFollow={handleFollow}
                   onOpenProfile={handleOpenProfile}
+                  onEditComment={handleEditComment}
+                  onDeleteComment={handleDeleteComment}
+                  currentUserId={user?.uid}
                 />
               ))
             ) : (
@@ -1319,10 +1782,11 @@ function SidebarRanking({ ranking, t }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-slate-950 dark:text-white">
-                {goal.title}
+                {getRankingVehicleLabel(goal)}
+                <span className="font-bold text-gray-400"> / {goal.author}</span>
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                {getProgress(goal).toFixed(0)}% / {goal.likes} likes
+              <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                {goal.username} / {goal.likes} likes / {getProgress(goal).toFixed(0)}%
               </p>
             </div>
           </div>

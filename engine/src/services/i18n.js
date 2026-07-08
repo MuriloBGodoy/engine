@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
+import { supportedLngs } from "./languages";
 
 const resources = {
   "pt-BR": {
@@ -43,9 +44,9 @@ const resources = {
         heroText:
           "Entre, acompanhe suas metas e mantenha sua garagem dos sonhos sempre ao alcance.",
         heroControlTitle: "Conta protegida",
-        heroControlText: "Login Firebase com seus dados separados por usuario.",
-        heroSpeedTitle: "Fluxo rapido",
-        heroSpeedText: "Cadastro, acesso e recuperacao de senha no mesmo padrao.",
+        heroControlText: "Login Firebase com seus dados separados por usuário.",
+        heroSpeedTitle: "Fluxo rápido",
+        heroSpeedText: "Cadastro, acesso e recuperação de senha no mesmo padrão.",
         loginKicker: "Acessar conta",
         registerKicker: "Criar acesso",
         resetKicker: "Redefinir senha",
@@ -58,15 +59,15 @@ const resources = {
         forgotPassword: "Esqueci minha senha",
         forgotPasswordTitle: "Recuperar acesso",
         forgotPasswordSubtitle:
-          "Informe seu e-mail e enviaremos o link de redefinicao.",
+          "Informe seu e-mail e enviaremos o link de redefinição.",
         resetPasswordTitle: "Nova senha",
         resetPasswordSubtitle: "Crie uma senha nova para voltar a acessar sua conta.",
-        resetEmailRequired: "Informe seu e-mail para receber a redefinicao.",
-        resetEmailSent: "Enviamos o link de redefinicao para seu e-mail.",
-        resetEmailError: "Nao foi possivel enviar o e-mail agora.",
-        passwordMismatch: "A confirmacao de senha nao confere.",
+        resetEmailRequired: "Informe seu e-mail para receber a redefinição.",
+        resetEmailSent: "Enviamos o link de redefinição para seu e-mail.",
+        resetEmailError: "Não foi possível enviar o e-mail agora.",
+        passwordMismatch: "A confirmação de senha não confere.",
         passwordResetSuccess: "Senha redefinida. Redirecionando para o login...",
-        passwordResetError: "Link invalido ou expirado. Solicite um novo e-mail.",
+        passwordResetError: "Link inválido ou expirado. Solicite um novo e-mail.",
         newPasswordPlaceholder: "Digite a nova senha",
         confirmPasswordPlaceholder: "Repita a nova senha",
         sendResetEmail: "Enviar link por e-mail",
@@ -78,7 +79,7 @@ const resources = {
         dashboard: "Painel",
         garage: "Garagem",
         community: "Comunidade",
-        services: "Servicos",
+        services: "Serviços",
         settings: "Configurações",
         logout: "Sair",
         collapse: "Recolher menu",
@@ -207,14 +208,14 @@ const resources = {
         saved: "Salvo",
         videoShort: "Short",
         ranges: {
-          entry: "Faixa ate 120k",
+          entry: "Faixa até 120k",
           premium: "Faixa 120k-250k",
           performance: "Faixa 250k-500k",
           elite: "Faixa 500k+",
         },
         seed: {
           premium: "Meta premium",
-          consistency: "Alta constancia",
+          consistency: "Alta constância",
           top: "Top ranking",
           mine: "Sua meta",
           marina:
@@ -235,11 +236,11 @@ const resources = {
         videos: {
           planning: "Diario de planejamento",
           planningCaption:
-            "Espaco para mostrar bastidores da meta, ajustes de rota e pequenas vitorias.",
+            "Espaço para mostrar bastidores da meta, ajustes de rota e pequenas vitórias.",
           progress: "Atualizacao de progresso",
           progressCaption:
-            "Posts curtos para contar o que mudou sem revelar informacoes financeiras sensiveis.",
-          slotTitle: "Espaco para reels da garagem",
+            "Posts curtos para contar o que mudou sem revelar informações financeiras sensíveis.",
+          slotTitle: "Espaço para reels da garagem",
           slotCopy:
             "Aqui cabem vlogs de metas, reviews, antes/depois e conquistas quando o upload real for conectado.",
         },
@@ -284,8 +285,23 @@ const resources = {
         },
         options: {
           portuguese: "Português Brasil",
+          portugueseBrazil: "Português (Brasil)",
+          portuguesePortugal: "Português (Portugal)",
           english: "Inglês EUA",
+          englishUS: "Inglês (Estados Unidos)",
+          englishUK: "Inglês (Reino Unido)",
           spanish: "Espanhol",
+          spanishSpain: "Espanhol (Espanha)",
+          spanishMexico: "Espanhol (México)",
+          spanishArgentina: "Espanhol (Argentina)",
+          germanGermany: "Alemão (Alemanha)",
+          frenchFrance: "Francês (França)",
+          italianItaly: "Italiano (Itália)",
+          japaneseJapan: "Japonês (Japão)",
+          chineseSimplified: "Mandarim simplificado (China)",
+          koreanKorea: "Coreano (Coreia do Sul)",
+          hindiIndia: "Hindi (Índia)",
+          arabicSaudi: "Árabe (Arábia Saudita)",
           dark: "Escuro",
           light: "Claro",
           system: "Sistema",
@@ -625,8 +641,23 @@ const resources = {
         },
         options: {
           portuguese: "Brazilian Portuguese",
+          portugueseBrazil: "Portuguese (Brazil)",
+          portuguesePortugal: "Portuguese (Portugal)",
           english: "English US",
+          englishUS: "English (United States)",
+          englishUK: "English (United Kingdom)",
           spanish: "Spanish",
+          spanishSpain: "Spanish (Spain)",
+          spanishMexico: "Spanish (Mexico)",
+          spanishArgentina: "Spanish (Argentina)",
+          germanGermany: "German (Germany)",
+          frenchFrance: "French (France)",
+          italianItaly: "Italian (Italy)",
+          japaneseJapan: "Japanese (Japan)",
+          chineseSimplified: "Mandarin Chinese (Simplified)",
+          koreanKorea: "Korean (South Korea)",
+          hindiIndia: "Hindi (India)",
+          arabicSaudi: "Arabic (Saudi Arabia)",
           dark: "Dark",
           light: "Light",
           system: "System",
@@ -727,7 +758,7 @@ const resources = {
           "Entra, sigue tus metas y mantén tu garaje soñado siempre al alcance.",
         heroControlTitle: "Cuenta protegida",
         heroControlText: "Login Firebase con tus datos separados por usuario.",
-        heroSpeedTitle: "Flujo rapido",
+        heroSpeedTitle: "Flujo rápido",
         heroSpeedText: "Registro, acceso y recuperacion de contrasena en un patron.",
         loginKicker: "Acceder cuenta",
         registerKicker: "Crear acceso",
@@ -750,7 +781,7 @@ const resources = {
         resetEmailError: "No pudimos enviar el correo ahora.",
         passwordMismatch: "La confirmacion de contrasena no coincide.",
         passwordResetSuccess: "Contrasena restablecida. Redirigiendo al login...",
-        passwordResetError: "Enlace invalido o expirado. Solicita un nuevo correo.",
+        passwordResetError: "Enlace inválido o expirado. Solicita un nuevo correo.",
         newPasswordPlaceholder: "Ingresa la nueva contrasena",
         confirmPasswordPlaceholder: "Repite la nueva contrasena",
         sendResetEmail: "Enviar enlace por correo",
@@ -968,8 +999,23 @@ const resources = {
         },
         options: {
           portuguese: "Portugués de Brasil",
+          portugueseBrazil: "Portugués (Brasil)",
+          portuguesePortugal: "Portugués (Portugal)",
           english: "Inglés de EE. UU.",
+          englishUS: "Inglés (Estados Unidos)",
+          englishUK: "Inglés (Reino Unido)",
           spanish: "Español",
+          spanishSpain: "Español (España)",
+          spanishMexico: "Español (México)",
+          spanishArgentina: "Español (Argentina)",
+          germanGermany: "Alemán (Alemania)",
+          frenchFrance: "Francés (Francia)",
+          italianItaly: "Italiano (Italia)",
+          japaneseJapan: "Japonés (Japón)",
+          chineseSimplified: "Chino mandarín simplificado",
+          koreanKorea: "Coreano (Corea del Sur)",
+          hindiIndia: "Hindi (India)",
+          arabicSaudi: "Árabe (Arabia Saudita)",
           dark: "Oscuro",
           light: "Claro",
           system: "Sistema",
@@ -1032,15 +1078,41 @@ const resources = {
   },
 };
 
+resources["pt-PT"] = resources["pt-BR"];
+resources["en-GB"] = resources["en-US"];
+resources["es-MX"] = resources["es-ES"];
+resources["es-AR"] = resources["es-ES"];
+resources["de-DE"] = resources["en-US"];
+resources["fr-FR"] = resources["en-US"];
+resources["it-IT"] = resources["en-US"];
+resources["ja-JP"] = resources["en-US"];
+resources["zh-CN"] = resources["en-US"];
+resources["ko-KR"] = resources["en-US"];
+resources["hi-IN"] = resources["en-US"];
+resources["ar-SA"] = resources["en-US"];
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
-    lng: "pt-BR", // ◄ Adicione isso temporariamente para FORÇAR o teste em português
-    fallbackLng: "pt-BR",
-    supportedLngs: ["pt-BR", "en-US", "es-ES"],
-    load: "currentOnly", // ◄ Evita que "pt-BR" seja reduzido para procurar apenas "pt"
+    fallbackLng: {
+      "pt-PT": ["pt-BR"],
+      "en-GB": ["en-US"],
+      "es-MX": ["es-ES"],
+      "es-AR": ["es-ES"],
+      "de-DE": ["en-US"],
+      "fr-FR": ["en-US"],
+      "it-IT": ["en-US"],
+      "ja-JP": ["en-US"],
+      "zh-CN": ["en-US"],
+      "ko-KR": ["en-US"],
+      "hi-IN": ["en-US"],
+      "ar-SA": ["en-US"],
+      default: ["pt-BR"],
+    },
+    supportedLngs,
+    load: "currentOnly",
     interpolation: {
       escapeValue: false,
     },

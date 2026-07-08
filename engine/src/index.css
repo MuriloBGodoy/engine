@@ -19,6 +19,43 @@ body {
   overflow-x: hidden;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+}
+
+* {
+  min-width: 0;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  h1,
+  h2,
+  h3,
+  p,
+  span,
+  button,
+  a {
+    overflow-wrap: anywhere;
+  }
+}
+
 .auth-screen {
   display: flex;
   min-height: 100vh;
@@ -397,4 +434,37 @@ body {
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+.engine-chip-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.72) rgba(148, 163, 184, 0.18);
+  scrollbar-width: thin;
+}
+
+.engine-chip-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.engine-chip-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.engine-chip-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: rgba(148, 163, 184, 0.72);
+}
+
+.engine-chip-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.92);
+}
+
+.dark .engine-chip-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.65) rgba(255, 255, 255, 0.1);
+}
+
+.dark .engine-chip-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.11);
 }

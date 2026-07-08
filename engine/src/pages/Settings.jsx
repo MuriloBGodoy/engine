@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { engineDB } from "../services/db";
 import { storage } from "../services/firebase";
+import { languageOptions } from "../services/languages";
 
 const inputClass =
   "w-full rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-4 py-3 text-slate-950 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none transition-colors focus:border-red-600 dark:focus:border-red-500";
@@ -610,15 +611,11 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                         updateGroup("preferences", "language", e.target.value)
                       }
                     >
-                      <option value="pt-BR">
-                        {t("settings.options.portuguese")}
-                      </option>
-                      <option value="en-US">
-                        {t("settings.options.english")}
-                      </option>
-                      <option value="es-ES">
-                        {t("settings.options.spanish")}
-                      </option>
+                      {languageOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {t(option.labelKey)}
+                        </option>
+                      ))}
                     </select>
                   </Field>
                   <Field label={t("settings.fields.currency")}>

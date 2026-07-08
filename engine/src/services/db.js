@@ -70,6 +70,8 @@ const PUBLIC_PROFILES_COLLECTION = "publicProfiles";
 const SERVICE_LISTINGS_COLLECTION = "serviceListings";
 const SERVICE_STATUS_APPROVED = "approved";
 const SERVICE_STATUS_PENDING = "pending";
+const SERVICE_STATUS_CHANGES_REQUESTED = "changes_requested";
+const SERVICE_STATUS_REJECTED = "rejected";
 const FIRESTORE_TIMEOUT_MS = 7000;
 const ENGINE_API_URL = import.meta.env.VITE_API_URL || "";
 const defaultCommunityState = {
@@ -411,12 +413,14 @@ const normalizeCommunityGoal = (goal = {}) => {
         ? { text: comment, author: "Engine", username: "@engine" }
         : {
             text: comment.text,
+            id: comment.id || comment.createdAt || crypto.randomUUID(),
             author: comment.author || "Usuário Engine",
             username: comment.username || "@engine",
             avatar: comment.avatar || comment.avatarInitials || "",
             avatarInitials: comment.avatarInitials || "",
             userId: comment.userId || "",
             createdAt: comment.createdAt || "",
+            editedAt: comment.editedAt || "",
           },
     ),
     rating: rating || 0,
@@ -484,12 +488,28 @@ const normalizeServiceListing = (listing = {}) => {
           .filter(Boolean)
           .slice(0, 6)
       : [],
-    moderationStatus: ["approved", "pending", "rejected"].includes(
+    moderationStatus: [
+      SERVICE_STATUS_APPROVED,
+      SERVICE_STATUS_PENDING,
+      SERVICE_STATUS_CHANGES_REQUESTED,
+      SERVICE_STATUS_REJECTED,
+    ].includes(
       listing.moderationStatus,
     )
       ? listing.moderationStatus
       : SERVICE_STATUS_PENDING,
-    moderationNote: String(listing.moderationNote || "").trim().slice(0, 280),
+    moderationNote: String(listing.moderationNote || "").trim().slice(0, 600),
+    moderationHistory: Array.isArray(listing.moderationHistory)
+      ? listing.moderationHistory
+          .map((entry) => ({
+            status: String(entry?.status || "").trim(),
+            note: String(entry?.note || "").trim().slice(0, 600),
+            reviewerId: String(entry?.reviewerId || entry?.reviewedBy || "").trim(),
+            reviewedAt: entry?.reviewedAt || entry?.createdAt || "",
+          }))
+          .filter((entry) => entry.status)
+          .slice(0, 20)
+      : [],
     reviewedBy: String(listing.reviewedBy || "").trim(),
     reviewedAt: listing.reviewedAt || "",
     submittedAt: listing.submittedAt || listing.createdAt || new Date().toISOString(),
@@ -870,12 +890,13 @@ export const engineDB = {
     const isAdmin = Boolean(options.isAdmin);
     const profile = getProfileSnapshot(settings, userId);
     const existingStatus = listing.moderationStatus || SERVICE_STATUS_PENDING;
-    const moderationStatus = isAdmin && existingStatus === SERVICE_STATUS_APPROVED
-      ? SERVICE_STATUS_APPROVED
-      : SERVICE_STATUS_PENDING;
+    const moderationStatus =
+      isAdmin && existingStatus === SERVICE_STATUS_APPROVED
+        ? SERVICE_STATUS_APPROVED
+        : SERVICE_STATUS_PENDING;
     const normalized = normalizeServiceListing({
       ...listing,
-      ownerId: userId,
+      ownerId: isAdmin && listing.ownerId ? listing.ownerId : userId,
       providerName: listing.providerName || profile.author,
       city: listing.city || profile.city,
       email: listing.email || auth.currentUser?.email || "",
@@ -917,36 +938,100 @@ export const engineDB = {
 
   async moderateServiceListing(listingId, status, note = "", reviewerId = currentUserId) {
     if (!listingId || !reviewerId) return;
-    if (!["approved", "rejected"].includes(status)) {
+    if (
+      ![
+        SERVICE_STATUS_APPROVED,
+        SERVICE_STATUS_CHANGES_REQUESTED,
+        SERVICE_STATUS_REJECTED,
+      ].includes(status)
+    ) {
       throw new Error("Status de moderacao invalido.");
     }
 
     const listingRef = doc(firestore, SERVICE_LISTINGS_COLLECTION, String(listingId));
-    const listingSnapshot = await getDoc(listingRef);
-    const listing = listingSnapshot.exists()
+    const listingSnapshot = await getDoc(listingRef).catch((error) => {
+      warnFirestoreFallback("moderateServiceListing.get", error);
+      return null;
+    });
+    const listing = listingSnapshot?.exists()
       ? normalizeServiceListing({ id: listingSnapshot.id, ...listingSnapshot.data() })
-      : null;
+      : ((await get("engine_service_listings")) || [])
+          .map(normalizeServiceListing)
+          .find((item) => item.id === String(listingId));
+    const cleanNote = String(note || "").trim().slice(0, 600);
+    const reviewedAt = new Date().toISOString();
+    const historyEntry = {
+      status,
+      note: cleanNote,
+      reviewerId,
+      reviewedAt,
+    };
     const patch = {
       moderationStatus: status,
-      moderationNote: String(note || "").trim().slice(0, 280),
+      moderationNote: cleanNote,
       reviewedBy: reviewerId,
-      reviewedAt: new Date().toISOString(),
+      reviewedAt,
       updatedAt: serverTimestamp(),
     };
 
-    await updateDoc(listingRef, patch);
+    try {
+      await updateDoc(listingRef, {
+        ...patch,
+        moderationHistory: arrayUnion(historyEntry),
+      });
+    } catch (error) {
+      warnFirestoreFallback("moderateServiceListing.update", error);
+    }
+
+    const localListings = (await get("engine_service_listings")) || [];
+    const localIndex = localListings.findIndex((item) => item.id === String(listingId));
+    if (localIndex >= 0) {
+      localListings[localIndex] = normalizeServiceListing({
+        ...localListings[localIndex],
+        ...patch,
+        updatedAt: reviewedAt,
+        moderationHistory: [
+          ...(localListings[localIndex].moderationHistory || []),
+          historyEntry,
+        ],
+      });
+      await set("engine_service_listings", localListings);
+    }
 
     if (listing?.ownerId) {
+      const notificationType =
+        status === SERVICE_STATUS_APPROVED
+          ? "service_approved"
+          : status === SERVICE_STATUS_CHANGES_REQUESTED
+            ? "service_changes_requested"
+            : "service_rejected";
+      const notificationText =
+        status === SERVICE_STATUS_APPROVED
+          ? `Seu anuncio ${listing.title} foi aprovado e publicado.`
+          : status === SERVICE_STATUS_CHANGES_REQUESTED
+            ? `Seu anuncio ${listing.title} voltou para ajustes.`
+            : `Seu anuncio ${listing.title} foi recusado.`;
+
       await this.notifyUser(listing.ownerId, {
-        type: status === "approved" ? "service_approved" : "service_rejected",
+        type: notificationType,
         actorId: reviewerId,
         serviceId: String(listingId),
         serviceTitle: listing.title,
         moderationNote: patch.moderationNote,
-        text:
-          status === "approved"
-            ? `Seu anuncio ${listing.title} foi aprovado e publicado.`
-            : `Seu anuncio ${listing.title} precisa de ajustes.`,
+        targetPath: "/services",
+        notificationTitle:
+          status === SERVICE_STATUS_APPROVED
+            ? "Anúncio aprovado"
+            : status === SERVICE_STATUS_CHANGES_REQUESTED
+              ? "Alterações solicitadas"
+              : "Anúncio recusado",
+        notificationBody:
+          status === SERVICE_STATUS_APPROVED
+            ? "Seu anúncio foi publicado."
+            : status === SERVICE_STATUS_CHANGES_REQUESTED
+              ? "Revise os comentários do admin."
+              : "Confira o motivo enviado pelo admin.",
+        text: notificationText,
       });
     }
   },
@@ -1151,6 +1236,9 @@ export const engineDB = {
       actorId: currentUserId,
       actorName: actor.author,
       actorUsername: actor.username,
+      targetPath: "/community",
+      notificationTitle: "Novo seguidor",
+      notificationBody: `${actor.author} começou a seguir sua garagem.`,
       text: `${actor.author} comecou a seguir sua garagem.`,
     });
   },
@@ -1233,6 +1321,9 @@ export const engineDB = {
         actorUsername: actor.username,
         goalId,
         goalTitle: goalData.title,
+        targetPath: `/community?goal=${encodeURIComponent(goalId)}`,
+        notificationTitle: "Nova curtida",
+        notificationBody: `${actor.author} curtiu sua publicação.`,
         text: `${actor.author} curtiu sua meta ${goalData.title}.`,
       });
     }
@@ -1251,9 +1342,11 @@ export const engineDB = {
     const goalData = goal.exists() ? goal.data() : null;
     const actorSettings = await this.getSettings();
     const actor = getProfileSnapshot(actorSettings, userId);
+    const commentId = crypto.randomUUID();
 
     await updateDoc(goalRef, {
       comments: arrayUnion({
+        id: commentId,
         userId,
         author: actor.author,
         username: actor.username,
@@ -1273,9 +1366,59 @@ export const engineDB = {
         actorUsername: actor.username,
         goalId,
         goalTitle: goalData.title,
+        commentId,
+        targetPath: `/community?goal=${encodeURIComponent(goalId)}`,
+        notificationTitle: "Novo comentário",
+        notificationBody: `${actor.author} comentou na sua publicação.`,
         text: `${actor.author} comentou na sua meta ${goalData.title}.`,
       });
     }
+  },
+
+  async updateCommunityComment(goalId, commentId, text, userId = currentUserId) {
+    if (!userId || !goalId || !commentId) return;
+
+    const goalRef = doc(firestore, COMMUNITY_COLLECTION, String(goalId));
+    const snapshot = await getDoc(goalRef);
+    if (!snapshot.exists()) return;
+
+    const comments = Array.isArray(snapshot.data().comments)
+      ? snapshot.data().comments
+      : [];
+    const updatedComments = comments.map((comment) => {
+      if (comment?.id !== commentId || comment?.userId !== userId) return comment;
+      return {
+        ...comment,
+        text: String(text || "").trim().slice(0, 180),
+        editedAt: new Date().toISOString(),
+      };
+    });
+
+    await updateDoc(goalRef, {
+      comments: updatedComments,
+      updatedAt: serverTimestamp(),
+    });
+  },
+
+  async deleteCommunityComment(goalId, commentId, userId = currentUserId) {
+    if (!userId || !goalId || !commentId) return;
+
+    const goalRef = doc(firestore, COMMUNITY_COLLECTION, String(goalId));
+    const snapshot = await getDoc(goalRef);
+    if (!snapshot.exists()) return;
+
+    const goalData = snapshot.data();
+    const comments = Array.isArray(goalData.comments) ? goalData.comments : [];
+    const updatedComments = comments.filter(
+      (comment) =>
+        comment?.id !== commentId ||
+        (comment?.userId !== userId && goalData.ownerId !== userId),
+    );
+
+    await updateDoc(goalRef, {
+      comments: updatedComments,
+      updatedAt: serverTimestamp(),
+    });
   },
 
   async rateCommunityGoal(goalId, rating, userId = currentUserId) {
@@ -1305,6 +1448,9 @@ export const engineDB = {
         actorUsername: actor.username,
         goalId,
         goalTitle: goalData.title,
+        targetPath: `/community?goal=${encodeURIComponent(goalId)}`,
+        notificationTitle: "Nova avaliação",
+        notificationBody: `${actor.author} avaliou sua publicação.`,
         text: `${actor.author} avaliou sua meta ${goalData.title}.`,
       });
     }

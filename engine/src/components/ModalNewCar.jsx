@@ -135,11 +135,11 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
     setError("");
 
     const brandName =
-      brands.find((b) => b.codigo === selectedBrand)?.nome ||
+      brands.find((b) => String(b.codigo) === String(selectedBrand))?.nome ||
       carToEdit?.brand ||
       "";
     const modelName =
-      models.find((m) => m.codigo === selectedModel)?.nome ||
+      models.find((m) => String(m.codigo) === String(selectedModel))?.nome ||
       carToEdit?.model ||
       "";
 
@@ -150,7 +150,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       brand: brandName,
       model: modelName,
       year:
-        years.find((y) => y.codigo === selectedYear)?.nome ||
+        years.find((y) => String(y.codigo) === String(selectedYear))?.nome ||
         carToEdit?.year ||
         "",
       targetValue: targetValue,

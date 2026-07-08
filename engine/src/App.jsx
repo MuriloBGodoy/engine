@@ -16,7 +16,7 @@ import { Garagem } from "./pages/Garagem";
 import { DashboardPage } from "./pages/DashboardPage";
 import { Settings } from "./pages/Settings";
 import { Community } from "./pages/Community";
-import { Services } from "./pages/Services";
+import { ServiceApprovals, Services } from "./pages/Services";
 
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -156,7 +156,7 @@ function App() {
           privacySettings={settings.privacy}
         />
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4 pb-24 sm:p-6 sm:pb-24 lg:h-screen lg:p-10">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-3 py-4 pb-28 sm:p-6 sm:pb-24 lg:h-screen lg:p-10">
           {/* Renderiza a Topbar rápida global após carregar o banco */}
           {!dbLoading && (
             <Topbar settings={settings} onSettingsUpdate={setSettings} user={user} />
@@ -167,7 +167,7 @@ function App() {
               {t("common.loading")}
             </div>
           ) : (
-            <div className="mt-4 flex-1">
+            <div className="mt-3 flex-1 sm:mt-4">
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route
@@ -195,6 +195,10 @@ function App() {
                 <Route
                   path="/services"
                   element={<Services settings={settings} user={user} />}
+                />
+                <Route
+                  path="/services/approvals"
+                  element={<ServiceApprovals user={user} />}
                 />
                 <Route
                   path="/settings"

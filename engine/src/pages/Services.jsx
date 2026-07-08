@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BriefcaseBusiness,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock,
   Edit3,
   ExternalLink,
   Filter,
+  Gauge,
   ImagePlus,
-  LockKeyhole,
-  Mail,
   MapPin,
+  Maximize2,
   Navigation,
-  Phone,
   Plus,
+  RotateCcw,
   Search,
   ShieldCheck,
   Sparkles,
@@ -22,7 +25,15 @@ import {
   Wrench,
   X,
   XCircle,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
+import {
+  DeleteOutlineOutlined,
+  EmailOutlined,
+  MapOutlined,
+  WhatsApp,
+} from "@mui/icons-material";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { engineDB } from "../services/db";
 import { storage } from "../services/firebase";
@@ -93,10 +104,18 @@ const modeCopy = {
   hybrid: "Mostra mapa do local e também a região de deslocamento.",
 };
 
+const modeFilters = [
+  { value: "all", label: "Todos" },
+  { value: "hybrid", label: "Local e externo" },
+  { value: "mobile", label: "Vai até você" },
+  { value: "place", label: "Local físico" },
+];
+
 const statusLabels = {
   approved: "Aprovado",
   pending: "Em análise",
-  rejected: "Ajustes necessários",
+  changes_requested: "Ajustes necessários",
+  rejected: "Recusado",
 };
 
 const fallbackPhoto =
@@ -256,12 +275,30 @@ const getMapUrl = (listing) =>
 const getDirectionsUrl = (listing) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery(listing))}`;
 
+const getSellerProfile = (settings, user) => {
+  const profile = settings?.profile || {};
+  const displayName =
+    profile.displayName ||
+    user?.displayName ||
+    String(user?.email || "").split("@")[0] ||
+    "Usuario Engine";
+
+  return {
+    displayName,
+    username: profile.username || "",
+    city: profile.location || "",
+    phone: profile.phone || "",
+    avatar: profile.avatar || user?.photoURL || "",
+    email: user?.email || "",
+  };
+};
+
 const makeInitialForm = (settings, user) => ({
   ...emptyForm,
-  providerName: settings?.profile?.displayName || user?.displayName || "",
-  city: settings?.profile?.location || "",
-  ...splitStoredPhone(settings?.profile?.phone || ""),
-  email: user?.email || "",
+  providerName: getSellerProfile(settings, user).displayName,
+  city: getSellerProfile(settings, user).city,
+  ...splitStoredPhone(getSellerProfile(settings, user).phone),
+  email: getSellerProfile(settings, user).email,
 });
 
 function Field({ label, children, wide = false }) {
@@ -306,8 +343,11 @@ function StatusBadge({ status }) {
   const styles = {
     approved: "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
     pending: "border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    changes_requested: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-300",
     rejected: "border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-300",
   };
+  const Icon =
+    status === "approved" ? CheckCircle2 : status === "rejected" ? XCircle : Clock;
 
   return (
     <span
@@ -315,169 +355,598 @@ function StatusBadge({ status }) {
         styles[status] || styles.pending
       }`}
     >
-      {status === "approved" ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+      <Icon size={13} />
       {statusLabels[status] || statusLabels.pending}
     </span>
   );
 }
 
-function ServiceCard({ listing, isMine, onEdit, onDelete }) {
+function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
   const ModeIcon = modeIcons[listing.serviceMode] || BriefcaseBusiness;
   const phone = normalizeWhatsApp(listing.whatsapp);
   const photos = listing.photos?.length ? listing.photos : [fallbackPhoto];
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const showMap = hasMapAddress(listing);
+  const stopAction = (event) => event.stopPropagation();
+  const activePhoto = photos[activePhotoIndex] || photos[0];
+
+  useEffect(() => {
+    setActivePhotoIndex(0);
+  }, [listing.id]);
+
+  const movePhoto = (event, direction) => {
+    stopAction(event);
+    setActivePhotoIndex((current) =>
+      (current + direction + photos.length) % photos.length,
+    );
+  };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl transition hover:-translate-y-0.5 hover:border-red-500/40 dark:border-[#222] dark:bg-[#151515] dark:shadow-none">
-      <div className="relative h-56 bg-gray-100 sm:h-72 dark:bg-[#101010]">
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(listing)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(listing);
+        }
+      }}
+      className="group flex min-h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:border-red-500/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:border-[#222] dark:bg-[#151515] dark:shadow-none"
+    >
+      <div className="relative aspect-[4/3] bg-gray-100 sm:aspect-[16/10] dark:bg-[#101010]">
         <img
-          src={photos[0]}
+          src={activePhoto}
           alt={listing.title}
           onError={(event) => {
             event.currentTarget.src = fallbackPhoto;
           }}
           className="h-full w-full object-cover"
         />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-5 text-white">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-widest">
-              {listing.category}
-            </span>
-            {isMine && <StatusBadge status={listing.moderationStatus} />}
-          </div>
-          <h2 className="text-3xl font-black uppercase italic tracking-tight">
-            {listing.title}
-          </h2>
-        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/75 to-transparent" />
+        <span className="absolute left-3 top-3 max-w-[calc(100%-5.75rem)] truncate rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+          {listing.category}
+        </span>
         {photos.length > 1 && (
-          <div className="absolute right-4 top-4 rounded-full bg-black/65 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur">
-            {photos.length} fotos
-          </div>
-        )}
-      </div>
-
-      <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0 space-y-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex min-w-0 gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 font-black italic text-white dark:bg-red-600">
-                {getInitials(listing.providerName || listing.title)}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
-                  {listing.providerName || "Profissional Engine"}
-                </p>
-                <p className="mt-1 truncate text-xs font-bold uppercase tracking-widest text-gray-400">
-                  {listing.city || "Online"} / {listing.serviceArea || modeLabels[listing.serviceMode]}
-                </p>
-              </div>
+          <>
+            <div className="absolute right-3 top-3 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur">
+              {activePhotoIndex + 1}/{photos.length}
             </div>
-            {isMine && (
-              <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={(event) => movePhoto(event, -1)}
+              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-red-600 sm:left-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+              title="Foto anterior"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => movePhoto(event, 1)}
+              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-red-600 sm:right-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+              title="Proxima foto"
+            >
+              <ChevronRight size={18} />
+            </button>
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+              {photos.map((photo, index) => (
                 <button
+                  key={`${listing.id}-photo-dot-${photo}-${index}`}
                   type="button"
-                  onClick={() => onEdit(listing)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
-                  title="Editar anúncio"
-                >
-                  <Edit3 size={17} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(listing)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
-                  title="Excluir anúncio"
-                >
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {photos.length > 1 && (
-            <div className="hide-scrollbar flex gap-2 overflow-x-auto">
-              {photos.slice(1).map((photo) => (
-                <img
-                  key={photo}
-                  src={photo}
-                  alt=""
-                  className="h-16 w-24 shrink-0 rounded-lg object-cover"
+                  onClick={(event) => {
+                    stopAction(event);
+                    setActivePhotoIndex(index);
+                  }}
+                  className={`h-1.5 rounded-full transition ${
+                    index === activePhotoIndex ? "w-6 bg-white" : "w-1.5 bg-white/45"
+                  }`}
+                  title={`Ver foto ${index + 1}`}
                 />
               ))}
             </div>
+          </>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-4 p-3.5 sm:p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="line-clamp-2 text-base font-black uppercase italic leading-5 tracking-tight text-slate-950 sm:text-lg sm:leading-6 dark:text-white">
+              {listing.title}
+            </h2>
+            <p className="mt-1 truncate text-xs font-black uppercase tracking-widest text-gray-400">
+              {listing.providerName || "Profissional Engine"}
+            </p>
+          </div>
+          {isMine && (
+            <div className="flex shrink-0 gap-1.5">
+              <button
+                type="button"
+                onClick={(event) => {
+                  stopAction(event);
+                  onEdit(listing);
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
+                title="Editar anúncio"
+              >
+                <Edit3 size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  stopAction(event);
+                  onDelete(listing);
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
+                title="Excluir anúncio"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           )}
+        </div>
 
-          <p className="text-sm font-medium leading-7 text-gray-600 dark:text-gray-300">
-            {listing.description}
+        <p className="line-clamp-3 min-h-[4.5rem] text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">
+          {listing.description}
+        </p>
+
+        <div className="grid gap-2 text-xs font-bold text-gray-500 dark:text-gray-400">
+          <p className="flex min-w-0 items-center gap-2">
+            <ModeIcon className="shrink-0 text-red-500" size={16} />
+            <span className="truncate">{modeLabels[listing.serviceMode]}</span>
           </p>
+          <p className="flex min-w-0 items-center gap-2">
+            <MapPin className="shrink-0 text-emerald-500" size={16} />
+            <span className="truncate">
+              {listing.city || listing.serviceArea || "Atendimento a combinar"}
+            </span>
+          </p>
+          <p className="flex min-w-0 items-center gap-2">
+            <Clock className="shrink-0 text-amber-500" size={16} />
+            <span className="truncate">{listing.availability || "Agenda a combinar"}</span>
+          </p>
+          {listing.experience && (
+            <p className="flex min-w-0 items-center gap-2">
+              <Gauge className="shrink-0 text-sky-500" size={16} />
+              <span className="truncate">{listing.experience}</span>
+            </p>
+          )}
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <InfoPill icon={ModeIcon} label="Atendimento" value={modeLabels[listing.serviceMode]} tone="red" />
-            <InfoPill icon={Clock} label="Agenda" value={listing.availability || "A combinar"} tone="amber" />
-            <InfoPill icon={ShieldCheck} label="Status" value={statusLabels[listing.moderationStatus]} tone="emerald" />
+        <div className="mt-auto space-y-3">
+          <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-[#242424]">
+            <p className="min-w-0 truncate text-base font-black italic text-red-600">
+              {listing.price || "Sob consulta"}
+            </p>
+            {isMine ? <StatusBadge status={listing.moderationStatus} /> : null}
           </div>
 
+          {isMine && listing.moderationNote && (
+            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold leading-5 text-red-600 dark:text-red-300">
+              {listing.moderationNote}
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-2">
-            {(listing.tags || []).map((tag) => (
+            {(listing.tags || []).slice(0, 3).map((tag) => (
               <span
                 key={`${listing.id}-${tag}`}
-                className="rounded-full border border-gray-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333] dark:text-gray-400"
+                className="rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333] dark:text-gray-400"
               >
                 {tag}
               </span>
             ))}
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <ContactButton
-              disabled={!phone}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            <a
               href={phone ? `https://wa.me/${phone}` : undefined}
-              icon={Phone}
-              label="Chamar no WhatsApp"
-              value={listing.whatsapp || "Sem número"}
-            />
-            <ContactButton
-              disabled={!listing.email}
+              onClick={stopAction}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!phone}
+              aria-label="Chamar no WhatsApp"
+              className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
+                phone
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "pointer-events-none bg-gray-100 text-gray-400 dark:bg-[#101010]"
+              }`}
+              title="Chamar no WhatsApp"
+            >
+              <WhatsApp className="shrink-0" sx={{ fontSize: 20 }} />
+            </a>
+            <a
               href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(`Contato pelo Engine: ${listing.title}`)}` : undefined}
-              icon={Mail}
-              label="Enviar e-mail"
-              value={listing.email || "Sem e-mail"}
-            />
+              onClick={stopAction}
+              aria-disabled={!listing.email}
+              aria-label="Enviar e-mail"
+              className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
+                listing.email
+                  ? "bg-slate-950 text-white hover:bg-red-600 dark:bg-[#262626] dark:hover:bg-red-600"
+                  : "pointer-events-none bg-gray-100 text-gray-400 dark:bg-[#101010]"
+              }`}
+              title="Enviar e-mail"
+            >
+              <EmailOutlined className="shrink-0" sx={{ fontSize: 20 }} />
+            </a>
+            <a
+              href={showMap ? getDirectionsUrl(listing) : undefined}
+              onClick={stopAction}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!showMap}
+              aria-label="Ver rota no mapa"
+              className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
+                showMap
+                  ? "border border-gray-200 text-gray-600 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                  : "pointer-events-none bg-gray-100 text-gray-400 dark:bg-[#101010]"
+              }`}
+              title="Ver rota"
+            >
+              <MapOutlined className="shrink-0" sx={{ fontSize: 20 }} />
+            </a>
           </div>
         </div>
-
-        <aside className="grid gap-3">
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-[#262626] dark:bg-[#101010]">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              Localização e preço
-            </p>
-            <p className="mt-2 flex items-start gap-2 text-sm font-black text-slate-950 dark:text-white">
-              <MapPin className="mt-0.5 shrink-0 text-red-500" size={17} />
-              <span>{mapQuery(listing) || listing.serviceArea || "Atendimento remoto ou a combinar"}</span>
-            </p>
-            <p className="mt-3 text-2xl font-black italic text-red-600">
-              {listing.price || "Orçamento sob consulta"}
-            </p>
-            {listing.experience && (
-              <p className="mt-2 text-xs font-bold leading-5 text-gray-500 dark:text-gray-400">
-                {listing.experience}
-              </p>
-            )}
-          </div>
-
-          {showMap ? (
-            <MapPreview listing={listing} compact />
-          ) : (
-            <div className="flex min-h-44 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5 text-center dark:border-[#333] dark:bg-[#101010]">
-              <Navigation className="mb-3 text-sky-500" size={30} />
-              <p className="text-xs font-black uppercase tracking-widest text-gray-500">
-                {listing.serviceArea || "Atende onde o cliente precisar"}
-              </p>
-            </div>
-          )}
-        </aside>
       </div>
     </article>
+  );
+}
+
+function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  useEffect(() => {
+    setActivePhotoIndex(0);
+    setLightboxOpen(false);
+    setZoom(1);
+  }, [listing?.id]);
+
+  if (!listing) return null;
+
+  const ModeIcon = modeIcons[listing.serviceMode] || BriefcaseBusiness;
+  const phone = normalizeWhatsApp(listing.whatsapp);
+  const photos = listing.photos?.length ? listing.photos : [fallbackPhoto];
+  const activePhoto = photos[activePhotoIndex] || photos[0];
+  const showMap = hasMapAddress(listing);
+  const movePhoto = (direction) => {
+    setActivePhotoIndex((current) =>
+      (current + direction + photos.length) % photos.length,
+    );
+    setZoom(1);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5">
+      <section className="h-[100dvh] w-full max-w-6xl overflow-y-auto rounded-none border-0 border-gray-200 bg-white text-slate-950 shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl sm:border dark:border-[#222] dark:bg-[#111] dark:text-white">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-200 bg-white/95 px-3 py-3 backdrop-blur dark:border-[#222] dark:bg-[#111]/95 sm:gap-4 sm:px-6 sm:py-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-red-500">
+              {listing.category}
+            </p>
+            <h2 className="mt-1 line-clamp-2 text-lg font-black uppercase italic tracking-tight sm:truncate sm:text-2xl">
+              {listing.title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300 sm:h-10 sm:w-10"
+            title="Fechar"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="grid gap-5 p-3 pb-28 sm:gap-6 sm:p-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
+          <div className="min-w-0 space-y-5">
+            <div className="relative overflow-hidden rounded-xl bg-gray-100 dark:bg-[#080808]">
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="block w-full cursor-zoom-in"
+                title="Ampliar foto"
+              >
+                <img
+                  src={activePhoto}
+                  alt={listing.title}
+                  onError={(event) => {
+                    event.currentTarget.src = fallbackPhoto;
+                  }}
+                  className="aspect-[4/3] w-full object-cover sm:aspect-[16/9]"
+                />
+              </button>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/75 to-transparent" />
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-red-600 sm:right-4 sm:top-4 sm:h-10 sm:w-10"
+                title="Abrir visualizacao"
+              >
+                <Maximize2 size={18} />
+              </button>
+              {photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => movePhoto(-1)}
+                    className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-red-600 sm:left-4"
+                    title="Foto anterior"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => movePhoto(1)}
+                    className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-red-600 sm:right-4"
+                    title="Proxima foto"
+                  >
+                    <ChevronRight size={22} />
+                  </button>
+                  <div className="absolute bottom-4 right-4 rounded-full bg-black/65 px-3 py-1 text-xs font-black uppercase tracking-widest text-white backdrop-blur">
+                    {activePhotoIndex + 1}/{photos.length}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {photos.length > 1 && (
+              <div className="engine-chip-scroll -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
+                {photos.map((photo, index) => (
+                  <button
+                    key={`${listing.id}-detail-photo-${photo}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      setActivePhotoIndex(index);
+                      setZoom(1);
+                    }}
+                    className={`relative h-18 w-24 shrink-0 overflow-hidden rounded-lg border transition sm:h-24 sm:w-36 ${
+                      index === activePhotoIndex
+                        ? "border-red-500 ring-2 ring-red-500/25"
+                        : "border-transparent opacity-70 hover:opacity-100"
+                    }`}
+                    title={`Ver foto ${index + 1}`}
+                  >
+                    <img
+                      src={photo}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Descrição
+              </p>
+              <p className="mt-2 whitespace-pre-line text-sm font-medium leading-7 text-gray-600 dark:text-gray-300">
+                {listing.description}
+              </p>
+            </div>
+
+            {(listing.tags || []).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {listing.tags.map((tag) => (
+                  <span
+                    key={`${listing.id}-detail-${tag}`}
+                    className="rounded-full border border-gray-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333] dark:text-gray-400"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {showMap && <MapPreview listing={listing} />}
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-[#262626] dark:bg-[#151515]">
+              <div className="flex min-w-0 gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 font-black italic text-white dark:bg-red-600">
+                  {getInitials(listing.providerName || listing.title)}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black uppercase italic">
+                    {listing.providerName || "Profissional Engine"}
+                  </p>
+                  <p className="mt-1 truncate text-xs font-bold uppercase tracking-widest text-gray-400">
+                    {listing.city || "Online"}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-5 text-2xl font-black italic text-red-600">
+                {listing.price || "Orçamento sob consulta"}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <InfoPill icon={ModeIcon} label="Atendimento" value={modeLabels[listing.serviceMode]} tone="red" />
+              <InfoPill icon={Clock} label="Agenda" value={listing.availability || "A combinar"} tone="amber" />
+              {listing.experience && (
+                <InfoPill icon={Gauge} label="Experiência" value={listing.experience} tone="sky" />
+              )}
+              <InfoPill icon={ShieldCheck} label="Status" value={statusLabels[listing.moderationStatus]} tone="emerald" />
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#262626] dark:bg-[#151515]">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Localização
+              </p>
+              <p className="mt-2 flex items-start gap-2 text-sm font-black">
+                <MapPin className="mt-0.5 shrink-0 text-red-500" size={17} />
+                <span>
+                  {mapQuery(listing) || listing.serviceArea || "Atendimento remoto ou a combinar"}
+                </span>
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              <ContactButton
+                disabled={!phone}
+                href={phone ? `https://wa.me/${phone}` : undefined}
+                icon={WhatsApp}
+                label="Chamar no WhatsApp"
+                value={listing.whatsapp || "Sem número"}
+              />
+              <ContactButton
+                disabled={!listing.email}
+                href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(`Contato pelo Engine: ${listing.title}`)}` : undefined}
+                icon={EmailOutlined}
+                label="Enviar e-mail"
+                value={listing.email || "Sem e-mail"}
+              />
+              <ContactButton
+                disabled={!showMap}
+                href={showMap ? getDirectionsUrl(listing) : undefined}
+                icon={MapOutlined}
+                label="Abrir mapa"
+                value={showMap ? "Ver rota no Google Maps" : "Sem endereço"}
+              />
+            </div>
+
+            {isMine && (
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => onEdit(listing)}
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 text-xs font-black uppercase tracking-widest text-gray-600 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                >
+                  <Edit3 size={16} />
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(listing)}
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-500/30 text-xs font-black uppercase tracking-widest text-red-600 transition hover:bg-red-600 hover:text-white"
+                >
+                  <DeleteOutlineOutlined className="shrink-0" sx={{ fontSize: 18 }} />
+                  Excluir
+                </button>
+              </div>
+            )}
+          </aside>
+        </div>
+      </section>
+
+      {lightboxOpen && (
+        <PhotoLightbox
+          listing={listing}
+          photos={photos}
+          activePhotoIndex={activePhotoIndex}
+          zoom={zoom}
+          onClose={() => {
+            setLightboxOpen(false);
+            setZoom(1);
+          }}
+          onMove={movePhoto}
+          onZoomIn={() => setZoom((current) => Math.min(current + 0.25, 2.5))}
+          onZoomOut={() => setZoom((current) => Math.max(current - 0.25, 1))}
+          onResetZoom={() => setZoom(1)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PhotoLightbox({
+  listing,
+  photos,
+  activePhotoIndex,
+  zoom,
+  onClose,
+  onMove,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+}) {
+  const activePhoto = photos[activePhotoIndex] || photos[0] || fallbackPhoto;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black/95 text-white">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-3 sm:gap-4 sm:px-6">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black uppercase italic">
+            {listing.title}
+          </p>
+          <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/50">
+            Foto {activePhotoIndex + 1} de {photos.length}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={onZoomOut}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+            title="Diminuir zoom"
+          >
+            <ZoomOut size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={onResetZoom}
+            className="hidden h-10 items-center justify-center rounded-full bg-white/10 px-4 text-[10px] font-black uppercase tracking-widest transition hover:bg-white/20 sm:flex"
+            title="Resetar zoom"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={onZoomIn}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+            title="Aumentar zoom"
+          >
+            <ZoomIn size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 transition hover:bg-red-700"
+            title="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-3 sm:p-4">
+        {photos.length > 1 && (
+          <button
+            type="button"
+            onClick={() => onMove(-1)}
+            className="absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 transition hover:bg-red-600 sm:left-4 sm:h-12 sm:w-12"
+            title="Foto anterior"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        )}
+        <img
+          src={activePhoto}
+          alt={listing.title}
+          className="object-contain transition-[width,height] duration-200"
+          style={{
+            width: `${zoom * 100}%`,
+            height: "auto",
+            maxWidth: zoom === 1 ? "100%" : "none",
+            maxHeight: zoom === 1 ? "100%" : "none",
+          }}
+        />
+        {photos.length > 1 && (
+          <button
+            type="button"
+            onClick={() => onMove(1)}
+            className="absolute right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 transition hover:bg-red-600 sm:right-4 sm:h-12 sm:w-12"
+            title="Proxima foto"
+          >
+            <ChevronRight size={24} />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -508,6 +977,7 @@ function InfoPill({ icon, label, value, tone }) {
   const tones = {
     red: "text-red-500",
     amber: "text-amber-500",
+    sky: "text-sky-500",
     emerald: "text-emerald-500",
   };
 
@@ -552,6 +1022,7 @@ function ContactButton({ href, icon, label, value, disabled }) {
 
 function ListingEditorModal({
   form,
+  sellerProfile,
   saving,
   photoUploading,
   onSubmit,
@@ -564,13 +1035,13 @@ function ListingEditorModal({
   const needsServiceArea = ["mobile", "hybrid"].includes(form.serviceMode);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-3 backdrop-blur-sm sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-0 backdrop-blur-sm sm:p-6">
       <form
         onSubmit={onSubmit}
-        className="my-4 w-full max-w-5xl rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#222] dark:bg-[#111]"
+        className="min-h-[100dvh] w-full max-w-5xl rounded-none border-0 border-gray-200 bg-white shadow-2xl sm:my-4 sm:min-h-0 sm:rounded-2xl sm:border dark:border-[#222] dark:bg-[#111]"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-5 dark:border-[#222] sm:p-6">
-          <div>
+        <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#111] sm:gap-4 sm:p-6">
+          <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
               {form.id ? "Editar anúncio" : "Cadastrar serviço"}
             </p>
@@ -580,6 +1051,26 @@ function ListingEditorModal({
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-gray-500 dark:text-gray-400">
               Envie seu anúncio para análise. Depois de aprovado, ele aparece no marketplace.
             </p>
+            <div className="mt-4 flex max-w-xl items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-[#262626] dark:bg-[#151515]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-sm font-black uppercase italic text-white dark:bg-red-600">
+                {sellerProfile?.avatar ? (
+                  <img src={sellerProfile.avatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  getInitials(sellerProfile?.displayName)
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                  Publicado como
+                </p>
+                <p className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
+                  {sellerProfile?.displayName || "Usuario Engine"}
+                </p>
+                <p className="truncate text-xs font-bold text-gray-500 dark:text-gray-400">
+                  {sellerProfile?.username || sellerProfile?.email || "Conta Engine"}
+                </p>
+              </div>
+            </div>
           </div>
           <button
             type="button"
@@ -591,12 +1082,12 @@ function ListingEditorModal({
           </button>
         </div>
 
-        <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-2">
+        <div className="grid gap-5 p-4 pb-28 sm:p-6 md:grid-cols-2">
           <Field label="Fotos do serviço" wide>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
               {(form.photos || []).map((photo) => (
                 <div key={photo} className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-[#262626] dark:bg-[#101010]">
-                  <img src={photo} alt="" className="h-32 w-full object-cover" />
+                  <img src={photo} alt="" className="h-36 w-full object-cover sm:h-32" />
                   <button
                     type="button"
                     onClick={() => onPhotoRemove(photo)}
@@ -666,7 +1157,7 @@ function ListingEditorModal({
           </Field>
 
           <Field label="Tipo de atendimento" wide>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 min-[520px]:grid-cols-3">
               {["hybrid", "mobile", "place"].map((item) => {
                 const Icon = modeIcons[item];
                 const active = form.serviceMode === item;
@@ -675,7 +1166,7 @@ function ListingEditorModal({
                     key={item}
                     type="button"
                     onClick={() => onChange("serviceMode", item)}
-                    className={`min-h-24 rounded-xl border p-3 text-left transition ${
+                    className={`min-h-20 rounded-xl border p-3 text-left transition sm:min-h-24 ${
                       active
                         ? "border-red-600 bg-red-600 text-white"
                         : "border-gray-200 bg-white text-gray-600 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:bg-[#101010] dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
@@ -730,7 +1221,7 @@ function ListingEditorModal({
           )}
 
           <Field label="WhatsApp">
-            <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-2">
+            <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-2 sm:grid-cols-[112px_minmax(0,1fr)]">
               <Select
                 value={form.whatsappCountry || "+55"}
                 onChange={(event) => {
@@ -819,10 +1310,251 @@ function ListingEditorModal({
   );
 }
 
-function ApprovalQueue({ listings, onApprove, onReject, onEdit }) {
-  const pending = listings.filter((listing) => listing.moderationStatus === "pending");
+function SellerProfileModal({
+  sellerProfile,
+  listings,
+  onClose,
+  onEditProfile,
+  onNewListing,
+}) {
+  if (!sellerProfile) return null;
 
-  if (!pending.length) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5">
+      <section className="w-full max-w-lg rounded-t-2xl border border-gray-200 bg-white p-5 text-slate-950 shadow-2xl dark:border-[#222] dark:bg-[#111] dark:text-white sm:rounded-2xl sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-lg font-black uppercase italic text-white dark:bg-red-600">
+              {sellerProfile.avatar ? (
+                <img src={sellerProfile.avatar} alt="" className="h-full w-full object-cover" />
+              ) : (
+                getInitials(sellerProfile.displayName)
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+                conta vendedor
+              </p>
+              <h2 className="mt-1 truncate text-2xl font-black uppercase italic">
+                Perfil vendedor
+              </h2>
+              <p className="mt-1 truncate text-xs font-bold text-gray-500 dark:text-gray-400">
+                {sellerProfile.displayName}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300"
+            title="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-[#262626] dark:bg-[#151515]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Conta
+            </span>
+            <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-300">
+              {sellerProfile.username || sellerProfile.email || "Engine"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Cidade
+            </span>
+            <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-300">
+              {sellerProfile.city || "Adicionar no perfil"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Status
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
+              <ShieldCheck size={12} />
+              {listings.length ? "Vendedor ativo" : "Pronto"}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onEditProfile}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 text-xs font-black uppercase tracking-widest text-slate-900 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-white"
+          >
+            <UserRoundCheck size={16} />
+            Editar perfil
+          </button>
+          <button
+            type="button"
+            onClick={onNewListing}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black uppercase italic text-white transition hover:bg-red-700"
+          >
+            <Plus size={16} />
+            Novo serviço
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SellerListingsModal({ listings, onClose, onEdit, onDelete, onNewListing }) {
+  const [search, setSearch] = useState("");
+  const cleanSearch = search.trim().toLowerCase();
+  const filtered = listings.filter((listing) =>
+    [
+      listing.title,
+      listing.category,
+      listing.providerName,
+      listing.city,
+      statusLabels[listing.moderationStatus],
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(cleanSearch),
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5">
+      <section className="flex h-[88dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-gray-200 bg-white text-slate-950 shadow-2xl dark:border-[#222] dark:bg-[#111] dark:text-white sm:h-auto sm:max-h-[82vh] sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-5 dark:border-[#222] sm:p-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+              vitrine do vendedor
+            </p>
+            <h2 className="mt-1 truncate text-2xl font-black uppercase italic">
+              Meus anúncios
+            </h2>
+            <p className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+              {listings.length === 1
+                ? "1 anúncio cadastrado"
+                : listings.length
+                  ? `${listings.length} anúncios cadastrados`
+                  : "Nenhum anúncio cadastrado"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300"
+            title="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="border-b border-gray-200 p-4 dark:border-[#222] sm:p-5">
+          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 dark:border-[#333] dark:bg-[#101010]">
+            <Search size={17} className="text-gray-400" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por título, categoria ou status"
+              className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-600"
+            />
+          </label>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          {filtered.length ? (
+            <div className="grid gap-3">
+              {filtered.map((listing) => (
+                <article
+                  key={listing.id}
+                  className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-[#262626] dark:bg-[#151515] sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-center"
+                >
+                  <img
+                    src={listing.photos?.[0] || fallbackPhoto}
+                    alt=""
+                    className="h-24 w-full rounded-lg object-cover sm:h-16 sm:w-[72px]"
+                    onError={(event) => {
+                      event.currentTarget.src = fallbackPhoto;
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={listing.moderationStatus} />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        {listing.category || "Serviço"}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 line-clamp-2 text-sm font-black uppercase italic">
+                      {listing.title || "Anúncio sem título"}
+                    </h3>
+                    <p className="mt-1 truncate text-xs font-bold text-gray-500 dark:text-gray-400">
+                      {listing.price || "Sob consulta"} / {listing.city || "Local a combinar"}
+                    </p>
+                    {listing.moderationNote && (
+                      <p className="mt-2 line-clamp-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold leading-5 text-red-600 dark:text-red-300">
+                        {listing.moderationNote}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:w-24 sm:grid-cols-1">
+                    <button
+                      type="button"
+                      onClick={() => onEdit(listing)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-600 dark:bg-[#262626]"
+                    >
+                      <Edit3 size={15} />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(listing)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                    >
+                      <DeleteOutlineOutlined className="shrink-0" sx={{ fontSize: 17 }} />
+                      Excluir
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-6 text-center dark:border-[#333]">
+              <BriefcaseBusiness className="mb-3 text-red-500" size={34} />
+              <h3 className="text-lg font-black uppercase italic">
+                Nenhum anúncio aqui
+              </h3>
+              <p className="mt-2 max-w-xs text-sm font-medium text-gray-500 dark:text-gray-400">
+                {listings.length ? "Tente outro termo de busca." : "Cadastre um serviço para começar sua vitrine."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 p-4 dark:border-[#222] sm:p-5">
+          <button
+            type="button"
+            onClick={onNewListing}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
+          >
+            <Plus size={18} />
+            Cadastrar novo serviço
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
+  const pending = listings.filter((listing) => listing.moderationStatus === "pending");
+  const reviewed = listings
+    .filter((listing) =>
+      ["approved", "changes_requested", "rejected"].includes(listing.moderationStatus),
+    )
+    .slice(0, 8);
+
+  if (!pending.length && !reviewed.length) {
     return (
       <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#222] dark:bg-[#111]">
         <h2 className="flex items-center gap-2 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
@@ -837,7 +1569,7 @@ function ApprovalQueue({ listings, onApprove, onReject, onEdit }) {
   }
 
   return (
-    <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 dark:bg-amber-500/5">
+    <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 dark:bg-amber-500/5 sm:p-5">
       <h2 className="flex items-center gap-2 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
         <ShieldCheck size={18} className="text-amber-500" />
         Aprovação de serviços
@@ -846,40 +1578,48 @@ function ApprovalQueue({ listings, onApprove, onReject, onEdit }) {
         {pending.map((listing) => (
           <div
             key={listing.id}
-            className="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#151515] md:grid-cols-[1fr_auto]"
+            className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-[#222] dark:bg-[#151515] sm:p-4 md:grid-cols-[1fr_auto]"
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
                 {listing.title}
               </p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <p className="mt-1 line-clamp-2 text-xs font-bold uppercase tracking-widest text-gray-400 sm:truncate">
                 {listing.providerName} / {listing.category} / {listing.city || "sem cidade"}
               </p>
               <p className="mt-2 line-clamp-2 text-sm font-medium text-gray-500 dark:text-gray-400">
                 {listing.description}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 md:justify-end">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap md:justify-end">
               <button
                 type="button"
                 onClick={() => onEdit(listing)}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
               >
                 <Edit3 size={15} />
                 Revisar
               </button>
               <button
                 type="button"
+                onClick={() => onReturn(listing)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-sky-700"
+              >
+                <RotateCcw size={15} />
+                Retornar
+              </button>
+              <button
+                type="button"
                 onClick={() => onReject(listing)}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-600 dark:bg-[#262626] dark:hover:bg-red-600"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-600 dark:bg-[#262626] dark:hover:bg-red-600"
               >
                 <XCircle size={15} />
-                Reprovar
+                Recusar
               </button>
               <button
                 type="button"
                 onClick={() => onApprove(listing)}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-emerald-700"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-emerald-700"
               >
                 <CheckCircle2 size={15} />
                 Aprovar
@@ -888,23 +1628,68 @@ function ApprovalQueue({ listings, onApprove, onReject, onEdit }) {
           </div>
         ))}
       </div>
+      <div className="mt-5 border-t border-amber-500/20 pt-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
+            Aprovações, retornos e recusas
+          </p>
+          <span className="rounded-full bg-slate-950/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:bg-white/10 dark:text-gray-300">
+            {reviewed.length} registro{reviewed.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        {reviewed.length ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {reviewed.map((listing) => (
+              <article
+                key={listing.id}
+                className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#151515]"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={listing.moderationStatus} />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    {listing.category || "Serviço"}
+                  </span>
+                </div>
+                <h3 className="mt-2 line-clamp-2 text-sm font-black uppercase italic text-slate-950 dark:text-white">
+                  {listing.title || "Anúncio sem título"}
+                </h3>
+                <p className="mt-1 truncate text-xs font-bold text-gray-500 dark:text-gray-400">
+                  {listing.providerName} / {listing.city || "sem cidade"}
+                </p>
+                {listing.moderationNote && (
+                  <p className="mt-3 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold leading-5 text-gray-600 dark:bg-[#101010] dark:text-gray-300">
+                    {listing.moderationNote}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#151515]">
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
+              As decisões tomadas nos anúncios vão aparecer aqui, sem misturar com a fila pendente.
+            </p>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
 
-function RejectionModal({ listing, note, onChangeNote, onCancel, onConfirm }) {
+function RejectionModal({ listing, note, action, onChangeNote, onCancel, onConfirm }) {
   if (!listing) return null;
+  const isReject = action === "rejected";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <section className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-[#222] dark:bg-[#111] sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <section className="max-h-[100dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-gray-200 bg-white p-5 pb-8 shadow-2xl dark:border-[#222] dark:bg-[#111] sm:max-h-[92vh] sm:rounded-2xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
               Feedback do anúncio
             </p>
             <h2 className="mt-1 text-2xl font-black uppercase italic text-slate-950 dark:text-white">
-              Sugerir ajustes
+              {isReject ? "Recusar anuncio" : "Retornar ajustes"}
             </h2>
           </div>
           <button
@@ -942,10 +1727,12 @@ function RejectionModal({ listing, note, onChangeNote, onCancel, onConfirm }) {
           <button
             type="button"
             onClick={onConfirm}
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
+            className={`inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-sm font-black uppercase italic text-white transition ${
+              isReject ? "bg-red-600 hover:bg-red-700" : "bg-sky-600 hover:bg-sky-700"
+            }`}
           >
-            <XCircle size={18} />
-            Enviar feedback
+            {isReject ? <XCircle size={18} /> : <RotateCcw size={18} />}
+            {isReject ? "Recusar anuncio" : "Retornar com alteracoes"}
           </button>
           <button
             type="button"
@@ -961,6 +1748,7 @@ function RejectionModal({ listing, note, onChangeNote, onCancel, onConfirm }) {
 }
 
 export function Services({ user, settings }) {
+  const navigate = useNavigate();
   const [listings, setListings] = useState([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
@@ -972,16 +1760,28 @@ export function Services({ user, settings }) {
   const [notice, setNotice] = useState("");
   const [rejectionTarget, setRejectionTarget] = useState(null);
   const [rejectionNote, setRejectionNote] = useState("");
+  const [moderationAction, setModerationAction] = useState("changes_requested");
+  const [detailListing, setDetailListing] = useState(null);
+  const [sellerProfileOpen, setSellerProfileOpen] = useState(false);
+  const [sellerListingsOpen, setSellerListingsOpen] = useState(false);
   const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email || "").toLowerCase());
+  const sellerProfile = useMemo(
+    () => getSellerProfile(settings, user),
+    [settings, user],
+  );
 
   useEffect(
     () => engineDB.subscribeServiceListings(setListings, { userId: user?.uid, isAdmin }),
     [isAdmin, user?.uid],
   );
 
-  const myListing = useMemo(
-    () => listings.find((listing) => listing.ownerId === user?.uid),
+  const myListings = useMemo(
+    () => listings.filter((listing) => listing.ownerId === user?.uid),
     [listings, user?.uid],
+  );
+  const pendingApprovalsCount = useMemo(
+    () => listings.filter((listing) => listing.moderationStatus === "pending").length,
+    [listings],
   );
 
   const approvedListings = useMemo(
@@ -1031,6 +1831,7 @@ export function Services({ user, settings }) {
   };
 
   const openEditor = (listing = null) => {
+    setDetailListing(null);
     if (listing) {
       setForm({
         ...emptyForm,
@@ -1038,14 +1839,6 @@ export function Services({ user, settings }) {
         ...splitStoredPhone(listing.whatsapp, listing.whatsappCountry),
         tags: (listing.tags || []).join(", "),
         photos: listing.photos || [],
-      });
-    } else if (myListing) {
-      setForm({
-        ...emptyForm,
-        ...myListing,
-        ...splitStoredPhone(myListing.whatsapp, myListing.whatsappCountry),
-        tags: (myListing.tags || []).join(", "),
-        photos: myListing.photos || [],
       });
     } else {
       resetForm();
@@ -1168,6 +1961,7 @@ export function Services({ user, settings }) {
     try {
       await engineDB.deleteServiceListing(listing.id, user?.uid);
       flash("Anúncio removido.");
+      if (detailListing?.id === listing.id) setDetailListing(null);
       if (form.id === listing.id) closeEditor();
     } catch (error) {
       console.error(error);
@@ -1185,23 +1979,39 @@ export function Services({ user, settings }) {
     }
   };
 
+  const openReturnListing = (listing) => {
+    setModerationAction("changes_requested");
+    setRejectionTarget(listing);
+    setRejectionNote(listing.moderationNote || "");
+  };
+
   const openRejectListing = (listing) => {
+    setModerationAction("rejected");
     setRejectionTarget(listing);
     setRejectionNote(listing.moderationNote || "");
   };
 
   const confirmRejectListing = async () => {
     if (!rejectionTarget) return;
+    if (!rejectionNote.trim()) {
+      flash("Escreva o comentÃ¡rio para o anunciante.");
+      return;
+    }
     try {
       await engineDB.moderateServiceListing(
         rejectionTarget.id,
-        "rejected",
+        moderationAction,
         rejectionNote,
         user?.uid,
       );
-      flash("Feedback enviado ao anunciante.");
+      flash(
+        moderationAction === "changes_requested"
+          ? "Anuncio retornado com alteracoes."
+          : "Anuncio recusado com comentario.",
+      );
       setRejectionTarget(null);
       setRejectionNote("");
+      setModerationAction("changes_requested");
     } catch (error) {
       console.error(error);
       flash("Não foi possível reprovar agora.");
@@ -1209,91 +2019,105 @@ export function Services({ user, settings }) {
   };
 
   return (
-    <section className="space-y-8 pb-10">
+    <section className="space-y-5 pb-28 sm:space-y-8 sm:pb-10">
       {notice && (
         <div className="fixed inset-x-4 top-4 z-50 rounded-xl bg-slate-950 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-2xl sm:left-auto sm:right-6 sm:top-6 dark:bg-red-600">
           {notice}
         </div>
       )}
 
-      <header className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-slate-950 shadow-xl dark:border-[#222] dark:bg-[#111] dark:text-white dark:shadow-none">
-        <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:p-10">
-          <div className="flex flex-col justify-between gap-8">
+      <header className="-mx-4 overflow-hidden border-y border-gray-200 bg-white text-slate-950 shadow-none sm:mx-0 sm:rounded-2xl sm:border sm:shadow-xl dark:border-[#222] dark:bg-[#111] dark:text-white dark:shadow-none">
+        <div className="grid gap-6 p-5 sm:gap-8 sm:p-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:p-10">
+          <div className="flex flex-col justify-between gap-6 sm:gap-8">
             <div>
-              <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
                   <Sparkles size={14} />
                   Engine Services
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-gray-500 dark:text-gray-400">
+                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500 sm:text-[10px] sm:tracking-[0.26em] dark:text-gray-400">
                   profissionais / mapa / contato direto
                 </span>
               </div>
-              <h1 className="max-w-4xl text-3xl font-black uppercase italic tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="max-w-4xl text-[2rem] font-black uppercase italic leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
                 Encontre quem resolve. Publique o que você faz.
               </h1>
-              <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-gray-600 dark:text-gray-300">
+              <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-gray-600 sm:text-base sm:leading-7 dark:text-gray-300">
                 Busque serviços, veja fotos, confira se o profissional vai até você e entre em contato por WhatsApp ou e-mail.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
               <HeroStat icon={BriefcaseBusiness} label="serviços ativos" value={stats.total} tone="red" />
               <HeroStat icon={Navigation} label="vão até você" value={stats.mobileCount} tone="sky" />
               <HeroStat icon={MapPin} label="cidades" value={stats.cities} tone="emerald" />
             </div>
           </div>
 
-          <aside className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-[#222] dark:bg-[#151515]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-950 text-white dark:bg-red-600">
-              <LockKeyhole size={22} />
-            </div>
-            <p className="mt-5 text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-              área do anunciante
-            </p>
-            <h2 className="mt-2 text-2xl font-black uppercase italic text-slate-950 dark:text-white">
-              Minha vitrine
-            </h2>
-            <p className="mt-3 text-sm font-medium leading-6 text-gray-500 dark:text-gray-400">
-              O cadastro fica em um fluxo separado, preparado para ser liberado apenas depois da assinatura.
-            </p>
-            {myListing && (
-              <div className="mt-4">
-                <StatusBadge status={myListing.moderationStatus} />
-                {myListing.moderationNote && (
-                  <p className="mt-2 text-xs font-bold leading-5 text-red-500">
-                    {myListing.moderationNote}
-                  </p>
+          <aside className="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5 dark:border-[#222] dark:bg-[#151515]">
+            <button
+              type="button"
+              onClick={() => setSellerProfileOpen(true)}
+              className="group flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-red-500/60 hover:shadow-lg dark:border-[#262626] dark:bg-[#101010] dark:shadow-none"
+            >
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-lg font-black uppercase italic text-white dark:bg-red-600">
+                {sellerProfile.avatar ? (
+                  <img src={sellerProfile.avatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  getInitials(sellerProfile.displayName)
                 )}
               </div>
-            )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+                  conta vendedor
+                </p>
+                <h2 className="mt-1 truncate text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+                  Perfil
+                </h2>
+                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
+                  <ShieldCheck size={12} />
+                  {myListings.length ? "Vendedor ativo" : "Pronto"}
+                </span>
+              </div>
+            </button>
             <button
               type="button"
               onClick={() => openEditor()}
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
+              className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
             >
-              {myListing ? <Edit3 size={18} /> : <Plus size={18} />}
-              {myListing ? "Editar meu anúncio" : "Cadastrar serviço"}
+              <Plus size={18} />
+              Cadastrar novo serviço
             </button>
-            <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs font-bold leading-5 text-emerald-700 dark:text-emerald-300">
-              <ShieldCheck size={16} className="mt-0.5 shrink-0" />
-              Novos anúncios entram em aprovação antes de aparecerem na vitrine.
-            </div>
+            <button
+              type="button"
+              onClick={() => setSellerListingsOpen(true)}
+              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-black uppercase tracking-widest text-slate-900 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:bg-[#101010] dark:text-white"
+            >
+              <BriefcaseBusiness size={17} />
+              Meus anúncios
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500 dark:bg-[#202020] dark:text-gray-300">
+                {myListings.length}
+              </span>
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate("/services/approvals")}
+                className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 text-sm font-black uppercase tracking-widest text-amber-700 transition hover:border-amber-500 hover:bg-amber-500/15 dark:text-amber-300"
+              >
+                <ShieldCheck size={17} />
+                Aprovações
+                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px]">
+                  {pendingApprovalsCount}
+                </span>
+              </button>
+            )}
           </aside>
         </div>
       </header>
 
-      {isAdmin && (
-        <ApprovalQueue
-          listings={listings}
-          onApprove={approveListing}
-          onReject={openRejectListing}
-          onEdit={openEditor}
-        />
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
-        <label className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 dark:border-[#222] dark:bg-[#111]">
+      <div className="space-y-3 sm:space-y-4">
+        <label className="flex min-h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 shadow-sm sm:min-h-12 sm:rounded-xl sm:shadow-none dark:border-[#222] dark:bg-[#111]">
           <Search size={18} className="text-gray-400" />
           <input
             value={query}
@@ -1302,35 +2126,65 @@ export function Services({ user, settings }) {
             className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-600"
           />
         </label>
-        <label className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 dark:border-[#222] dark:bg-[#111]">
-          <Filter size={18} className="text-gray-400" />
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className="min-w-0 flex-1 appearance-none bg-transparent pr-6 text-sm font-bold text-slate-950 outline-none dark:text-white dark:[color-scheme:dark]"
-          >
-            <option>Todos</option>
-            {categories.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 dark:border-[#222] dark:bg-[#111]">
-          <UserRoundCheck size={18} className="text-gray-400" />
-          <select
-            value={mode}
-            onChange={(event) => setMode(event.target.value)}
-            className="min-w-0 flex-1 appearance-none bg-transparent pr-6 text-sm font-bold text-slate-950 outline-none dark:text-white dark:[color-scheme:dark]"
-          >
-            <option value="all">Todos</option>
-            <option value="hybrid">Local e externo</option>
-            <option value="mobile">Vai até você</option>
-            <option value="place">Local físico</option>
-          </select>
-        </label>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-[#222] dark:bg-[#111] sm:rounded-xl sm:shadow-none">
+          <div className="mb-2 flex items-center gap-2 px-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
+            <Filter size={15} />
+            Categoria
+          </div>
+          <div className="-mx-1">
+            <div className="engine-chip-scroll flex gap-2 overflow-x-auto px-1 pb-2">
+            {["Todos", ...categories].map((item) => {
+              const active = category === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCategory(item)}
+                  className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black uppercase tracking-widest transition ${
+                    active
+                      ? "bg-red-600 text-white shadow-sm"
+                      : "border border-gray-200 text-gray-500 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                  }`}
+                >
+                  {item}
+                </button>
+              );
+            })}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-[#222] dark:bg-[#111] sm:rounded-xl sm:shadow-none">
+          <div className="mb-2 flex items-center gap-2 px-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
+            <UserRoundCheck size={15} />
+            Atendimento
+          </div>
+          <div className="-mx-1">
+            <div className="engine-chip-scroll flex gap-2 overflow-x-auto px-1 pb-2">
+            {modeFilters.map((item) => {
+              const active = mode === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setMode(item.value)}
+                  className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black uppercase tracking-widest transition ${
+                    active
+                      ? "bg-slate-950 text-white shadow-sm dark:bg-red-600"
+                      : "border border-gray-200 text-gray-500 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filteredListings.length ? (
           filteredListings.map((listing) => (
             <ServiceCard
@@ -1339,10 +2193,11 @@ export function Services({ user, settings }) {
               isMine={listing.ownerId === user?.uid}
               onEdit={openEditor}
               onDelete={deleteListing}
+              onOpen={setDetailListing}
             />
           ))
         ) : (
-          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center dark:border-[#333] dark:bg-[#151515]">
+          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center dark:border-[#333] dark:bg-[#151515] sm:col-span-2 xl:col-span-3 2xl:col-span-4">
             <BriefcaseBusiness className="mb-4 text-red-500" size={42} />
             <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
               Nenhum serviço encontrado
@@ -1357,6 +2212,7 @@ export function Services({ user, settings }) {
       {editorOpen && (
         <ListingEditorModal
           form={form}
+          sellerProfile={sellerProfile}
           saving={saving}
           photoUploading={photoUploading}
           onSubmit={submitListing}
@@ -1367,15 +2223,205 @@ export function Services({ user, settings }) {
         />
       )}
 
+      {sellerProfileOpen && (
+        <SellerProfileModal
+          sellerProfile={sellerProfile}
+          listings={myListings}
+          onClose={() => setSellerProfileOpen(false)}
+          onEditProfile={() => {
+            setSellerProfileOpen(false);
+            navigate("/settings");
+          }}
+          onNewListing={() => {
+            setSellerProfileOpen(false);
+            openEditor();
+          }}
+        />
+      )}
+
+      {sellerListingsOpen && (
+        <SellerListingsModal
+          listings={myListings}
+          onClose={() => setSellerListingsOpen(false)}
+          onEdit={(listing) => {
+            setSellerListingsOpen(false);
+            openEditor(listing);
+          }}
+          onDelete={deleteListing}
+          onNewListing={() => {
+            setSellerListingsOpen(false);
+            openEditor();
+          }}
+        />
+      )}
+
+      <ServiceDetailModal
+        listing={detailListing}
+        isMine={detailListing?.ownerId === user?.uid}
+        onClose={() => setDetailListing(null)}
+        onEdit={openEditor}
+        onDelete={deleteListing}
+      />
+
       <RejectionModal
         listing={rejectionTarget}
         note={rejectionNote}
+        action={moderationAction}
         onChangeNote={setRejectionNote}
         onCancel={() => {
           setRejectionTarget(null);
           setRejectionNote("");
+          setModerationAction("changes_requested");
         }}
         onConfirm={confirmRejectListing}
+      />
+    </section>
+  );
+}
+
+export function ServiceApprovals({ user }) {
+  const navigate = useNavigate();
+  const [listings, setListings] = useState([]);
+  const [notice, setNotice] = useState("");
+  const [detailListing, setDetailListing] = useState(null);
+  const [rejectionTarget, setRejectionTarget] = useState(null);
+  const [rejectionNote, setRejectionNote] = useState("");
+  const [moderationAction, setModerationAction] = useState("changes_requested");
+  const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email || "").toLowerCase());
+
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    return engineDB.subscribeServiceListings(setListings, {
+      userId: user?.uid,
+      isAdmin: true,
+    });
+  }, [isAdmin, user?.uid]);
+
+  const flash = (message) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2600);
+  };
+
+  const approveListing = async (listing) => {
+    try {
+      await engineDB.moderateServiceListing(listing.id, "approved", "", user?.uid);
+      flash("Anuncio aprovado e publicado.");
+    } catch (error) {
+      console.error(error);
+      flash("Nao foi possivel aprovar agora.");
+    }
+  };
+
+  const openReturnListing = (listing) => {
+    setModerationAction("changes_requested");
+    setRejectionTarget(listing);
+    setRejectionNote(listing.moderationNote || "");
+  };
+
+  const openRejectListing = (listing) => {
+    setModerationAction("rejected");
+    setRejectionTarget(listing);
+    setRejectionNote(listing.moderationNote || "");
+  };
+
+  const closeFeedback = () => {
+    setRejectionTarget(null);
+    setRejectionNote("");
+    setModerationAction("changes_requested");
+  };
+
+  const confirmFeedback = async () => {
+    if (!rejectionTarget) return;
+    if (!rejectionNote.trim()) {
+      flash("Escreva o comentario para o anunciante.");
+      return;
+    }
+
+    try {
+      await engineDB.moderateServiceListing(
+        rejectionTarget.id,
+        moderationAction,
+        rejectionNote,
+        user?.uid,
+      );
+      flash(
+        moderationAction === "changes_requested"
+          ? "Anuncio retornado com alteracoes."
+          : "Anuncio recusado com comentario.",
+      );
+      closeFeedback();
+    } catch (error) {
+      console.error(error);
+      flash("Nao foi possivel enviar o feedback agora.");
+    }
+  };
+
+  if (!isAdmin) {
+    return (
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#222] dark:bg-[#111]">
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+          acesso restrito
+        </p>
+        <h1 className="mt-2 text-3xl font-black uppercase italic text-slate-950 dark:text-white">
+          Aprovações
+        </h1>
+        <p className="mt-3 text-sm font-bold text-gray-500 dark:text-gray-400">
+          Esta área é exclusiva para administradores de serviços.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-5 pb-10">
+      {notice && (
+        <div className="fixed inset-x-4 top-4 z-50 rounded-xl bg-slate-950 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-2xl sm:left-auto sm:right-6 sm:top-6 dark:bg-red-600">
+          {notice}
+        </div>
+      )}
+
+      <header className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#222] dark:bg-[#111] sm:p-6">
+        <button
+          type="button"
+          onClick={() => navigate("/services")}
+          className="mb-5 inline-flex min-h-10 items-center justify-center rounded-xl border border-gray-200 px-4 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+        >
+          Voltar aos serviços
+        </button>
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
+          admin / serviços
+        </p>
+        <h1 className="mt-2 text-3xl font-black uppercase italic leading-none text-slate-950 dark:text-white sm:text-5xl">
+          Aprovações
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-gray-500 dark:text-gray-400">
+          Fila de revisão e histórico de decisões ficam nesta página, separados da vitrine pública.
+        </p>
+      </header>
+
+      <ApprovalQueue
+        listings={listings}
+        onApprove={approveListing}
+        onReturn={openReturnListing}
+        onReject={openRejectListing}
+        onEdit={setDetailListing}
+      />
+
+      <ServiceDetailModal
+        listing={detailListing}
+        isMine={false}
+        onClose={() => setDetailListing(null)}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+
+      <RejectionModal
+        listing={rejectionTarget}
+        note={rejectionNote}
+        action={moderationAction}
+        onChangeNote={setRejectionNote}
+        onCancel={closeFeedback}
+        onConfirm={confirmFeedback}
       />
     </section>
   );
@@ -1390,7 +2436,7 @@ function HeroStat({ icon, value, label, tone }) {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+    <div className="min-w-[150px] rounded-xl border border-gray-200 bg-gray-50 p-4 sm:min-w-0 dark:border-white/10 dark:bg-white/5">
       <Icon className={tones[tone]} size={20} />
       <p className="mt-3 text-2xl font-black text-slate-950 dark:text-white">{value}</p>
       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
