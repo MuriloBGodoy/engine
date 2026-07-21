@@ -341,7 +341,7 @@ const buildPublicProfile = (settings = {}, userId = currentUserId) => {
   };
 };
 
-const buildCommunityGoal = (goal, userId, settings = {}) => {
+const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
   const profile = getProfileSnapshot(settings, userId);
 
   return {
@@ -360,7 +360,8 @@ const buildCommunityGoal = (goal, userId, settings = {}) => {
     image: goal.image,
     savedValue: goal.savedValue,
     targetValue: goal.targetValue,
-    note: profile.note,
+    // Legenda escrita na hora de publicar — não é mais a bio do perfil.
+    note: String(note || "").trim().slice(0, 280),
     verified: true,
     likesBy: {},
     comments: [],
@@ -446,7 +447,6 @@ const normalizeCommunityGoal = (goal = {}) => {
     rating: rating || 0,
     verified: Boolean(goal.verified),
     tagKey: "community.seed.mine",
-    noteKey: goal.note ? null : "community.seed.mineNote",
     note: goal.note || "",
     isMine: goal.ownerId === currentUserId,
     ownerId: goal.ownerId,
@@ -1162,15 +1162,15 @@ export const engineDB = {
     );
   },
 
-  async shareCommunityGoal(goal, settings, userId = currentUserId) {
+  async shareCommunityGoal(goal, settings, userId = currentUserId, note = "") {
     if (!userId) throw new Error("Usuário não identificado.");
 
     if (apiEnabled()) {
-      const response = await apiJson("POST", "/community/goals", goal);
+      const response = await apiJson("POST", "/community/goals", { ...goal, note });
       return response.id;
     }
 
-    const payload = buildCommunityGoal(goal, userId, settings);
+    const payload = buildCommunityGoal(goal, userId, settings, note);
     const goalRef = doc(firestore, COMMUNITY_COLLECTION, payload.id);
     const existing = await getDoc(goalRef);
     const existingData = existing.exists() ? existing.data() : {};

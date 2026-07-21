@@ -7,12 +7,9 @@ import {
   Bookmark,
   Car,
   Check,
-  CheckCircle2,
   Clapperboard,
   Copy,
-  EyeOff,
   Edit3,
-  Flame,
   Heart,
   MapPin,
   MoreHorizontal,
@@ -22,7 +19,6 @@ import {
   Send,
   Share2,
   ShieldCheck,
-  Sparkles,
   Star,
   MessageCircle,
   Trophy,
@@ -65,13 +61,6 @@ const getInitials = (name = "U") =>
 const isImageUrl = (value) =>
   typeof value === "string" && (value.startsWith("http") || value.startsWith("data:"));
 
-const getGoalRangeKey = (value) => {
-  if (value >= 500000) return "community.ranges.elite";
-  if (value >= 250000) return "community.ranges.performance";
-  if (value >= 120000) return "community.ranges.premium";
-  return "community.ranges.entry";
-};
-
 const normalizeVehicleText = (value = "") =>
   String(value).replace(/\s+/g, " ").trim();
 
@@ -106,6 +95,23 @@ const getRankingVehicleLabel = (goal = {}) => {
   }
 
   return model || normalizeVehicleText(goal.title) || brand || "Meta";
+};
+
+/**
+ * Linha do veículo: modelo em destaque, depois marca e ano.
+ * Cadastro que só tem a marca preenchida (o modelo fica vazio) virava
+ * "Mitsubishi · Mitsubishi · 2015" — aqui a repetição é descartada.
+ */
+const getVehicleLine = (goal = {}) => {
+  const model = getRankingVehicleLabel(goal);
+  const brand = normalizeVehicleText(goal.brand);
+  const year = normalizeVehicleText(goal.year);
+  const rest = [];
+
+  if (brand && brand.toLowerCase() !== model.toLowerCase()) rest.push(brand);
+  if (year) rest.push(year);
+
+  return { model, rest };
 };
 
 const communityGoalId = (goal, userId = "") => {
@@ -144,6 +150,8 @@ const profileFromSettings = (settings, user) => {
 const withProfile = (person = {}, profiles = {}) => {
   const profile = profiles[person.userId] || profiles[person.ownerId];
   if (!profile) return person;
+  // `note` fica de fora de propósito: no post ela é a legenda da publicação,
+  // não a bio de quem publicou.
   return {
     ...person,
     author: profile.author ?? person.author,
@@ -151,7 +159,6 @@ const withProfile = (person = {}, profiles = {}) => {
     avatar: profile.avatar ?? person.avatar,
     avatarInitials: profile.avatarInitials ?? person.avatarInitials,
     city: profile.city ?? person.city,
-    note: profile.note ?? person.note,
   };
 };
 
@@ -244,8 +251,7 @@ const buildUserGoals = (cars, settings, user) => {
     rating: 4.5,
     verified: true,
     tagKey: "community.seed.mine",
-    noteKey: settings.profile.bio ? null : "community.seed.mineNote",
-    note: settings.profile.bio,
+    note: "",
     isMine: true,
   }));
 };
@@ -371,13 +377,12 @@ function GoalCard({
 
   const progress = getProgress(goal);
   const comments = [...goal.comments, ...interactions.comments];
-  const lastComment = comments[comments.length - 1];
   const liked = interactions.liked;
   const rating = interactions.rating || goal.rating;
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
   const isModal = variant === "modal";
-  const modelLabel = getRankingVehicleLabel(goal);
+  const vehicle = getVehicleLine(goal);
 
   const submitComment = (event) => {
     event.preventDefault();
@@ -528,25 +533,17 @@ function GoalCard({
         </p>
 
         <p className="text-sm leading-6 text-[var(--engine-text)]">
-          <span className="font-bold italic">{modelLabel}</span>
-          <span className="text-[var(--engine-text-subtle)]">
-            {goal.brand ? ` · ${goal.brand}` : ""}
-            {goal.year ? ` · ${goal.year}` : ""}
-          </span>
+          <span className="font-bold italic">{vehicle.model}</span>
+          {vehicle.rest.length > 0 && (
+            <span className="text-[var(--engine-text-subtle)]">
+              {` · ${vehicle.rest.join(" · ")}`}
+            </span>
+          )}
         </p>
 
-        {(goal.note || goal.noteKey) && (
-          <p className="line-clamp-2 text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
-            {goal.note || t(goal.noteKey)}
-          </p>
-        )}
-
-        {/* Progresso em uma linha só: faixa + barra fina + %. O aviso de
+        {/* Progresso logo abaixo do veículo: barra fina + %. O aviso de
             privacidade virou tooltip, em vez de um parágrafo por post. */}
-        <div className="flex items-center gap-2 pt-1">
-          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-[var(--engine-text-subtle)]">
-            {t(getGoalRangeKey(goal.targetValue))}
-          </span>
+        <div className="flex items-center gap-2">
           <span className="h-1 min-w-8 flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
             <span
               className="block h-full rounded-full bg-[var(--engine-accent)]"
@@ -559,37 +556,22 @@ function GoalCard({
           <InfoTip text={t("community.privacyLine")} align="right" />
         </div>
 
-        {comments.length > 0 && (
-          <div className="space-y-1 pt-1">
-            {comments.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setCommentsOpen(true)}
-                className="text-[13px] font-medium text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
-              >
-                {t("community.viewAllComments", { count: comments.length })}
-              </button>
-            )}
-            <p className="truncate text-[13px] text-[var(--engine-text-muted)]">
-              <span className="font-bold text-[var(--engine-text)]">
-                {typeof lastComment === "string"
-                  ? t("community.member")
-                  : lastComment.author}
-              </span>{" "}
-              {typeof lastComment === "string" ? lastComment : lastComment.text}
-            </p>
-          </div>
+        {goal.note && (
+          <p className="line-clamp-2 text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+            {goal.note}
+          </p>
         )}
 
-        <button
-          type="button"
-          onClick={() => setCommentsOpen(true)}
-          className="pt-0.5 text-[13px] font-medium text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
-        >
-          {comments.length
-            ? t("community.commentPlaceholder")
-            : t("community.beFirstToComment")}
-        </button>
+        {/* Só a contagem: os comentários em si abrem no balão ou no post. */}
+        {comments.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setCommentsOpen(true)}
+            className="pt-0.5 text-[13px] font-medium text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
+          >
+            {t("community.viewAllComments", { count: comments.length })}
+          </button>
+        )}
       </div>
 
       {commentsOpen && (
@@ -962,6 +944,7 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
 function ShareModal({
   goals,
   sharedGoalIds,
+  notesByCarId = {},
   userId,
   t,
   onClose,
@@ -969,6 +952,14 @@ function ShareModal({
   onUnshare,
   onClearAll,
 }) {
+  const [composingId, setComposingId] = useState("");
+  const [caption, setCaption] = useState("");
+
+  const startComposing = (goal, currentNote) => {
+    setComposingId((current) => (current === goal.id ? "" : goal.id));
+    setCaption(currentNote || "");
+  };
+
   return (
     <div className="engine-modal-overlay">
       <div className="engine-modal-panel engine-pop sm:max-w-2xl">
@@ -994,47 +985,101 @@ function ShareModal({
         <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-3 p-4 sm:p-6">
           {goals.map((goal) => {
             const shared = isGoalShared(goal, sharedGoalIds, userId);
+            const publishedNote = notesByCarId[String(goal.carId || goal.id)] || "";
+            const composing = composingId === goal.id;
+
             return (
               <div
                 key={goal.id}
-                className="flex w-full items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:border-[var(--engine-accent)] "
+                className="rounded-xl border border-[var(--engine-border)] p-3 transition hover:border-[var(--engine-accent)]"
               >
-                <button
-                  type="button"
-                  onClick={() => onShare(goal)}
-                  className="flex min-w-0 flex-1 items-center gap-4 text-left"
-                >
-                  <img
-                    src={goal.image}
-                    alt={goal.title}
-                    className="h-16 w-20 rounded-lg object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-black italic text-[var(--engine-text)] dark:text-white">
-                      {goal.title}
-                    </p>
-                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
-                      {getProgress(goal).toFixed(1)}% / {t(getGoalRangeKey(goal.targetValue))}
-                    </p>
-                  </div>
-                  <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      shared ? "bg-[var(--engine-accent)] text-white" : "bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
-                    }`}
-                    title={shared ? t("community.shared") : t("community.publishGoal")}
-                  >
-                    {shared ? <Check size={17} /> : <Share2 size={17} />}
-                  </span>
-                </button>
-                {shared && (
+                <div className="flex w-full items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => onUnshare(goal)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white "
-                    title={t("community.unshare")}
+                    onClick={() => startComposing(goal, publishedNote)}
+                    className="flex min-w-0 flex-1 items-center gap-4 text-left"
                   >
-                    <Trash2 size={16} />
+                    <img
+                      src={goal.image}
+                      alt={goal.title}
+                      className="h-16 w-20 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-black italic text-[var(--engine-text)] dark:text-white">
+                        {goal.title}
+                      </p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                        {getProgress(goal).toFixed(1)}%
+                        {shared ? ` / ${t("community.shared")}` : ""}
+                      </p>
+                      {shared && publishedNote && !composing && (
+                        <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-muted)]">
+                          {publishedNote}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        shared
+                          ? "bg-[var(--engine-accent)] text-white"
+                          : "bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
+                      }`}
+                      title={shared ? t("community.editCaption") : t("community.publishGoal")}
+                    >
+                      {shared ? <Check size={17} /> : <Share2 size={17} />}
+                    </span>
                   </button>
+                  {shared && (
+                    <button
+                      type="button"
+                      onClick={() => onUnshare(goal)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white "
+                      title={t("community.unshare")}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Legenda da publicação: escrita aqui, na hora de publicar
+                    (ou editada depois), em vez de herdar a bio do perfil. */}
+                {composing && (
+                  <div className="mt-3 border-t border-[var(--engine-border)] pt-3">
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-text-subtle)]">
+                      {t("community.captionLabel")}
+                    </label>
+                    <textarea
+                      value={caption}
+                      rows={3}
+                      maxLength={280}
+                      autoFocus
+                      onChange={(event) => setCaption(event.target.value)}
+                      placeholder={t("community.captionPlaceholder")}
+                      className="engine-scroll w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
+                    />
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onShare(goal, caption);
+                          setComposingId("");
+                        }}
+                        className="rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+                      >
+                        {shared ? t("common.save") : t("community.publishGoal")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setComposingId("")}
+                        className="rounded-full px-3 py-2 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:text-[var(--engine-text)]"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                      <span className="ml-auto text-[11px] font-semibold text-[var(--engine-text-subtle)]">
+                        {caption.length}/280
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -1289,6 +1334,18 @@ export function Community({ cars = [], settings, user }) {
     }),
     [publicProfiles, settings, user],
   );
+
+  // Legenda já publicada de cada carro — o modal de publicar usa para
+  // pré-preencher a edição.
+  const myPublishedNotes = useMemo(() => {
+    const notes = {};
+    communityGoals.forEach((goal) => {
+      if (goal.ownerId === user?.uid && goal.carId) {
+        notes[String(goal.carId)] = goal.note || "";
+      }
+    });
+    return notes;
+  }, [communityGoals, user?.uid]);
 
   const carsById = useMemo(
     () => new Map(cars.map((car) => [String(car.id), car])),
@@ -1644,14 +1701,19 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
-  const handlePublishGoal = async (goal) => {
+  const handlePublishGoal = async (goal, caption = "") => {
     if (!goal.isMine || goal.ownerId !== user?.uid) {
       await handleCopyShareLink(goal);
       return;
     }
 
     try {
-      const publishedGoalId = await engineDB.shareCommunityGoal(goal, settings, user?.uid);
+      const publishedGoalId = await engineDB.shareCommunityGoal(
+        goal,
+        settings,
+        user?.uid,
+        caption,
+      );
       persistState((current) => ({
         ...current,
         sharedGoalIds: Array.from(
@@ -1930,6 +1992,7 @@ export function Community({ cars = [], settings, user }) {
         <ShareModal
           goals={personalGoals}
           sharedGoalIds={communityState.sharedGoalIds}
+          notesByCarId={myPublishedNotes}
           userId={user?.uid}
           t={t}
           onClose={() => setShareModalOpen(false)}
