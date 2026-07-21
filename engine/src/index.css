@@ -763,6 +763,21 @@ h5 {
   }
 }
 
+/* ===== Chat =====
+   A tela de mensagens precisa de altura própria: o compositor tem que ficar
+   colado no rodapé e só a lista rola. Descontamos o header/tab bar do mobile
+   e a topbar do desktop do viewport. */
+.engine-chat-shell {
+  height: calc(100dvh - 10.5rem - env(safe-area-inset-bottom));
+  min-height: 24rem;
+}
+
+@media (min-width: 1024px) {
+  .engine-chat-shell {
+    height: calc(100vh - 9.5rem);
+  }
+}
+
 /* Respeita a barra de gestos do iPhone em rodapés fixos */
 .engine-safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);

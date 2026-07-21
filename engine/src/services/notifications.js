@@ -4,6 +4,7 @@ import {
   Heart,
   MessageCircle,
   RotateCcw,
+  Send,
   Star,
   UserPlus,
   XCircle,
@@ -21,6 +22,7 @@ const notificationLabels = {
   service_approved: "Anúncio aprovado",
   service_changes_requested: "Anúncio retornado",
   service_rejected: "Anúncio recusado",
+  message: "Nova mensagem",
 };
 
 export const notificationStyles = {
@@ -31,6 +33,7 @@ export const notificationStyles = {
   service_approved: { icon: CheckCircle2, iconClass: "text-emerald-500" },
   service_changes_requested: { icon: RotateCcw, iconClass: "text-sky-500" },
   service_rejected: { icon: XCircle, iconClass: "text-red-500" },
+  message: { icon: Send, iconClass: "text-[var(--engine-accent)]" },
 };
 
 export const defaultNotificationStyle = {
@@ -52,12 +55,26 @@ export const formatNotificationTime = (createdAt) => {
 
 export const getNotificationTarget = (notification) => {
   if (notification.targetPath) return notification.targetPath;
-  if (notification.goalId)
-    return `/community?goal=${encodeURIComponent(notification.goalId)}`;
-  if (notification.serviceId) return "/services";
-  if (["follow", "like", "comment", "rating"].includes(notification.type)) {
-    return "/community";
+
+  if (notification.conversationId)
+    return `/messages/${notification.conversationId}`;
+
+  // Publicação: abre o post no modal (e já com os comentários, quando o
+  // alerta é justamente sobre um comentário).
+  if (notification.goalId) {
+    const goal = `/community?goal=${encodeURIComponent(notification.goalId)}`;
+    return notification.type === "comment" ? `${goal}&comments=1` : goal;
   }
+
+  if (notification.serviceId) return "/services";
+
+  // Sem meta: leva ao perfil de quem interagiu.
+  if (["follow", "like", "comment", "rating"].includes(notification.type)) {
+    return notification.actorId
+      ? `/community?user=${encodeURIComponent(notification.actorId)}`
+      : "/community";
+  }
+
   return "";
 };
 
@@ -96,6 +113,10 @@ export const getNotificationCopy = (notification) => {
       body: `${actor} avaliou sua publicação.`,
     },
     follow: { title: "Novo seguidor", body: `${actor} começou a seguir você.` },
+    message: {
+      title: "Nova mensagem",
+      body: `${actor} te enviou uma mensagem.`,
+    },
   };
 
   return (

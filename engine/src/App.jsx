@@ -19,6 +19,7 @@ import { Garagem } from "./pages/Garagem";
 import { DashboardPage } from "./pages/DashboardPage";
 import { Settings } from "./pages/Settings";
 import { Community } from "./pages/Community";
+import { Messages } from "./pages/Messages";
 import { ServiceApprovals, Services } from "./pages/Services";
 
 import { Login } from "./pages/Login";
@@ -72,6 +73,11 @@ function App() {
         ]);
         setCars(savedCars);
         setSettings(savedSettings);
+        // O perfil público só era escrito ao salvar os ajustes — quem nunca
+        // entrou lá aparecia como "Usuário Engine" para os outros.
+        engineDB
+          .syncPublicProfile(savedSettings, userId)
+          .catch((error) => console.warn("syncPublicProfile", error));
         if (i18n.language !== savedSettings.preferences.language) {
           i18n.changeLanguage(savedSettings.preferences.language);
         }
@@ -248,6 +254,14 @@ function App() {
                   element={
                     <Community cars={cars} settings={settings} user={user} />
                   }
+                />
+                <Route
+                  path="/messages"
+                  element={<Messages user={user} settings={settings} />}
+                />
+                <Route
+                  path="/messages/:conversationId"
+                  element={<Messages user={user} settings={settings} />}
                 />
                 <Route
                   path="/services"

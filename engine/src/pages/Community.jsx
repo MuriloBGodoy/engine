@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Award,
@@ -34,6 +35,8 @@ import {
 import { engineDB } from "../services/db";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useToast } from "../components/ToastProvider";
+import { ShareToChatModal } from "../components/ShareToChatModal";
+import { profileCardFromSettings, startConversation } from "../services/chat";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=900";
@@ -161,6 +164,18 @@ const enrichGoalProfiles = (goal, profiles) => {
   };
 };
 
+// O @ já vem no username salvo; ao lado do ícone de arroba ele duplicava.
+const withoutAt = (value = "") => String(value || "").replace(/^@+/, "");
+
+const mergeDefined = (base, incoming = {}) =>
+  Object.entries(incoming).reduce(
+    (merged, [key, value]) =>
+      value === null || value === undefined || value === ""
+        ? merged
+        : { ...merged, [key]: value },
+    { ...base },
+  );
+
 const getProfileStats = (profile = {}) => {
   const goals = profile.goals || [];
   const progress = goals.reduce((sum, goal) => sum + getProgress(goal), 0);
@@ -270,12 +285,16 @@ function GoalCard({
   onOpenProfile,
   onEditComment,
   onDeleteComment,
+  onOpenPost,
+  onSendToChat,
   currentUserId,
+  variant = "feed",
+  initialCommentsOpen = false,
 }) {
   const [draft, setDraft] = useState("");
   const [editingCommentId, setEditingCommentId] = useState("");
   const [editingDraft, setEditingDraft] = useState("");
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(initialCommentsOpen);
   const [commentMenuId, setCommentMenuId] = useState("");
   const progress = getProgress(goal);
   const comments = [...goal.comments, ...interactions.comments];
@@ -307,7 +326,13 @@ function GoalCard({
   };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-xl transition-all hover:border-[var(--engine-accent)]/40   dark:shadow-none">
+    <article
+      className={
+        variant === "modal"
+          ? "overflow-hidden bg-[var(--engine-elevated)]"
+          : "overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-xl transition-all hover:border-[var(--engine-accent)]/40   dark:shadow-none"
+      }
+    >
       <div className="flex items-center justify-between gap-3 border-b border-[var(--engine-border)] p-4  sm:gap-4 sm:p-5">
         <div className="flex min-w-0 items-center gap-3">
           <AvatarButton person={goal} onClick={() => onOpenProfile(goal.ownerId, goal)} />
@@ -356,7 +381,17 @@ function GoalCard({
           }}
           className="h-full w-full object-cover"
         />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white sm:p-5">
+        {/* A foto é o "abrir publicação" — mesmo gesto de qualquer feed. */}
+        {onOpenPost && (
+          <button
+            type="button"
+            onClick={() => onOpenPost(goal.id)}
+            aria-label={t("community.openPost")}
+            title={t("community.openPost")}
+            className="absolute inset-0 z-10"
+          />
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white sm:p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--engine-accent)]">
             {goal.brand} · {goal.year}
           </p>
@@ -421,6 +456,13 @@ function GoalCard({
               onClick={() => setCommentsOpen(true)}
               icon={<MessageCircle size={18} />}
             />
+            {onSendToChat && (
+              <ActionButton
+                title={t("messages.shareTitle")}
+                onClick={() => onSendToChat(goal)}
+                icon={<Send size={18} />}
+              />
+            )}
             <ActionButton
               title={t("community.share")}
               onClick={() => onShare(goal)}
@@ -1042,7 +1084,19 @@ function ShareModal({ goals, sharedGoalIds, userId, t, onClose, onShare, onUnsha
   );
 }
 
-function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
+function UserProfileModal({
+  profile,
+  loading,
+  t,
+  currentUserId,
+  onClose,
+  onOpenGoal,
+  onMessage,
+}) {
+  const canMessage =
+    Boolean(onMessage) &&
+    Boolean(profile?.userId) &&
+    profile.userId !== currentUserId;
   const goals = profile?.goals || [];
   const stats = getProfileStats(profile);
 
@@ -1062,13 +1116,15 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
                 {t("community.profileTitle")}
               </p>
+              {/* O nome que o feed já conhecia entra na hora: só cai no
+                  "carregando" quando não temos nem isso. */}
               <h2 className="truncate text-xl font-extrabold italic text-[var(--engine-text)] dark:text-white sm:text-2xl">
-                {loading ? t("common.loading") : profile?.author || "Usuário Engine"}
+                {profile?.author || (loading ? t("common.loading") : "Usuário Engine")}
               </h2>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-[var(--engine-text-subtle)] sm:text-sm">
                 <span className="inline-flex items-center gap-1">
                   <AtSign size={14} />
-                  {profile?.username || "@engine"}
+                  {withoutAt(profile?.username) || "engine"}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin size={14} />
@@ -1077,14 +1133,27 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
-            title={t("common.cancel")}
-          >
-            <X size={18} />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {canMessage && (
+              <button
+                type="button"
+                onClick={() => onMessage(profile)}
+                title={t("messages.messageAction")}
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--engine-accent)] px-3.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+              >
+                <MessageCircle size={15} />
+                <span className="hidden sm:inline">{t("messages.messageAction")}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
+              title={t("common.cancel")}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-5 p-4 sm:p-5">
@@ -1143,12 +1212,73 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
   );
 }
 
+/**
+ * Publicação individual.
+ *
+ * Todo post agora tem endereço próprio (`/community?goal=<id>`): é o que as
+ * notificações e o link de compartilhar abrem, em vez de só filtrar o feed.
+ */
+function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
+  return (
+    <div className="engine-modal-overlay" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("community.postTitle")}
+        className="engine-modal-panel engine-pop sm:max-w-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3.5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-accent)]">
+              {t("community.postTitle")}
+            </p>
+            <h2 className="mt-1 truncate text-base font-extrabold italic text-[var(--engine-text)] dark:text-white">
+              {goal?.title || t("common.loading")}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            title={t("common.cancel")}
+            aria-label={t("common.cancel")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+          >
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className="engine-modal-body engine-scroll engine-safe-bottom">
+          {goal ? (
+            <GoalCard
+              {...cardProps}
+              goal={goal}
+              t={t}
+              variant="modal"
+              initialCommentsOpen={openComments}
+            />
+          ) : (
+            <p className="px-4 py-16 text-center text-sm font-semibold text-[var(--engine-text-muted)]">
+              {loading ? t("common.loading") : t("community.postMissing")}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Community({ cars = [], settings, user }) {
   const { t } = useTranslation();
   const confirm = useConfirm();
   const toast = useToast();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("feed");
   const [query, setQuery] = useState("");
+  const [remoteGoal, setRemoteGoal] = useState(null);
+  const [postToShare, setPostToShare] = useState(null);
+  const handledProfileId = useRef("");
   const [communityState, setCommunityState] = useState(
     engineDB.getDefaultCommunityState(),
   );
@@ -1250,19 +1380,47 @@ export function Community({ cars = [], settings, user }) {
     return () => unsubscribe();
   }, []);
 
+  const openPostId = searchParams.get("goal") || "";
+  const openProfileId = searchParams.get("user") || "";
+  const openWithComments = searchParams.get("comments") === "1";
+
+  const feedGoal = useMemo(
+    () => goals.find((item) => item.id === openPostId) || null,
+    [goals, openPostId],
+  );
+
+  // Se a publicação não veio na página carregada do feed (link direto ou
+  // notificação antiga), acompanhamos o documento dela sozinho.
   useEffect(() => {
-    const goalId = new URLSearchParams(window.location.search).get("goal");
-    if (!goalId || !goals.length) return;
-    const goal = goals.find((item) => item.id === goalId);
-    if (!goal) return;
+    if (!openPostId || feedGoal) return undefined;
 
-    const timer = window.setTimeout(() => {
-      setActiveTab("feed");
-      setQuery(goal.title);
-    }, 0);
+    return engineDB.subscribeCommunityGoal(openPostId, (goal) =>
+      setRemoteGoal({ id: openPostId, goal }),
+    );
+  }, [feedGoal, openPostId]);
 
-    return () => window.clearTimeout(timer);
-  }, [goals]);
+  const loadedRemoteGoal = remoteGoal?.id === openPostId ? remoteGoal.goal : null;
+  const remoteGoalLoading =
+    Boolean(openPostId) && !feedGoal && remoteGoal?.id !== openPostId;
+
+  const postModalGoal = useMemo(() => {
+    if (feedGoal) return feedGoal;
+    return loadedRemoteGoal ? enrichGoalProfiles(loadedRemoteGoal, profiles) : null;
+  }, [feedGoal, loadedRemoteGoal, profiles]);
+
+  const closeParamModal = (key) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(key);
+    if (key === "goal") next.delete("comments");
+    setSearchParams(next, { replace: true });
+  };
+
+  const openPost = (goalId) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("goal", goalId);
+    next.delete("comments");
+    setSearchParams(next);
+  };
 
   const persistState = async (updater) => {
     setCommunityState((current) => {
@@ -1412,7 +1570,9 @@ export function Community({ cars = [], settings, user }) {
       setProfileModal({
         open: true,
         loading: false,
-        profile: { ...fallbackProfile, ...profile },
+        // Campo vazio vindo do perfil público não apaga o que o card do feed
+        // já sabia sobre a pessoa.
+        profile: mergeDefined(fallbackProfile, profile),
       });
     } catch (error) {
       console.error(error);
@@ -1420,12 +1580,55 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
-  const handleOpenProfileGoal = (goalId) => {
-    const goal = goals.find((item) => item.id === goalId);
+  // Notificação de seguidor (ou link de perfil): /community?user=<uid>.
+  // O setTimeout evita setState síncrono dentro do efeito.
+  useEffect(() => {
+    if (!openProfileId) {
+      handledProfileId.current = "";
+      return undefined;
+    }
+    if (handledProfileId.current === openProfileId) return undefined;
+
+    handledProfileId.current = openProfileId;
+    const timer = window.setTimeout(
+      () => handleOpenProfile(openProfileId, profiles[openProfileId] || {}),
+      0,
+    );
+
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openProfileId, profiles]);
+
+  const closeProfileModal = () => {
     setProfileModal({ open: false, loading: false, profile: null });
-    if (goal) {
-      setActiveTab("feed");
-      setQuery(goal.title);
+    if (openProfileId) closeParamModal("user");
+  };
+
+  const handleOpenProfileGoal = (goalId) => {
+    closeProfileModal();
+    openPost(goalId);
+  };
+
+  const handleMessageProfile = async (profile) => {
+    const targetId = profile?.userId || profile?.id;
+    if (!targetId || targetId === user?.uid) return;
+
+    try {
+      const conversationId = await startConversation(
+        profileCardFromSettings(settings, user),
+        {
+          userId: targetId,
+          author: profile.author,
+          username: profile.username,
+          avatar: profile.avatar,
+          avatarInitials: profile.avatarInitials,
+        },
+      );
+      closeProfileModal();
+      navigate(`/messages/${conversationId}`);
+    } catch (error) {
+      console.error(error);
+      flash(t("messages.startError"));
     }
   };
 
@@ -1705,6 +1908,8 @@ export function Community({ cars = [], settings, user }) {
                   onOpenProfile={handleOpenProfile}
                   onEditComment={handleEditComment}
                   onDeleteComment={handleDeleteComment}
+                  onOpenPost={openPost}
+                  onSendToChat={setPostToShare}
                   currentUserId={user?.uid}
                 />
               ))
@@ -1781,10 +1986,52 @@ export function Community({ cars = [], settings, user }) {
           profile={profileModal.profile}
           loading={profileModal.loading}
           t={t}
-          onClose={() => setProfileModal({ open: false, loading: false, profile: null })}
+          currentUserId={user?.uid}
+          onClose={closeProfileModal}
           onOpenGoal={handleOpenProfileGoal}
+          onMessage={handleMessageProfile}
         />
       )}
+
+      {Boolean(openPostId) && (
+        <PostModal
+          goal={postModalGoal}
+          loading={remoteGoalLoading}
+          openComments={openWithComments}
+          t={t}
+          onClose={() => closeParamModal("goal")}
+          cardProps={{
+            interactions: {
+              ...emptyInteraction,
+              liked: Boolean(postModalGoal?.likesBy?.[user?.uid]),
+              rating: postModalGoal?.ratingsBy?.[user?.uid] || postModalGoal?.rating || 0,
+            },
+            following: communityState.following,
+            shared: postModalGoal
+              ? isGoalShared(postModalGoal, communityState.sharedGoalIds, user?.uid)
+              : false,
+            onLike: handleLike,
+            onComment: handleComment,
+            onRate: handleRate,
+            onShare: handleCopyShareLink,
+            onUnshare: handleUnshareGoal,
+            onFollow: handleFollow,
+            onOpenProfile: handleOpenProfile,
+            onEditComment: handleEditComment,
+            onDeleteComment: handleDeleteComment,
+            onSendToChat: setPostToShare,
+            currentUserId: user?.uid,
+          }}
+        />
+      )}
+
+      <ShareToChatModal
+        open={Boolean(postToShare)}
+        goal={postToShare}
+        user={user}
+        settings={settings}
+        onClose={() => setPostToShare(null)}
+      />
     </section>
   );
 }

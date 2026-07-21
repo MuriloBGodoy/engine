@@ -5,12 +5,14 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Settings,
   Users,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { useTranslation } from "react-i18next";
+import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { Logo } from "./Logo";
 import { Topbar } from "./TopBar";
 
@@ -40,6 +42,7 @@ export function TopNav({
   const navigate = useNavigate();
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
+  const unreadMessages = useUnreadMessages(user?.uid);
 
   const handleLogout = async () => {
     try {
@@ -55,6 +58,12 @@ export function TopNav({
     { name: t("nav.dashboard"), path: "/dashboard", icon: LayoutDashboard },
     { name: t("nav.garage"), path: "/garagem", icon: Car },
     { name: t("nav.community"), path: "/community", icon: Users },
+    {
+      name: t("nav.messages"),
+      path: "/messages",
+      icon: MessageCircle,
+      badge: unreadMessages,
+    },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
     { name: t("nav.settings"), path: "/settings", icon: Settings },
   ];
@@ -83,7 +92,12 @@ export function TopNav({
                     : "text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
                 }`}
               >
-                <Icon size={17} strokeWidth={active ? 2.4 : 2} />
+                <span className="relative">
+                  <Icon size={17} strokeWidth={active ? 2.4 : 2} />
+                  {item.badge > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-[var(--engine-accent)]" />
+                  )}
+                </span>
                 <span className="hidden xl:inline">{item.name}</span>
               </Link>
             );

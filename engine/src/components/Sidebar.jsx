@@ -5,12 +5,14 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Settings,
   Users,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { useTranslation } from "react-i18next";
+import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { Logo } from "./Logo";
 
 const getInitials = (name) => {
@@ -36,6 +38,7 @@ export function Sidebar({
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
   const showEmail = privacySettings.showEmailInSidebar !== false;
+  const unreadMessages = useUnreadMessages(user?.uid);
 
   const handleLogout = async () => {
     try {
@@ -51,6 +54,12 @@ export function Sidebar({
     { name: t("nav.dashboard"), path: "/dashboard", icon: LayoutDashboard },
     { name: t("nav.garage"), path: "/garagem", icon: Car },
     { name: t("nav.community"), path: "/community", icon: Users },
+    {
+      name: t("nav.messages"),
+      path: "/messages",
+      icon: MessageCircle,
+      badge: unreadMessages,
+    },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
     { name: t("nav.settings"), path: "/settings", icon: Settings },
   ];
@@ -108,13 +117,24 @@ export function Sidebar({
               {active && !collapsed && (
                 <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--engine-accent)]" />
               )}
-              <Icon size={20} strokeWidth={active ? 2.4 : 2} className="shrink-0" />
+              <span className="relative shrink-0">
+                <Icon size={20} strokeWidth={active ? 2.4 : 2} />
+                {/* Recolhida, a sidebar só tem espaço para um ponto */}
+                {item.badge > 0 && collapsed && (
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[var(--engine-accent)] ring-2 ring-[var(--engine-surface)]" />
+                )}
+              </span>
               <span
-                className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+                className={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap transition-all duration-300 ${
                   collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
                 }`}
               >
-                {item.name}
+                <span className="truncate">{item.name}</span>
+                {item.badge > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1.5 text-[10px] font-black text-white">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                )}
               </span>
             </Link>
           );

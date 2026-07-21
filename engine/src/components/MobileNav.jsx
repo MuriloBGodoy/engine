@@ -5,11 +5,13 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Users,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { useTranslation } from "react-i18next";
+import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { Logo } from "./Logo";
 import { Topbar } from "./TopBar";
 
@@ -43,6 +45,8 @@ export function MobileNav({
   const currentUser = user || auth.currentUser;
   const displayName = profileSettings.displayName || currentUser?.displayName;
   const avatar = profileSettings.avatar || currentUser?.photoURL;
+  const unreadMessages = useUnreadMessages(currentUser?.uid);
+  const messagesActive = location.pathname.startsWith("/messages");
 
   const handleLogout = async () => {
     try {
@@ -74,6 +78,27 @@ export function MobileNav({
         </Link>
 
         <div className="flex shrink-0 items-center gap-0.5">
+          {/* Mensagens ficam no header (como no Instagram): a barra de baixo
+              já está cheia com as 5 áreas principais. */}
+          <Link
+            to="/messages"
+            title={t("nav.messages")}
+            aria-label={t("nav.messages")}
+            aria-current={messagesActive ? "page" : undefined}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+              messagesActive
+                ? "bg-[var(--engine-accent)] text-white"
+                : "text-[var(--engine-text-muted)] active:text-[var(--engine-accent)]"
+            }`}
+          >
+            <MessageCircle size={21} />
+            {unreadMessages > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1 text-[9px] font-black text-white">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
+          </Link>
+
           {settings && onSettingsUpdate && (
             <Topbar
               settings={settings}

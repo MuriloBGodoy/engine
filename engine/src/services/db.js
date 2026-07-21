@@ -858,6 +858,47 @@ export const engineDB = {
     };
   },
 
+  /**
+   * Acompanha UMA publicação — usada pelo modal de post aberto por link direto
+   * ou notificação, quando a meta não está na página já carregada do feed.
+   */
+  subscribeCommunityGoal(goalId, callback) {
+    if (!goalId) {
+      callback(null);
+      return () => {};
+    }
+
+    if (apiEnabled()) {
+      let active = true;
+      apiRequest(`/community/goals/${goalId}`)
+        .then((goal) => {
+          if (active) callback(goal);
+        })
+        .catch((error) => {
+          warnFirestoreFallback("subscribeCommunityGoal", error);
+          if (active) callback(null);
+        });
+      return () => {
+        active = false;
+      };
+    }
+
+    return onSnapshot(
+      doc(firestore, COMMUNITY_COLLECTION, String(goalId)),
+      (snapshot) => {
+        callback(
+          snapshot.exists()
+            ? normalizeCommunityGoal({ id: snapshot.id, ...snapshot.data() })
+            : null,
+        );
+      },
+      (error) => {
+        warnFirestoreFallback("subscribeCommunityGoal", error);
+        callback(null);
+      },
+    );
+  },
+
   subscribePublicProfiles(callback) {
     if (apiEnabled()) return () => {};
 
@@ -1257,16 +1298,23 @@ export const engineDB = {
       return sum + (target ? Math.min((Number(goal.savedValue) / target) * 100, 100) : 0);
     }, 0);
 
+    // O doc em publicProfiles só nasce quando a pessoa salva os ajustes; até
+    // lá, os dados do autor que viajam junto de cada meta são a melhor fonte
+    // (antes caíamos num "Usuário Engine / @engine" genérico).
+    const profile = profileSnapshot.exists() ? profileSnapshot.data() : {};
+    const fromGoals = goals[0] || {};
+    const pick = (...values) => values.find(Boolean) || "";
+
     return {
       id: userId,
       userId,
-      author: "Usuário Engine",
-      username: "@engine",
-      avatar: "",
-      avatarInitials: "UE",
-      city: "Engine Garage",
-      note: "",
-      ...(profileSnapshot.exists() ? profileSnapshot.data() : {}),
+      ...profile,
+      author: pick(profile.author, fromGoals.author, "Usuário Engine"),
+      username: pick(profile.username, fromGoals.username, "@engine"),
+      avatar: pick(profile.avatar, fromGoals.avatar),
+      avatarInitials: pick(profile.avatarInitials, fromGoals.avatarInitials),
+      city: pick(profile.city, fromGoals.city, "Engine Garage"),
+      note: pick(profile.note, fromGoals.note),
       goals,
       goalsCount: goals.length,
       likesCount: goals.reduce((sum, goal) => sum + Object.keys(goal.likesBy || {}).length, 0),
@@ -1302,7 +1350,7 @@ export const engineDB = {
       actorId: currentUserId,
       actorName: actor.author,
       actorUsername: actor.username,
-      targetPath: "/community",
+      targetPath: `/community?user=${encodeURIComponent(currentUserId)}`,
       notificationTitle: "Novo seguidor",
       notificationBody: `${actor.author} começou a seguir sua garagem.`,
       text: `${actor.author} comecou a seguir sua garagem.`,
@@ -1433,7 +1481,7 @@ export const engineDB = {
         goalId,
         goalTitle: goalData.title,
         commentId,
-        targetPath: `/community?goal=${encodeURIComponent(goalId)}`,
+        targetPath: `/community?goal=${encodeURIComponent(goalId)}&comments=1`,
         notificationTitle: "Novo comentário",
         notificationBody: `${actor.author} comentou na sua publicação.`,
         text: `${actor.author} comentou na sua meta ${goalData.title}.`,
