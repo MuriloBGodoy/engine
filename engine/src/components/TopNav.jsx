@@ -95,7 +95,6 @@ export function TopNav({
             settings={settings}
             onSettingsUpdate={onSettingsUpdate}
             user={user}
-            variant="embedded"
           />
           <span className="mx-1.5 h-6 w-px bg-[var(--engine-border)]" />
           <Link

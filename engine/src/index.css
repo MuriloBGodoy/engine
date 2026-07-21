@@ -686,6 +686,83 @@ h5 {
   }
 }
 
+/* ===== Drawer (notificações) =====
+   Padrão consagrado: no desktop é um painel ancorado na borda direita, de
+   largura fixa, que NÃO cobre o conteúdo (o usuário continua vendo a página);
+   no celular vira bottom sheet, que é o equivalente móvel — mais perto do
+   polegar e fácil de dispensar. Referências: notification drawer do
+   PatternFly e as guidelines de bottom sheet do Material 3 / NN/g. */
+.engine-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.5);
+  animation: engine-fade-in 0.18s ease-out;
+}
+
+.engine-drawer {
+  position: fixed;
+  z-index: 121;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--engine-elevated);
+  border: 1px solid var(--engine-border);
+  box-shadow: var(--engine-shadow-lg);
+
+  /* Mobile: folha inferior */
+  inset: auto 0 0 0;
+  /* Deixa uma faixa da página aparecendo em cima: a folha não "engole" a
+     tela e o toque no fundo continua sendo uma saída óbvia. */
+  max-height: min(78dvh, 36rem);
+  border-width: 1px 0 0 0;
+  border-radius: 20px 20px 0 0;
+  animation: engine-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 640px) {
+  /* Desktop: coluna encostada na direita, ocupando só ~380px */
+  .engine-drawer-scrim {
+    background: rgba(0, 0, 0, 0.28);
+  }
+
+  .engine-drawer {
+    inset: 0 0 0 auto;
+    width: min(380px, 100vw);
+    max-height: none;
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+    animation: engine-drawer-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes engine-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes engine-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes engine-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 /* Respeita a barra de gestos do iPhone em rodapés fixos */
 .engine-safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);

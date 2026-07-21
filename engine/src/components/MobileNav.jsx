@@ -79,7 +79,6 @@ export function MobileNav({
               settings={settings}
               onSettingsUpdate={onSettingsUpdate}
               user={currentUser}
-              variant="embedded"
             />
           )}
           {/* O avatar é a porta de entrada de Ajustes no mobile (mesmo padrão

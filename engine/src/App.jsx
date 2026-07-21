@@ -200,7 +200,13 @@ function App() {
               No layout top-nav, ela já está embutida no TopNav. */}
           {!dbLoading && !isTopNav && (
             <div className="engine-container hidden lg:block">
-              <Topbar settings={settings} onSettingsUpdate={setSettings} user={user} />
+              <div className="flex w-full items-center justify-end gap-1.5 border-b border-[var(--engine-border)] pb-4">
+                <Topbar
+                  settings={settings}
+                  onSettingsUpdate={setSettings}
+                  user={user}
+                />
+              </div>
             </div>
           )}
 

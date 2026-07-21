@@ -300,6 +300,14 @@ const resources = {
       notifications: {
         title: "Notificações",
         empty: "Nenhuma notificação ainda.",
+        emptyHint: "Quando algo importante acontecer, o alerta aparece aqui.",
+        unread_one: "{{count}} não lida",
+        unread_other: "{{count}} não lidas",
+        allRead: "Tudo em dia",
+        markAllRead: "Marcar todas como lidas",
+        close: "Fechar notificações",
+        open: "Abrir",
+        adminNote: "Comentário do admin",
       },
       community: {
         kicker: "metas públicas / vídeos / ranking",
@@ -838,6 +846,14 @@ const resources = {
       notifications: {
         title: "Notifications",
         empty: "No notifications yet.",
+        emptyHint: "When something important happens, the alert shows up here.",
+        unread_one: "{{count}} unread",
+        unread_other: "{{count}} unread",
+        allRead: "All caught up",
+        markAllRead: "Mark all as read",
+        close: "Close notifications",
+        open: "Open",
+        adminNote: "Admin note",
       },
       community: {
         kicker: "public goals / videos / ranking",
@@ -1374,6 +1390,14 @@ const resources = {
       notifications: {
         title: "Notificaciones",
         empty: "Sin notificaciones todavía.",
+        emptyHint: "Cuando pase algo importante, el aviso aparece aquí.",
+        unread_one: "{{count}} sin leer",
+        unread_other: "{{count}} sin leer",
+        allRead: "Todo al día",
+        markAllRead: "Marcar todas como leídas",
+        close: "Cerrar notificaciones",
+        open: "Abrir",
+        adminNote: "Comentario del admin",
       },
       community: {
         kicker: "metas públicas / videos / ranking",
