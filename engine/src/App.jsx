@@ -288,7 +288,10 @@ function App() {
           )}
         </main>
 
+        {/* A key remonta o formulário a cada carro: sem isso o modal fica
+            montado e carrega marca/modelo/ano/preço do carro anterior. */}
         <ModalNewCar
+          key={carToEdit?.id ?? "new"}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onSave={saveCarAction}

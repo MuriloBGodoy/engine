@@ -7,6 +7,8 @@ import {
   Bookmark,
   Car,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Clapperboard,
   Copy,
   Edit3,
@@ -280,6 +282,105 @@ function RatingControl({ value, onRate, label, size = 16 }) {
 }
 
 /**
+ * Galeria do post. Uma foto só continua sendo uma imagem simples; com mais
+ * de uma vira carrossel: arrastar o dedo no celular, setas no desktop e
+ * bolinhas indicando onde você está.
+ */
+function PostGallery({ images, alt, t, onOpen }) {
+  const [index, setIndex] = useState(0);
+  const dragStart = useRef(null);
+
+  const total = images.length;
+  const current = Math.min(index, total - 1);
+
+  const go = (next) => setIndex(Math.max(0, Math.min(next, total - 1)));
+
+  const handleTouchStart = (event) => {
+    dragStart.current = event.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (event) => {
+    if (dragStart.current === null) return;
+    const delta = event.changedTouches[0].clientX - dragStart.current;
+    dragStart.current = null;
+    if (Math.abs(delta) < 40) return;
+    go(delta < 0 ? current + 1 : current - 1);
+  };
+
+  return (
+    <div
+      className="relative aspect-[4/3] overflow-hidden bg-[var(--engine-surface-2)]"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div
+        className="flex h-full transition-transform duration-300 ease-out"
+        style={{ transform: `translateX(-${current * 100}%)` }}
+      >
+        {images.map((image) => (
+          <img
+            key={image}
+            src={image}
+            alt={alt}
+            onError={(event) => {
+              event.currentTarget.src = fallbackImage;
+            }}
+            className="h-full w-full shrink-0 object-cover"
+          />
+        ))}
+      </div>
+
+      {/* A foto é o "abrir publicação" — mesmo gesto de qualquer feed. */}
+      {onOpen && (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={t("community.openPost")}
+          title={t("community.openPost")}
+          className="absolute inset-0"
+        />
+      )}
+
+      {total > 1 && (
+        <>
+          {current > 0 && (
+            <button
+              type="button"
+              onClick={() => go(current - 1)}
+              aria-label={t("community.previousPhoto")}
+              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70 sm:flex"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          {current < total - 1 && (
+            <button
+              type="button"
+              onClick={() => go(current + 1)}
+              aria-label={t("community.nextPhoto")}
+              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70 sm:flex"
+            >
+              <ChevronRight size={18} />
+            </button>
+          )}
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+            {images.map((image, position) => (
+              <span
+                key={image}
+                className={`h-1.5 rounded-full transition-all ${
+                  position === current ? "w-4 bg-white" : "w-1.5 bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
  * Menu "..." do post. Tira do cartão as ações raras (copiar link, remover)
  * que antes moravam na barra de ícones e a deixavam pesada.
  */
@@ -382,6 +483,7 @@ function GoalCard({
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
   const isModal = variant === "modal";
+  const photos = goal.images?.length ? goal.images : [goal.image || fallbackImage];
   // No modal de publicação (desktop) os comentários já estão ao lado: o balão
   // leva o foco para o compositor em vez de abrir outra folha.
   const showComments = onCommentClick || (() => setCommentsOpen(true));
@@ -483,26 +585,12 @@ function GoalCard({
         <PostMenu items={menuItems} label={t("community.postOptions")} />
       </header>
 
-      <div className="relative aspect-[4/3] bg-[var(--engine-surface-2)]">
-        <img
-          src={goal.image}
-          alt={goal.title}
-          onError={(event) => {
-            event.currentTarget.src = fallbackImage;
-          }}
-          className="h-full w-full object-cover"
-        />
-        {/* A foto é o "abrir publicação" — mesmo gesto de qualquer feed. */}
-        {onOpenPost && (
-          <button
-            type="button"
-            onClick={() => onOpenPost(goal.id)}
-            aria-label={t("community.openPost")}
-            title={t("community.openPost")}
-            className="absolute inset-0"
-          />
-        )}
-      </div>
+      <PostGallery
+        images={photos}
+        alt={goal.title}
+        t={t}
+        onOpen={onOpenPost ? () => onOpenPost(goal.id) : undefined}
+      />
 
       <div className="flex items-center gap-0.5 px-2 pt-1.5 sm:px-3">
         <ActionButton

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Save, Loader2, Upload } from "lucide-react";
+import { X, Save, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-
-const fallbackImage =
-  "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
+import { auth } from "../services/firebase";
+import { MAX_CAR_PHOTOS } from "../services/db";
+import { isFileTooBig, isImageFile, uploadUserPhoto } from "../services/photos";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
@@ -22,7 +22,12 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const [targetValue, setTargetValue] = useState(0);
   const [savedValue, setSavedValue] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [customImage, setCustomImage] = useState(null);
+  const [photos, setPhotos] = useState(() =>
+    Array.isArray(carToEdit?.images) && carToEdit.images.length
+      ? carToEdit.images
+      : [carToEdit?.image].filter(Boolean),
+  );
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
 
@@ -50,11 +55,9 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       if (carToEdit) {
         setSavedValue(carToEdit.savedValue || 0);
         setTargetValue(carToEdit.targetValue || 0);
-        setCustomImage(carToEdit.image || null);
       } else {
         setSavedValue(0);
         setTargetValue(0);
-        setCustomImage(null);
         setSelectedBrand("");
         setSelectedModel("");
         setSelectedYear("");
@@ -64,22 +67,43 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
     return () => clearTimeout(timer);
   }, [isOpen, carToEdit]);
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
     setError("");
+    if (!files.length) return;
 
-    if (!file) return;
-
-    if (!file.type.startsWith("image/") || file.size > 4 * 1024 * 1024) {
-      setError(t("modalCar.imageError"));
-      e.target.value = "";
+    const slots = MAX_CAR_PHOTOS - photos.length;
+    if (slots <= 0) {
+      setError(t("modalCar.photoLimit", { value: MAX_CAR_PHOTOS }));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => setCustomImage(reader.result);
-    reader.readAsDataURL(file);
+    const selected = files.slice(0, slots);
+    if (selected.some((file) => !isImageFile(file) || isFileTooBig(file))) {
+      setError(t("modalCar.imageError"));
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // As fotos vão para o Storage; o documento guarda só a URL.
+      const urls = await Promise.all(
+        selected.map((file) =>
+          uploadUserPhoto(file, { userId: auth.currentUser?.uid, folder: "cars" }),
+        ),
+      );
+      setPhotos((current) => [...current, ...urls].slice(0, MAX_CAR_PHOTOS));
+    } catch (uploadError) {
+      console.error(uploadError);
+      setError(t("modalCar.imageError"));
+    } finally {
+      setUploading(false);
+    }
   };
+
+  const removePhoto = (index) =>
+    setPhotos((current) => current.filter((_, position) => position !== index));
 
   const handleBrandChange = (brandId) => {
     setSelectedBrand(brandId);
@@ -157,7 +181,11 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       return;
     }
 
-    const finalImage = customImage || carToEdit?.image || fallbackImage;
+    if (!photos.length) {
+      setError(t("modalCar.photoRequired"));
+      setLoading(false);
+      return;
+    }
 
     const carData = {
       id: carToEdit ? carToEdit.id : Date.now(),
@@ -169,7 +197,8 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
         "",
       targetValue: targetValue,
       savedValue: savedValue,
-      image: finalImage,
+      images: photos,
+      image: photos[0],
     };
 
     const saved = await onSave(carData);
@@ -204,29 +233,70 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
           onSubmit={handleSubmit}
           className="engine-modal-body engine-scroll engine-safe-bottom space-y-5 px-5 pt-5 sm:px-7 sm:pt-6"
         >
-          <div
-            onClick={() => fileInputRef.current.click()}
-            className="flex h-40 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--engine-border-strong)] bg-[var(--engine-surface-2)] transition-colors hover:border-[var(--engine-accent)] sm:h-48"
-          >
-            {customImage ? (
-              <img
-                src={customImage}
-                className="h-full w-full object-cover"
-                alt="Car preview"
-              />
-            ) : (
-              <div className="text-center">
-                <Upload className="mx-auto mb-2 text-[var(--engine-text-subtle)]" size={30} />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
-                  {t("modalCar.photo")}
-                </span>
+          {/* Galeria: a primeira foto é a capa. Foto é obrigatória — nada de
+              imagem genérica quando a pessoa não envia nada. */}
+          <div className="space-y-2">
+            {photos.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {photos.map((photo, index) => (
+                  <div
+                    key={photo}
+                    className="relative aspect-[4/3] overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]"
+                  >
+                    <img src={photo} alt="" className="h-full w-full object-cover" />
+                    {index === 0 && (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+                        {t("modalCar.cover")}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      title={t("common.delete")}
+                      aria-label={t("common.delete")}
+                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-[var(--engine-accent)]"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
+
+            {photos.length < MAX_CAR_PHOTOS && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border-strong)] bg-[var(--engine-surface-2)] transition-colors hover:border-[var(--engine-accent)] disabled:opacity-50 ${
+                  photos.length ? "h-20" : "h-40 sm:h-48"
+                }`}
+              >
+                {uploading ? (
+                  <Loader2 className="animate-spin text-[var(--engine-accent)]" size={24} />
+                ) : (
+                  <>
+                    {photos.length ? (
+                      <Plus className="text-[var(--engine-text-subtle)]" size={22} />
+                    ) : (
+                      <Upload className="mb-2 text-[var(--engine-text-subtle)]" size={30} />
+                    )}
+                    <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                      {photos.length
+                        ? t("modalCar.addPhoto", { count: MAX_CAR_PHOTOS - photos.length })
+                        : t("modalCar.photo")}
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
+
             <input
               type="file"
               ref={fileInputRef}
               className="hidden"
               accept="image/*"
+              multiple
               onChange={handleFileUpload}
             />
           </div>

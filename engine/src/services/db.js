@@ -218,6 +218,18 @@ const recoverSettingsAvatar = async (settings = {}, userId = currentUserId) => {
     : normalized;
 };
 
+export const MAX_CAR_PHOTOS = 4;
+
+/** Galeria do carro: aceita o campo antigo (`image`) e o novo (`images`). */
+const normalizeCarImages = (car = {}) => {
+  const list = Array.isArray(car.images) ? car.images : [];
+  const all = [...list, car.image]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(all)).slice(0, MAX_CAR_PHOTOS);
+};
+
 const normalizeCar = (car) => ({
   id: String(car.id || crypto.randomUUID()),
   brand: String(car.brand || "").trim().slice(0, 80),
@@ -225,7 +237,9 @@ const normalizeCar = (car) => ({
   year: String(car.year || "").trim().slice(0, 40),
   targetValue: Math.max(Number(car.targetValue) || 0, 0),
   savedValue: Math.max(Number(car.savedValue) || 0, 0),
-  image: String(car.image || "").trim(),
+  images: normalizeCarImages(car),
+  // `image` continua sendo a capa, para tudo que já lê esse campo.
+  image: normalizeCarImages(car)[0] || "",
   // Simulação de custo real de posse (inputs do usuário), quando existir.
   ownership: car.ownership
     ? {
@@ -358,6 +372,7 @@ const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
     model: goal.model,
     year: goal.year,
     image: goal.image,
+    images: normalizeCarImages(goal),
     savedValue: goal.savedValue,
     targetValue: goal.targetValue,
     // Legenda escrita na hora de publicar — não é mais a bio do perfil.
@@ -394,6 +409,7 @@ const communityCarPatch = (car) => ({
   model: car.model,
   year: car.year,
   image: car.image,
+  images: normalizeCarImages(car),
   savedValue: car.savedValue,
   targetValue: car.targetValue,
   updatedAt: serverTimestamp(),
@@ -425,6 +441,7 @@ const normalizeCommunityGoal = (goal = {}) => {
     model: goal.model || "",
     year: goal.year || "",
     image: goal.image || "",
+    images: normalizeCarImages(goal),
     savedValue: Number(goal.savedValue) || 0,
     targetValue: Number(goal.targetValue) || 0,
     streak: Number(goal.streak) || 1,
