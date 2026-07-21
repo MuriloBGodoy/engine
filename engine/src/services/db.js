@@ -1191,6 +1191,23 @@ export const engineDB = {
     return payload.id;
   },
 
+  /** Edita só a legenda de uma publicação já no ar. */
+  async updateCommunityGoalNote(goalId, note, userId = currentUserId) {
+    if (!userId || !goalId) return;
+
+    const text = String(note || "").trim().slice(0, 280);
+
+    if (apiEnabled()) {
+      await apiJson("PATCH", `/community/goals/${goalId}`, { note: text });
+      return;
+    }
+
+    await updateDoc(doc(firestore, COMMUNITY_COLLECTION, String(goalId)), {
+      note: text,
+      updatedAt: serverTimestamp(),
+    });
+  },
+
   async deleteCommunityGoal(goal, userId = currentUserId) {
     if (!userId) return;
     const goalId = communityGoalId(goal, userId);

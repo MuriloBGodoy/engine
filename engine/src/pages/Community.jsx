@@ -365,6 +365,7 @@ function GoalCard({
   onDeleteComment,
   onOpenPost,
   onSendToChat,
+  onEditCaption,
   currentUserId,
   variant = "feed",
   initialCommentsOpen = false,
@@ -408,6 +409,15 @@ function GoalCard({
 
   const menuItems = [
     { icon: Copy, label: t("community.copyLink"), onClick: () => onShare(goal) },
+    ...(isOwner && onEditCaption
+      ? [
+          {
+            icon: Edit3,
+            label: t("community.editCaption"),
+            onClick: () => onEditCaption(goal),
+          },
+        ]
+      : []),
     ...(isOwner
       ? [
           {
@@ -1241,6 +1251,73 @@ function UserProfileModal({
   );
 }
 
+/** Editor da legenda de uma publicação já no ar. */
+function CaptionModal({ goal, t, onClose, onSave }) {
+  const [caption, setCaption] = useState(goal?.note || "");
+
+  return (
+    <div className="engine-modal-overlay" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="engine-modal-panel engine-pop sm:max-w-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3.5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-accent)]">
+              {t("community.captionTitle")}
+            </p>
+            <p className="mt-1 truncate text-sm font-bold text-[var(--engine-text)]">
+              {goal.title}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.cancel")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+          >
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className="engine-modal-body engine-scroll p-4">
+          <textarea
+            value={caption}
+            rows={5}
+            maxLength={280}
+            autoFocus
+            onChange={(event) => setCaption(event.target.value)}
+            placeholder={t("community.captionPlaceholder")}
+            className="engine-scroll w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
+          />
+          <p className="mt-2 text-right text-[11px] font-semibold text-[var(--engine-text-subtle)]">
+            {caption.length}/280
+          </p>
+        </div>
+
+        <div className="engine-safe-bottom flex shrink-0 items-center gap-2 border-t border-[var(--engine-border)] p-3">
+          <button
+            type="button"
+            onClick={() => onSave(goal, caption)}
+            className="rounded-full bg-[var(--engine-accent)] px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+          >
+            {t("common.save")}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-3 py-2.5 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:text-[var(--engine-text)]"
+          >
+            {t("common.cancel")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Publicação individual.
  *
@@ -1307,6 +1384,7 @@ export function Community({ cars = [], settings, user }) {
   const [query, setQuery] = useState("");
   const [remoteGoal, setRemoteGoal] = useState(null);
   const [postToShare, setPostToShare] = useState(null);
+  const [captionGoal, setCaptionGoal] = useState(null);
   const handledProfileId = useRef("");
   const [communityState, setCommunityState] = useState(
     engineDB.getDefaultCommunityState(),
@@ -1746,6 +1824,17 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
+  const handleSaveCaption = async (goal, caption) => {
+    try {
+      await engineDB.updateCommunityGoalNote(goal.id, caption, user?.uid);
+      setCaptionGoal(null);
+      flash(t("community.captionSaved"));
+    } catch (error) {
+      console.error(error);
+      flash(t("community.captionError"));
+    }
+  };
+
   const handleClearMyPublications = async () => {
     const ok = await confirm({
       title: t("community.clearPublishedTitle"),
@@ -1874,6 +1963,7 @@ export function Community({ cars = [], settings, user }) {
                       onDeleteComment={handleDeleteComment}
                       onOpenPost={openPost}
                       onSendToChat={setPostToShare}
+                      onEditCaption={setCaptionGoal}
                       currentUserId={user?.uid}
                     />
                   ))}
@@ -2041,8 +2131,18 @@ export function Community({ cars = [], settings, user }) {
             onEditComment: handleEditComment,
             onDeleteComment: handleDeleteComment,
             onSendToChat: setPostToShare,
+            onEditCaption: setCaptionGoal,
             currentUserId: user?.uid,
           }}
+        />
+      )}
+
+      {captionGoal && (
+        <CaptionModal
+          goal={captionGoal}
+          t={t}
+          onClose={() => setCaptionGoal(null)}
+          onSave={handleSaveCaption}
         />
       )}
 

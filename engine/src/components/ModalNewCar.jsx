@@ -148,6 +148,15 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       carToEdit?.model ||
       "";
 
+    // O select de modelo fica desabilitado enquanto a lista da FIPE não
+    // carrega — e navegador nenhum valida campo desabilitado, então dava para
+    // salvar carro só com a marca. Aí a publicação saía sem modelo.
+    if (!brandName || !modelName) {
+      setError(t("modalCar.missingVehicle"));
+      setLoading(false);
+      return;
+    }
+
     const finalImage = customImage || carToEdit?.image || fallbackImage;
 
     const carData = {
