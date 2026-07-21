@@ -1,42 +1,66 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from"react";
+import { useNavigate } from"react-router-dom";
+import { useTranslation } from"react-i18next";
 import {
   BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Clock,
+  ClipboardCheck,
+  Cog,
+  Droplets,
   Edit3,
   ExternalLink,
   Filter,
   Gauge,
+  Globe,
+  Grid2x2,
   ImagePlus,
+  LayoutGrid,
+  Mail,
+  Map,
   MapPin,
   Maximize2,
+  Music,
   Navigation,
+  PaintBucket,
   Plus,
   RotateCcw,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Store,
   Trash2,
+  Truck,
   UserRoundCheck,
   Wrench,
   X,
   XCircle,
+  Zap,
   ZoomIn,
   ZoomOut,
-} from "lucide-react";
+} from"lucide-react";
+import { getDownloadURL, ref, uploadBytes } from"firebase/storage";
+import { FaWhatsapp } from"react-icons/fa";
+import { engineDB } from"../services/db";
+import { storage } from"../services/firebase";
 import {
-  DeleteOutlineOutlined,
-  EmailOutlined,
-  MapOutlined,
-  WhatsApp,
-} from "@mui/icons-material";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { engineDB } from "../services/db";
-import { storage } from "../services/firebase";
+  countries,
+  getStates,
+  getCities,
+  getCountryName,
+  getStateName,
+} from"../services/locations";
+import { useConfirm } from"../components/ConfirmProvider";
+import { useToast } from"../components/ToastProvider";
+
+// Ícone oficial do WhatsApp (react-icons). Mantém a mesma assinatura
+// (size/className) usada em todo o arquivo, inclusive como `icon={WhatsAppIcon}`.
+function WhatsAppIcon({ size = 18, className ="" }) {
+  return <FaWhatsapp size={size} className={className} aria-hidden="true" />;
+}
 
 const SUBSCRIPTION_GATE_OPEN = true;
 const MAX_PHOTOS = 6;
@@ -44,52 +68,81 @@ const PHOTO_UPLOAD_TIMEOUT_MS = 15000;
 const FALLBACK_IMAGE_MAX_SIZE = 1100;
 const FALLBACK_IMAGE_QUALITY = 0.72;
 const SERVICE_ADMIN_EMAILS = (
-  import.meta.env.VITE_SERVICE_ADMIN_EMAILS || "muxdtuber@gmail.com"
+  import.meta.env.VITE_SERVICE_ADMIN_EMAILS ||"muxdtuber@gmail.com"
 )
   .split(",")
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 
-const categories = [
-  "Estética automotiva",
-  "Limpeza de carros",
-  "Mecânica",
-  "Funilaria e pintura",
-  "Elétrica",
-  "Pneus e rodas",
-  "Guincho",
-  "Som e acessórios",
-  "Vistoria",
-  "Consultoria",
-  "Outro",
+const serviceCategories = [
+  { value:"automotive-aesthetics", labelKey:"services.categories.automotiveAesthetics" },
+  { value:"car-cleaning", labelKey:"services.categories.carCleaning" },
+  { value:"mechanics", labelKey:"services.categories.mechanics" },
+  { value:"body-paint", labelKey:"services.categories.bodyPaint" },
+  { value:"electrical", labelKey:"services.categories.electrical" },
+  { value:"tires-wheels", labelKey:"services.categories.tiresWheels" },
+  { value:"tow", labelKey:"services.categories.tow" },
+  { value:"sound-accessories", labelKey:"services.categories.soundAccessories" },
+  { value:"inspection", labelKey:"services.categories.inspection" },
+  { value:"consulting", labelKey:"services.categories.consulting" },
+  { value:"other", labelKey:"services.categories.other" },
 ];
 
 const emptyForm = {
-  id: "",
-  title: "",
-  providerName: "",
-  category: "Limpeza de carros",
-  description: "",
-  price: "",
-  serviceMode: "hybrid",
-  city: "",
-  address: "",
-  serviceArea: "",
-  whatsappCountry: "+55",
-  whatsapp: "",
-  email: "",
-  website: "",
-  availability: "",
-  experience: "",
-  tags: "",
+  id:"",
+  title:"",
+  providerName:"",
+  category:"car-cleaning",
+  description:"",
+  price:"",
+  serviceMode:"hybrid",
+  country:"BR",
+  state:"",
+  city:"",
+  address:"",
+  serviceArea:"",
+  whatsappCountry:"+55",
+  whatsapp:"",
+  email:"",
+  website:"",
+  availability:"",
+  experience:"",
+  tags:"",
   photos: [],
-  moderationStatus: "pending",
+  moderationStatus:"pending",
 };
 
-const modeLabels = {
-  place: "Local físico",
-  mobile: "Vou até você",
-  hybrid: "Local e atendimento externo",
+const serviceCategoryByValue = Object.fromEntries(
+  serviceCategories.map((category) => [category.value, category]),
+);
+
+const legacyCategoryMap = {
+  "Estética automotiva":"automotive-aesthetics",
+  "Limpeza de carros":"car-cleaning",
+  Mecânica:"mechanics",
+  "Funilaria e pintura":"body-paint",
+  Elétrica:"electrical",
+  "Pneus e rodas":"tires-wheels",
+  Guincho:"tow",
+  "Som e acessórios":"sound-accessories",
+  Vistoria:"inspection",
+  Consultoria:"consulting",
+  Outro:"other",
+};
+
+const normalizeServiceCategory = (category) =>
+  serviceCategoryByValue[category] ? category : legacyCategoryMap[category] ||"other";
+
+const getServiceCategoryLabel = (category, t) =>
+  t(
+    serviceCategoryByValue[normalizeServiceCategory(category)]?.labelKey ||
+      "services.categories.other",
+  );
+
+const modeLabelKeys = {
+  place:"services.modes.place",
+  mobile:"services.modes.mobile",
+  hybrid:"services.modes.hybrid",
 };
 
 const modeIcons = {
@@ -98,74 +151,96 @@ const modeIcons = {
   hybrid: BriefcaseBusiness,
 };
 
-const modeCopy = {
-  place: "Endereço obrigatório e mapa visível no anúncio.",
-  mobile: "Área atendida em destaque, sem exigir endereço fixo.",
-  hybrid: "Mostra mapa do local e também a região de deslocamento.",
+const categoryIcons = {
+  all: LayoutGrid,
+  "automotive-aesthetics": Sparkles,
+  "car-cleaning": Droplets,
+  mechanics: Wrench,
+  "body-paint": PaintBucket,
+  electrical: Zap,
+  "tires-wheels": Cog,
+  tow: Truck,
+  "sound-accessories": Music,
+  inspection: ClipboardCheck,
+  consulting: UserRoundCheck,
+  other: Grid2x2,
+};
+
+const modeFilterIcons = {
+  all: LayoutGrid,
+  hybrid: BriefcaseBusiness,
+  mobile: Navigation,
+  place: Store,
+};
+
+const modeCopyKeys = {
+  place:"services.modeCopy.place",
+  mobile:"services.modeCopy.mobile",
+  hybrid:"services.modeCopy.hybrid",
 };
 
 const modeFilters = [
-  { value: "all", label: "Todos" },
-  { value: "hybrid", label: "Local e externo" },
-  { value: "mobile", label: "Vai até você" },
-  { value: "place", label: "Local físico" },
+  { value:"all", labelKey:"services.filters.all" },
+  { value:"hybrid", labelKey:"services.filters.hybrid" },
+  { value:"mobile", labelKey:"services.filters.mobile" },
+  { value:"place", labelKey:"services.filters.place" },
 ];
 
-const statusLabels = {
-  approved: "Aprovado",
-  pending: "Em análise",
-  changes_requested: "Ajustes necessários",
-  rejected: "Recusado",
+const statusLabelKeys = {
+  approved:"services.status.approved",
+  pending:"services.status.pending",
+  changes_requested:"services.status.changesRequested",
+  rejected:"services.status.rejected",
 };
 
 const fallbackPhoto =
   "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=1100&q=80";
 
-const getInitials = (name = "S") =>
+const getInitials = (name ="S") =>
   name
-    .split(" ")
+    .split("")
     .map((part) => part[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
 
-const normalizeWhatsApp = (value = "") => value.replace(/\D/g, "");
+const normalizeWhatsApp = (value ="") => value.replace(/\D/g,"");
 
 const phoneCountries = [
-  { code: "+55", label: "BR" },
-  { code: "+1", label: "US/CA" },
-  { code: "+351", label: "PT" },
-  { code: "+34", label: "ES" },
-  { code: "+44", label: "UK" },
-  { code: "+33", label: "FR" },
-  { code: "+49", label: "DE" },
-  { code: "+39", label: "IT" },
-  { code: "+52", label: "MX" },
-  { code: "+54", label: "AR" },
-  { code: "+56", label: "CL" },
-  { code: "+57", label: "CO" },
+  { code:"+55", label:"BR" },
+  { code:"+1", label:"US/CA" },
+  { code:"+351", label:"PT" },
+  { code:"+34", label:"ES" },
+  { code:"+44", label:"UK" },
+  { code:"+33", label:"FR" },
+  { code:"+49", label:"DE" },
+  { code:"+39", label:"IT" },
+  { code:"+52", label:"MX" },
+  { code:"+54", label:"AR" },
+  { code:"+56", label:"CL" },
+  { code:"+57", label:"CO" },
 ];
 
-const inferPhoneCountry = (value = "") => {
-  const cleanValue = String(value).replace(/\s/g, "");
+const inferPhoneCountry = (value ="") => {
+  const cleanValue = String(value).replace(/\s/g,"");
   return (
     phoneCountries
       .map((country) => country.code)
       .sort((a, b) => b.length - a.length)
-      .find((code) => cleanValue.startsWith(code)) || "+55"
+      .find((code) => cleanValue.startsWith(code)) ||"+55"
   );
 };
 
-const stripPhoneCountry = (value = "", countryCode = "+55") => {
-  const cleanCountry = countryCode.replace(/\D/g, "");
-  const digits = String(value).replace(/\D/g, "");
+const stripPhoneCountry = (value ="", countryCode ="+55") => {
+  const cleanCountry = countryCode.replace(/\D/g,"");
+  const digits = String(value).replace(/\D/g,"");
   return digits.startsWith(cleanCountry) ? digits.slice(cleanCountry.length) : digits;
 };
 
-const formatPhoneInput = (value = "", countryCode = "+55") => {
-  const digits = String(value).replace(/\D/g, "").slice(0, 14);
+const formatPhoneInput = (value ="", countryCode ="+55") => {
+  const digits = String(value).replace(/\D/g,"").slice(0, 14);
 
-  if (countryCode === "+55") {
+  if (countryCode ==="+55") {
     const localDigits = stripPhoneCountry(digits, countryCode).slice(0, 11);
     const areaCode = localDigits.slice(0, 2);
     const firstPart = localDigits.length > 10
@@ -175,35 +250,35 @@ const formatPhoneInput = (value = "", countryCode = "+55") => {
       ? localDigits.slice(7, 11)
       : localDigits.slice(6, 10);
 
-    let formatted = "";
+    let formatted ="";
     if (areaCode) formatted += `(${areaCode}`;
-    if (areaCode.length === 2) formatted += ") ";
+    if (areaCode.length === 2) formatted +=")";
     if (firstPart) formatted += firstPart;
     if (secondPart) formatted += `-${secondPart}`;
     return formatted;
   }
 
-  if (countryCode === "+1") {
+  if (countryCode ==="+1") {
     const localDigits = stripPhoneCountry(digits, countryCode).slice(0, 10);
     const areaCode = localDigits.slice(0, 3);
     const firstPart = localDigits.slice(3, 6);
     const secondPart = localDigits.slice(6, 10);
 
-    let formatted = "";
+    let formatted ="";
     if (areaCode) formatted += `(${areaCode}`;
-    if (areaCode.length === 3) formatted += ") ";
+    if (areaCode.length === 3) formatted +=")";
     if (firstPart) formatted += firstPart;
     if (secondPart) formatted += `-${secondPart}`;
     return formatted;
   }
 
   return stripPhoneCountry(digits, countryCode)
-    .replace(/(\d{3})(?=\d)/g, "$1 ")
+    .replace(/(\d{3})(?=\d)/g,"$1")
     .trim();
 };
 
-const splitStoredPhone = (value = "", fallbackCountry = "+55") => {
-  const cleanValue = String(value || "").trim();
+const splitStoredPhone = (value ="", fallbackCountry ="+55") => {
+  const cleanValue = String(value ||"").trim();
   const countryCode = cleanValue.startsWith("+")
     ? inferPhoneCountry(cleanValue)
     : fallbackCountry;
@@ -213,12 +288,12 @@ const splitStoredPhone = (value = "", fallbackCountry = "+55") => {
   };
 };
 
-const formatCurrencyInput = (value = "") => {
-  const digits = value.replace(/\D/g, "").slice(0, 9);
-  if (!digits) return "";
+const formatCurrencyInput = (value ="") => {
+  const digits = value.replace(/\D/g,"").slice(0, 9);
+  if (!digits) return"";
   return Number(digits).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
+    style:"currency",
+    currency:"BRL",
     maximumFractionDigits: 0,
   });
 };
@@ -265,7 +340,7 @@ const compressImageFile = (file) =>
   });
 
 const mapQuery = (listing) =>
-  [listing.address, listing.city].filter(Boolean).join(", ");
+  [listing.address, listing.city].filter(Boolean).join(",");
 
 const hasMapAddress = (listing) => Boolean(mapQuery(listing));
 
@@ -280,31 +355,38 @@ const getSellerProfile = (settings, user) => {
   const displayName =
     profile.displayName ||
     user?.displayName ||
-    String(user?.email || "").split("@")[0] ||
+    String(user?.email ||"").split("@")[0] ||
     "Usuario Engine";
 
   return {
     displayName,
-    username: profile.username || "",
-    city: profile.location || "",
-    phone: profile.phone || "",
-    avatar: profile.avatar || user?.photoURL || "",
-    email: user?.email || "",
+    username: profile.username ||"",
+    country: profile.country ||"BR",
+    state: profile.state ||"",
+    city: profile.location ||"",
+    phone: profile.phone ||"",
+    avatar: profile.avatar || user?.photoURL ||"",
+    email: user?.email ||"",
   };
 };
 
-const makeInitialForm = (settings, user) => ({
-  ...emptyForm,
-  providerName: getSellerProfile(settings, user).displayName,
-  city: getSellerProfile(settings, user).city,
-  ...splitStoredPhone(getSellerProfile(settings, user).phone),
-  email: getSellerProfile(settings, user).email,
-});
+const makeInitialForm = (settings, user) => {
+  const seller = getSellerProfile(settings, user);
+  return {
+    ...emptyForm,
+    providerName: seller.displayName,
+    country: seller.country,
+    state: seller.state,
+    city: seller.city,
+    ...splitStoredPhone(seller.phone),
+    email: seller.email,
+  };
+};
 
 function Field({ label, children, wide = false }) {
   return (
-    <label className={`grid min-w-0 gap-2 ${wide ? "md:col-span-2" : ""}`}>
-      <span className="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
+    <label className={`grid min-w-0 gap-2 ${wide ?"md:col-span-2" :""}`}>
+      <span className="text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
         {label}
       </span>
       {children}
@@ -316,7 +398,7 @@ function TextInput(props) {
   return (
     <input
       {...props}
-      className="min-h-12 w-full min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:text-gray-400 focus:border-red-500 focus:bg-white dark:border-[#333] dark:bg-[#101010] dark:text-white dark:[color-scheme:dark] dark:placeholder:text-gray-600 dark:focus:bg-[#151515]"
+      className="min-h-12 w-full min-w-0 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 text-sm font-bold text-[var(--engine-text)] outline-none transition placeholder:text-[var(--engine-text-subtle)] focus:border-[var(--engine-accent)] focus:bg-[var(--engine-surface)] dark:text-white dark:[color-scheme:dark] dark:placeholder:text-[var(--engine-text-muted)] dark:focus:bg-[var(--engine-elevated)]"
     />
   );
 }
@@ -325,7 +407,7 @@ function TextArea(props) {
   return (
     <textarea
       {...props}
-      className="min-h-32 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold leading-6 text-slate-950 outline-none transition placeholder:text-gray-400 focus:border-red-500 focus:bg-white dark:border-[#333] dark:bg-[#101010] dark:text-white dark:[color-scheme:dark] dark:placeholder:text-gray-600 dark:focus:bg-[#151515]"
+      className="min-h-32 w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-sm font-bold leading-6 text-[var(--engine-text)] outline-none transition placeholder:text-[var(--engine-text-subtle)] focus:border-[var(--engine-accent)] focus:bg-[var(--engine-surface)] dark:text-white dark:[color-scheme:dark] dark:placeholder:text-[var(--engine-text-muted)] dark:focus:bg-[var(--engine-elevated)]"
     />
   );
 }
@@ -334,20 +416,21 @@ function Select(props) {
   return (
     <select
       {...props}
-      className="min-h-12 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 pr-9 text-sm font-bold text-slate-950 outline-none transition focus:border-red-500 focus:bg-white dark:border-[#333] dark:bg-[#101010] dark:text-white dark:[color-scheme:dark] dark:focus:bg-[#151515]"
+      className="min-h-12 w-full appearance-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 pr-9 text-sm font-bold text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)] focus:bg-[var(--engine-surface)] dark:text-white dark:[color-scheme:dark] dark:focus:bg-[var(--engine-elevated)]"
     />
   );
 }
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation();
   const styles = {
-    approved: "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-    pending: "border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300",
-    changes_requested: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-300",
-    rejected: "border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-300",
+    approved:"border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
+    pending:"border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    changes_requested:"border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-300",
+    rejected:"border-[var(--engine-accent)]/25 bg-[var(--engine-accent)]/10 text-[var(--engine-accent)]",
   };
   const Icon =
-    status === "approved" ? CheckCircle2 : status === "rejected" ? XCircle : Clock;
+    status ==="approved" ? CheckCircle2 : status ==="rejected" ? XCircle : Clock;
 
   return (
     <span
@@ -356,12 +439,13 @@ function StatusBadge({ status }) {
       }`}
     >
       <Icon size={13} />
-      {statusLabels[status] || statusLabels.pending}
+      {t(statusLabelKeys[status] || statusLabelKeys.pending)}
     </span>
   );
 }
 
 function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
+  const { t } = useTranslation();
   const ModeIcon = modeIcons[listing.serviceMode] || BriefcaseBusiness;
   const phone = normalizeWhatsApp(listing.whatsapp);
   const photos = listing.photos?.length ? listing.photos : [fallbackPhoto];
@@ -387,14 +471,14 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
       tabIndex={0}
       onClick={() => onOpen(listing)}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (event.key ==="Enter" || event.key ==="") {
           event.preventDefault();
           onOpen(listing);
         }
       }}
-      className="group flex min-h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:border-red-500/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:border-[#222] dark:bg-[#151515] dark:shadow-none"
+      className="group flex min-h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] transition hover:-translate-y-0.5 hover:border-[var(--engine-accent)]/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:shadow-none"
     >
-      <div className="relative aspect-[4/3] bg-gray-100 sm:aspect-[16/10] dark:bg-[#101010]">
+      <div className="relative aspect-[4/3] bg-[var(--engine-surface-2)] sm:aspect-[16/10]">
         <img
           src={activePhoto}
           alt={listing.title}
@@ -404,8 +488,8 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           className="h-full w-full object-cover"
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/75 to-transparent" />
-        <span className="absolute left-3 top-3 max-w-[calc(100%-5.75rem)] truncate rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
-          {listing.category}
+        <span className="absolute left-3 top-3 max-w-[calc(100%-5.75rem)] truncate rounded-full bg-[var(--engine-accent)] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+          {getServiceCategoryLabel(listing.category, t)}
         </span>
         {photos.length > 1 && (
           <>
@@ -415,16 +499,16 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
             <button
               type="button"
               onClick={(event) => movePhoto(event, -1)}
-              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-red-600 sm:left-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
-              title="Foto anterior"
+              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-[var(--engine-accent)] sm:left-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+              title={t("services.previousPhoto")}
             >
               <ChevronLeft size={18} />
             </button>
             <button
               type="button"
               onClick={(event) => movePhoto(event, 1)}
-              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-red-600 sm:right-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
-              title="Proxima foto"
+              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-[var(--engine-accent)] sm:right-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+              title={t("services.nextPhoto")}
             >
               <ChevronRight size={18} />
             </button>
@@ -438,9 +522,9 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
                     setActivePhotoIndex(index);
                   }}
                   className={`h-1.5 rounded-full transition ${
-                    index === activePhotoIndex ? "w-6 bg-white" : "w-1.5 bg-white/45"
+                    index === activePhotoIndex ?"w-6 bg-[var(--engine-surface)]" :"w-1.5 bg-[var(--engine-surface)]/45"
                   }`}
-                  title={`Ver foto ${index + 1}`}
+                  title={t("services.viewPhoto", { value: index + 1 })}
                 />
               ))}
             </div>
@@ -451,11 +535,11 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
       <div className="flex flex-1 flex-col gap-4 p-3.5 sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="line-clamp-2 text-base font-black uppercase italic leading-5 tracking-tight text-slate-950 sm:text-lg sm:leading-6 dark:text-white">
+            <h2 className="line-clamp-2 text-base font-extrabold italic leading-5 tracking-tight text-[var(--engine-text)] sm:text-lg sm:leading-6 dark:text-white">
               {listing.title}
             </h2>
-            <p className="mt-1 truncate text-xs font-black uppercase tracking-widest text-gray-400">
-              {listing.providerName || "Profissional Engine"}
+            <p className="mt-1 truncate text-xs font-semibold text-[var(--engine-text-subtle)]">
+              {listing.providerName || t("services.engineProfessional")}
             </p>
           </div>
           {isMine && (
@@ -466,8 +550,8 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
                   stopAction(event);
                   onEdit(listing);
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
-                title="Editar anúncio"
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+                title={t("services.editListing")}
               >
                 <Edit3 size={16} />
               </button>
@@ -477,8 +561,8 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
                   stopAction(event);
                   onDelete(listing);
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
-                title="Excluir anúncio"
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+                title={t("services.deleteListing")}
               >
                 <Trash2 size={16} />
               </button>
@@ -486,24 +570,24 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           )}
         </div>
 
-        <p className="line-clamp-3 min-h-[4.5rem] text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">
+        <p className="line-clamp-3 min-h-[4.5rem] text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
           {listing.description}
         </p>
 
-        <div className="grid gap-2 text-xs font-bold text-gray-500 dark:text-gray-400">
+        <div className="grid gap-2 text-xs font-bold text-[var(--engine-text-muted)]">
           <p className="flex min-w-0 items-center gap-2">
-            <ModeIcon className="shrink-0 text-red-500" size={16} />
-            <span className="truncate">{modeLabels[listing.serviceMode]}</span>
+            <ModeIcon className="shrink-0 text-[var(--engine-accent)]" size={16} />
+            <span className="truncate">{t(modeLabelKeys[listing.serviceMode] || modeLabelKeys.hybrid)}</span>
           </p>
           <p className="flex min-w-0 items-center gap-2">
             <MapPin className="shrink-0 text-emerald-500" size={16} />
             <span className="truncate">
-              {listing.city || listing.serviceArea || "Atendimento a combinar"}
+              {listing.city || listing.serviceArea || t("services.locationFallback")}
             </span>
           </p>
           <p className="flex min-w-0 items-center gap-2">
             <Clock className="shrink-0 text-amber-500" size={16} />
-            <span className="truncate">{listing.availability || "Agenda a combinar"}</span>
+            <span className="truncate">{listing.availability || t("services.scheduleFallback")}</span>
           </p>
           {listing.experience && (
             <p className="flex min-w-0 items-center gap-2">
@@ -514,15 +598,15 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
         </div>
 
         <div className="mt-auto space-y-3">
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-[#242424]">
-            <p className="min-w-0 truncate text-base font-black italic text-red-600">
-              {listing.price || "Sob consulta"}
+          <div className="flex items-center justify-between gap-3 border-t border-[var(--engine-border)] pt-3">
+            <p className="min-w-0 truncate text-base font-black italic text-[var(--engine-accent)]">
+              {listing.price || t("services.priceFallback")}
             </p>
             {isMine ? <StatusBadge status={listing.moderationStatus} /> : null}
           </div>
 
           {isMine && listing.moderationNote && (
-            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold leading-5 text-red-600 dark:text-red-300">
+            <p className="rounded-lg bg-[var(--engine-accent)]/10 px-3 py-2 text-xs font-bold leading-5 text-[var(--engine-accent)]">
               {listing.moderationNote}
             </p>
           )}
@@ -531,7 +615,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
             {(listing.tags || []).slice(0, 3).map((tag) => (
               <span
                 key={`${listing.id}-${tag}`}
-                className="rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333] dark:text-gray-400"
+                className="rounded-full border border-[var(--engine-border)] px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]"
               >
                 {tag}
               </span>
@@ -545,29 +629,29 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               target="_blank"
               rel="noreferrer"
               aria-disabled={!phone}
-              aria-label="Chamar no WhatsApp"
+              aria-label={t("services.whatsapp")}
               className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
                 phone
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "pointer-events-none bg-gray-100 text-gray-400 dark:bg-[#101010]"
+                  ?"bg-emerald-600 text-white hover:bg-emerald-700"
+                  :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
               }`}
-              title="Chamar no WhatsApp"
+              title={t("services.whatsapp")}
             >
-              <WhatsApp className="shrink-0" sx={{ fontSize: 20 }} />
+              <WhatsAppIcon className="shrink-0" size={20} />
             </a>
             <a
-              href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(`Contato pelo Engine: ${listing.title}`)}` : undefined}
+              href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(t("services.emailSubject", { title: listing.title }))}` : undefined}
               onClick={stopAction}
               aria-disabled={!listing.email}
-              aria-label="Enviar e-mail"
+              aria-label={t("services.sendEmail")}
               className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
                 listing.email
-                  ? "bg-slate-950 text-white hover:bg-red-600 dark:bg-[#262626] dark:hover:bg-red-600"
-                  : "pointer-events-none bg-gray-100 text-gray-400 dark:bg-[#101010]"
+                  ?"bg-[var(--engine-accent)] text-white hover:bg-[var(--engine-accent)] hover:brightness-95"
+                  :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
               }`}
-              title="Enviar e-mail"
+              title={t("services.sendEmail")}
             >
-              <EmailOutlined className="shrink-0" sx={{ fontSize: 20 }} />
+              <Mail className="shrink-0" size={20} />
             </a>
             <a
               href={showMap ? getDirectionsUrl(listing) : undefined}
@@ -575,15 +659,15 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               target="_blank"
               rel="noreferrer"
               aria-disabled={!showMap}
-              aria-label="Ver rota no mapa"
+              aria-label={t("services.viewRoute")}
               className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
                 showMap
-                  ? "border border-gray-200 text-gray-600 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
-                  : "pointer-events-none bg-gray-100 text-gray-400 dark:bg-[#101010]"
+                  ?"border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                  :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
               }`}
-              title="Ver rota"
+              title={t("services.viewRouteShort")}
             >
-              <MapOutlined className="shrink-0" sx={{ fontSize: 20 }} />
+              <Map className="shrink-0" size={20} />
             </a>
           </div>
         </div>
@@ -593,6 +677,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
 }
 
 function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
+  const { t } = useTranslation();
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -619,21 +704,21 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5">
-      <section className="h-[100dvh] w-full max-w-6xl overflow-y-auto rounded-none border-0 border-gray-200 bg-white text-slate-950 shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl sm:border dark:border-[#222] dark:bg-[#111] dark:text-white">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-200 bg-white/95 px-3 py-3 backdrop-blur dark:border-[#222] dark:bg-[#111]/95 sm:gap-4 sm:px-6 sm:py-4">
+      <section className="h-[100dvh] w-full max-w-6xl overflow-y-auto rounded-none border-0 border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text)] shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl sm:border dark:text-white">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-surface)]/95 px-3 py-3 backdrop-blur /95 sm:gap-4 sm:px-6 sm:py-4">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-red-500">
-              {listing.category}
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[var(--engine-accent)]">
+              {getServiceCategoryLabel(listing.category, t)}
             </p>
-            <h2 className="mt-1 line-clamp-2 text-lg font-black uppercase italic tracking-tight sm:truncate sm:text-2xl">
+            <h2 className="mt-1 line-clamp-2 text-lg font-extrabold italic tracking-tight sm:truncate sm:text-2xl">
               {listing.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300 sm:h-10 sm:w-10"
-            title="Fechar"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white sm:h-10 sm:w-10"
+            title={t("common.cancel")}
           >
             <X size={20} />
           </button>
@@ -641,12 +726,12 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
 
         <div className="grid gap-5 p-3 pb-28 sm:gap-6 sm:p-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
           <div className="min-w-0 space-y-5">
-            <div className="relative overflow-hidden rounded-xl bg-gray-100 dark:bg-[#080808]">
+            <div className="relative overflow-hidden rounded-xl bg-[var(--engine-surface-2)]">
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
                 className="block w-full cursor-zoom-in"
-                title="Ampliar foto"
+                title={t("services.enlargePhoto")}
               >
                 <img
                   src={activePhoto}
@@ -661,8 +746,8 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-red-600 sm:right-4 sm:top-4 sm:h-10 sm:w-10"
-                title="Abrir visualizacao"
+                className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-[var(--engine-accent)] sm:right-4 sm:top-4 sm:h-10 sm:w-10"
+                title={t("services.openPreview")}
               >
                 <Maximize2 size={18} />
               </button>
@@ -671,16 +756,16 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
                   <button
                     type="button"
                     onClick={() => movePhoto(-1)}
-                    className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-red-600 sm:left-4"
-                    title="Foto anterior"
+                    className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-[var(--engine-accent)] sm:left-4"
+                    title={t("services.previousPhoto")}
                   >
                     <ChevronLeft size={22} />
                   </button>
                   <button
                     type="button"
                     onClick={() => movePhoto(1)}
-                    className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-red-600 sm:right-4"
-                    title="Proxima foto"
+                    className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-[var(--engine-accent)] sm:right-4"
+                    title={t("services.nextPhoto")}
                   >
                     <ChevronRight size={22} />
                   </button>
@@ -703,10 +788,10 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
                     }}
                     className={`relative h-18 w-24 shrink-0 overflow-hidden rounded-lg border transition sm:h-24 sm:w-36 ${
                       index === activePhotoIndex
-                        ? "border-red-500 ring-2 ring-red-500/25"
-                        : "border-transparent opacity-70 hover:opacity-100"
+                        ?"border-[var(--engine-accent)] ring-2 ring-red-500/25"
+                        :"border-transparent opacity-70 hover:opacity-100"
                     }`}
-                    title={`Ver foto ${index + 1}`}
+                    title={t("services.viewPhoto", { value: index + 1 })}
                   >
                     <img
                       src={photo}
@@ -719,10 +804,10 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
             )}
 
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Descrição
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                {t("services.description")}
               </p>
-              <p className="mt-2 whitespace-pre-line text-sm font-medium leading-7 text-gray-600 dark:text-gray-300">
+              <p className="mt-2 whitespace-pre-line text-sm font-medium leading-7 text-[var(--engine-text-muted)]">
                 {listing.description}
               </p>
             </div>
@@ -732,7 +817,7 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
                 {listing.tags.map((tag) => (
                   <span
                     key={`${listing.id}-detail-${tag}`}
-                    className="rounded-full border border-gray-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333] dark:text-gray-400"
+                    className="rounded-full border border-[var(--engine-border)] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]"
                   >
                     {tag}
                   </span>
@@ -744,43 +829,43 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
           </div>
 
           <aside className="space-y-4">
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-[#262626] dark:bg-[#151515]">
+            <div className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4">
               <div className="flex min-w-0 gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 font-black italic text-white dark:bg-red-600">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-accent)] font-black italic text-white">
                   {getInitials(listing.providerName || listing.title)}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black uppercase italic">
-                    {listing.providerName || "Profissional Engine"}
+                  <p className="truncate text-sm font-bold italic">
+                    {listing.providerName || t("services.engineProfessional")}
                   </p>
-                  <p className="mt-1 truncate text-xs font-bold uppercase tracking-widest text-gray-400">
-                    {listing.city || "Online"}
+                  <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-subtle)]">
+                    {listing.city || t("services.online")}
                   </p>
                 </div>
               </div>
 
-              <p className="mt-5 text-2xl font-black italic text-red-600">
-                {listing.price || "Orçamento sob consulta"}
+              <p className="mt-5 text-2xl font-black italic text-[var(--engine-accent)]">
+                {listing.price || t("services.quoteFallback")}
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <InfoPill icon={ModeIcon} label="Atendimento" value={modeLabels[listing.serviceMode]} tone="red" />
-              <InfoPill icon={Clock} label="Agenda" value={listing.availability || "A combinar"} tone="amber" />
+              <InfoPill icon={ModeIcon} label={t("services.serviceMode")} value={t(modeLabelKeys[listing.serviceMode] || modeLabelKeys.hybrid)} tone="red" />
+              <InfoPill icon={Clock} label={t("services.schedule")} value={listing.availability || t("services.toArrange")} tone="amber" />
               {listing.experience && (
-                <InfoPill icon={Gauge} label="Experiência" value={listing.experience} tone="sky" />
+                <InfoPill icon={Gauge} label={t("services.experience")} value={listing.experience} tone="sky" />
               )}
-              <InfoPill icon={ShieldCheck} label="Status" value={statusLabels[listing.moderationStatus]} tone="emerald" />
+              <InfoPill icon={ShieldCheck} label={t("services.statusLabel")} value={t(statusLabelKeys[listing.moderationStatus] || statusLabelKeys.pending)} tone="emerald" />
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#262626] dark:bg-[#151515]">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Localização
+            <div className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                {t("services.location")}
               </p>
               <p className="mt-2 flex items-start gap-2 text-sm font-black">
-                <MapPin className="mt-0.5 shrink-0 text-red-500" size={17} />
+                <MapPin className="mt-0.5 shrink-0 text-[var(--engine-accent)]" size={17} />
                 <span>
-                  {mapQuery(listing) || listing.serviceArea || "Atendimento remoto ou a combinar"}
+                  {mapQuery(listing) || listing.serviceArea || t("services.remoteFallback")}
                 </span>
               </p>
             </div>
@@ -789,23 +874,23 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
               <ContactButton
                 disabled={!phone}
                 href={phone ? `https://wa.me/${phone}` : undefined}
-                icon={WhatsApp}
-                label="Chamar no WhatsApp"
-                value={listing.whatsapp || "Sem número"}
+                icon={WhatsAppIcon}
+                label={t("services.whatsapp")}
+                value={listing.whatsapp || t("services.noPhone")}
               />
               <ContactButton
                 disabled={!listing.email}
-                href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(`Contato pelo Engine: ${listing.title}`)}` : undefined}
-                icon={EmailOutlined}
-                label="Enviar e-mail"
-                value={listing.email || "Sem e-mail"}
+                href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(t("services.emailSubject", { title: listing.title }))}` : undefined}
+                icon={Mail}
+                label={t("services.sendEmail")}
+                value={listing.email || t("services.noEmail")}
               />
               <ContactButton
                 disabled={!showMap}
                 href={showMap ? getDirectionsUrl(listing) : undefined}
-                icon={MapOutlined}
-                label="Abrir mapa"
-                value={showMap ? "Ver rota no Google Maps" : "Sem endereço"}
+                icon={Map}
+                label={t("services.openMap")}
+                value={showMap ? t("services.googleRoute") : t("services.noAddress")}
               />
             </div>
 
@@ -814,18 +899,18 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
                 <button
                   type="button"
                   onClick={() => onEdit(listing)}
-                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 text-xs font-black uppercase tracking-widest text-gray-600 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
                 >
                   <Edit3 size={16} />
-                  Editar
+                  {t("services.edit")}
                 </button>
                 <button
                   type="button"
                   onClick={() => onDelete(listing)}
-                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-500/30 text-xs font-black uppercase tracking-widest text-red-600 transition hover:bg-red-600 hover:text-white"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--engine-accent)]/30 text-xs font-black uppercase tracking-widest text-[var(--engine-accent)] transition hover:bg-[var(--engine-accent)] hover:text-white"
                 >
-                  <DeleteOutlineOutlined className="shrink-0" sx={{ fontSize: 18 }} />
-                  Excluir
+                  <Trash2 className="shrink-0" size={18} />
+                  {t("common.delete")}
                 </button>
               </div>
             )}
@@ -864,49 +949,53 @@ function PhotoLightbox({
   onZoomOut,
   onResetZoom,
 }) {
+  const { t } = useTranslation();
   const activePhoto = photos[activePhotoIndex] || photos[0] || fallbackPhoto;
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-black/95 text-white">
       <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-3 sm:gap-4 sm:px-6">
         <div className="min-w-0">
-          <p className="truncate text-sm font-black uppercase italic">
+          <p className="truncate text-sm font-bold italic">
             {listing.title}
           </p>
           <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-white/50">
-            Foto {activePhotoIndex + 1} de {photos.length}
+            {t("services.photoCounter", {
+              current: activePhotoIndex + 1,
+              total: photos.length,
+            })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={onZoomOut}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
-            title="Diminuir zoom"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--engine-surface)]/10 transition hover:bg-[var(--engine-surface)]/20"
+            title={t("services.zoomOut")}
           >
             <ZoomOut size={18} />
           </button>
           <button
             type="button"
             onClick={onResetZoom}
-            className="hidden h-10 items-center justify-center rounded-full bg-white/10 px-4 text-[10px] font-black uppercase tracking-widest transition hover:bg-white/20 sm:flex"
-            title="Resetar zoom"
+            className="hidden h-10 items-center justify-center rounded-full bg-[var(--engine-surface)]/10 px-4 text-[10px] font-black uppercase tracking-widest transition hover:bg-[var(--engine-surface)]/20 sm:flex"
+            title={t("services.resetZoom")}
           >
             {Math.round(zoom * 100)}%
           </button>
           <button
             type="button"
             onClick={onZoomIn}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
-            title="Aumentar zoom"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--engine-surface)]/10 transition hover:bg-[var(--engine-surface)]/20"
+            title={t("services.zoomIn")}
           >
             <ZoomIn size={18} />
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 transition hover:bg-red-700"
-            title="Fechar"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--engine-accent)] transition hover:brightness-95"
+            title={t("common.cancel")}
           >
             <X size={18} />
           </button>
@@ -918,8 +1007,8 @@ function PhotoLightbox({
           <button
             type="button"
             onClick={() => onMove(-1)}
-            className="absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 transition hover:bg-red-600 sm:left-4 sm:h-12 sm:w-12"
-            title="Foto anterior"
+            className="absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--engine-surface)]/15 transition hover:bg-[var(--engine-accent)] sm:left-4 sm:h-12 sm:w-12"
+            title={t("services.previousPhoto")}
           >
             <ChevronLeft size={24} />
           </button>
@@ -930,17 +1019,17 @@ function PhotoLightbox({
           className="object-contain transition-[width,height] duration-200"
           style={{
             width: `${zoom * 100}%`,
-            height: "auto",
-            maxWidth: zoom === 1 ? "100%" : "none",
-            maxHeight: zoom === 1 ? "100%" : "none",
+            height:"auto",
+            maxWidth: zoom === 1 ?"100%" :"none",
+            maxHeight: zoom === 1 ?"100%" :"none",
           }}
         />
         {photos.length > 1 && (
           <button
             type="button"
             onClick={() => onMove(1)}
-            className="absolute right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 transition hover:bg-red-600 sm:right-4 sm:h-12 sm:w-12"
-            title="Proxima foto"
+            className="absolute right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--engine-surface)]/15 transition hover:bg-[var(--engine-accent)] sm:right-4 sm:h-12 sm:w-12"
+            title={t("services.nextPhoto")}
           >
             <ChevronRight size={24} />
           </button>
@@ -951,22 +1040,23 @@ function PhotoLightbox({
 }
 
 function MapPreview({ listing, compact = false }) {
+  const { t } = useTranslation();
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-[#262626] dark:bg-[#101010]">
+    <div className="overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]">
       <iframe
-        title={`Mapa de ${listing.title || "serviço"}`}
+        title={t("services.mapTitle", { title: listing.title || t("services.service") })}
         src={getMapUrl(listing)}
         loading="lazy"
-        className={`${compact ? "h-44" : "h-64"} w-full border-0`}
+        className={`${compact ?"h-44" :"h-64"} w-full border-0`}
       />
       <a
         href={getDirectionsUrl(listing)}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 transition hover:bg-red-600 hover:text-white dark:border-[#262626]"
+        className="flex items-center justify-center gap-2 border-t border-[var(--engine-border)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-accent)] transition hover:bg-[var(--engine-accent)] hover:text-white"
       >
         <ExternalLink size={15} />
-        Abrir no Google Maps
+        {t("services.openGoogleMaps")}
       </a>
     </div>
   );
@@ -975,19 +1065,19 @@ function MapPreview({ listing, compact = false }) {
 function InfoPill({ icon, label, value, tone }) {
   const Icon = icon;
   const tones = {
-    red: "text-red-500",
-    amber: "text-amber-500",
-    sky: "text-sky-500",
-    emerald: "text-emerald-500",
+    red:"text-[var(--engine-accent)]",
+    amber:"text-amber-500",
+    sky:"text-sky-500",
+    emerald:"text-emerald-500",
   };
 
   return (
-    <div className="rounded-xl bg-gray-50 p-3 dark:bg-[#101010]">
+    <div className="rounded-xl bg-[var(--engine-surface-2)] p-3">
       <Icon className={tones[tone]} size={18} />
-      <p className="mt-2 text-[9px] font-black uppercase tracking-widest text-gray-400">
+      <p className="mt-2 text-[9px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-slate-950 dark:text-white">{value}</p>
+      <p className="mt-1 text-sm font-black text-[var(--engine-text)] dark:text-white">{value}</p>
     </div>
   );
 }
@@ -996,8 +1086,8 @@ function ContactButton({ href, icon, label, value, disabled }) {
   const Icon = icon;
   const className = `flex min-h-14 items-center gap-3 rounded-xl px-4 transition ${
     disabled
-      ? "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#101010]"
-      : "bg-slate-950 text-white hover:bg-red-600 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
+      ?"cursor-not-allowed bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
+      :"bg-[var(--engine-accent)] text-white hover:bg-[var(--engine-accent)] dark:text-white hover:brightness-95"
   }`;
   const content = (
     <>
@@ -1031,28 +1121,32 @@ function ListingEditorModal({
   onPhotoRemove,
   onCancel,
 }) {
-  const needsAddress = ["place", "hybrid"].includes(form.serviceMode);
-  const needsServiceArea = ["mobile", "hybrid"].includes(form.serviceMode);
+  const { t } = useTranslation();
+  const needsAddress = ["place","hybrid"].includes(form.serviceMode);
+  const needsServiceArea = ["mobile","hybrid"].includes(form.serviceMode);
+  const formStates = getStates(form.country);
+  const formCities = getCities(form.country, form.state);
+  const cityListId = "listing-city-suggestions";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-0 backdrop-blur-sm sm:p-6">
       <form
         onSubmit={onSubmit}
-        className="min-h-[100dvh] w-full max-w-5xl rounded-none border-0 border-gray-200 bg-white shadow-2xl sm:my-4 sm:min-h-0 sm:rounded-2xl sm:border dark:border-[#222] dark:bg-[#111]"
+        className="min-h-[100dvh] w-full max-w-5xl rounded-none border-0 border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-2xl sm:my-4 sm:min-h-0 sm:rounded-2xl sm:border"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#111] sm:gap-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-surface)] p-4 sm:gap-4 sm:p-6">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-              {form.id ? "Editar anúncio" : "Cadastrar serviço"}
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
+              {form.id ? t("services.editListing") : t("services.createService")}
             </p>
-            <h2 className="mt-1 text-2xl font-black uppercase italic text-slate-950 dark:text-white sm:text-3xl">
-              Minha vitrine
+            <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white sm:text-xl">
+              {t("services.myShowcase")}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-gray-500 dark:text-gray-400">
-              Envie seu anúncio para análise. Depois de aprovado, ele aparece no marketplace.
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+              {t("services.editorCopy")}
             </p>
-            <div className="mt-4 flex max-w-xl items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-[#262626] dark:bg-[#151515]">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-sm font-black uppercase italic text-white dark:bg-red-600">
+            <div className="mt-4 flex max-w-xl items-center gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--engine-accent)] text-sm font-bold uppercase text-white">
                 {sellerProfile?.avatar ? (
                   <img src={sellerProfile.avatar} alt="" className="h-full w-full object-cover" />
                 ) : (
@@ -1060,14 +1154,14 @@ function ListingEditorModal({
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                  Publicado como
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                  {t("services.publishedAs")}
                 </p>
-                <p className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
-                  {sellerProfile?.displayName || "Usuario Engine"}
+                <p className="truncate text-sm font-bold italic text-[var(--engine-text)] dark:text-white">
+                  {sellerProfile?.displayName || t("services.engineUser")}
                 </p>
-                <p className="truncate text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {sellerProfile?.username || sellerProfile?.email || "Conta Engine"}
+                <p className="truncate text-xs font-bold text-[var(--engine-text-muted)]">
+                  {sellerProfile?.username || sellerProfile?.email || t("services.engineAccount")}
                 </p>
               </div>
             </div>
@@ -1075,41 +1169,41 @@ function ListingEditorModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010]"
-            title="Fechar cadastro"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+            title={t("services.closeEditor")}
           >
             <X size={18} />
           </button>
         </div>
 
         <div className="grid gap-5 p-4 pb-28 sm:p-6 md:grid-cols-2">
-          <Field label="Fotos do serviço" wide>
+          <Field label={t("services.fields.photos")} wide>
             <div className="grid gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
               {(form.photos || []).map((photo) => (
-                <div key={photo} className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-[#262626] dark:bg-[#101010]">
+                <div key={photo} className="relative overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]">
                   <img src={photo} alt="" className="h-36 w-full object-cover sm:h-32" />
                   <button
                     type="button"
                     onClick={() => onPhotoRemove(photo)}
-                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
-                    title="Remover foto"
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-[var(--engine-accent)]"
+                    title={t("services.removePhoto")}
                   >
                     <X size={15} />
                   </button>
                 </div>
               ))}
               {(form.photos || []).length < MAX_PHOTOS && (
-                <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:bg-[#101010]">
+                <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4 text-center transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]">
                   {photoUploading ? (
-                    <Wrench className="mb-2 animate-spin text-red-500" size={24} />
+                    <Wrench className="mb-2 animate-spin text-[var(--engine-accent)]" size={24} />
                   ) : (
-                    <ImagePlus className="mb-2 text-red-500" size={24} />
+                    <ImagePlus className="mb-2 text-[var(--engine-accent)]" size={24} />
                   )}
                   <span className="text-xs font-black uppercase tracking-widest">
-                    {photoUploading ? "Enviando foto" : "Adicionar foto"}
+                    {photoUploading ? t("services.uploadingPhoto") : t("services.addPhoto")}
                   </span>
-                  <span className="mt-1 text-[11px] font-bold text-gray-400">
-                    Até {MAX_PHOTOS} imagens
+                  <span className="mt-1 text-[11px] font-bold text-[var(--engine-text-subtle)]">
+                    {t("services.maxImages", { value: MAX_PHOTOS })}
                   </span>
                   <input
                     type="file"
@@ -1124,41 +1218,41 @@ function ListingEditorModal({
             </div>
           </Field>
 
-          <Field label="Título do serviço" wide>
+          <Field label={t("services.fields.title")} wide>
             <TextInput
               value={form.title}
               onChange={(event) => onChange("title", event.target.value)}
-              placeholder="Limpeza premium de carros em domicílio"
+              placeholder={t("services.placeholders.title")}
             />
           </Field>
-          <Field label="Nome profissional">
+          <Field label={t("services.fields.providerName")}>
             <TextInput
               value={form.providerName}
               onChange={(event) => onChange("providerName", event.target.value)}
-              placeholder="Seu nome ou empresa"
+              placeholder={t("services.placeholders.providerName")}
             />
           </Field>
-          <Field label="Categoria">
+          <Field label={t("services.fields.category")}>
             <Select
-              value={form.category}
+              value={normalizeServiceCategory(form.category)}
               onChange={(event) => onChange("category", event.target.value)}
             >
-              {categories.map((item) => (
-                <option key={item}>{item}</option>
+              {serviceCategories.map((item) => (
+                <option key={item.value} value={item.value}>{t(item.labelKey)}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Descrição completa" wide>
+          <Field label={t("services.fields.description")} wide>
             <TextArea
               value={form.description}
               onChange={(event) => onChange("description", event.target.value)}
-              placeholder="Explique o que você faz, diferenciais, tipo de cliente, materiais usados, garantia e detalhes importantes."
+              placeholder={t("services.placeholders.description")}
             />
           </Field>
 
-          <Field label="Tipo de atendimento" wide>
+          <Field label={t("services.fields.serviceMode")} wide>
             <div className="grid gap-2 min-[520px]:grid-cols-3">
-              {["hybrid", "mobile", "place"].map((item) => {
+              {["hybrid","mobile","place"].map((item) => {
                 const Icon = modeIcons[item];
                 const active = form.serviceMode === item;
                 return (
@@ -1168,16 +1262,16 @@ function ListingEditorModal({
                     onClick={() => onChange("serviceMode", item)}
                     className={`min-h-20 rounded-xl border p-3 text-left transition sm:min-h-24 ${
                       active
-                        ? "border-red-600 bg-red-600 text-white"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:bg-[#101010] dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
+                        ?"border-[var(--engine-accent)] bg-[var(--engine-accent)] text-white"
+                        :"border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
                     }`}
                   >
                     <Icon size={18} />
                     <span className="mt-2 block text-xs font-black uppercase tracking-widest">
-                      {modeLabels[item]}
+                      {t(modeLabelKeys[item])}
                     </span>
                     <span className="mt-1 block text-[11px] font-bold leading-4 opacity-75">
-                      {modeCopy[item]}
+                      {t(modeCopyKeys[item])}
                     </span>
                   </button>
                 );
@@ -1185,50 +1279,95 @@ function ListingEditorModal({
             </div>
           </Field>
 
-          <Field label="Cidade">
+          <Field label={t("services.fields.country")}>
+            <Select
+              value={form.country ||"BR"}
+              onChange={(event) => {
+                onChange("country", event.target.value);
+                onChange("state", "");
+                onChange("city", "");
+              }}
+            >
+              {countries.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.flag} {item.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t("services.fields.state")}>
+            <Select
+              value={form.state ||""}
+              onChange={(event) => {
+                onChange("state", event.target.value);
+                onChange("city", "");
+              }}
+              disabled={!formStates.length}
+            >
+              <option value="">
+                {formStates.length
+                  ? t("services.placeholders.state")
+                  : t("services.placeholders.stateUnavailable")}
+              </option>
+              {formStates.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t("services.fields.city")}>
             <TextInput
               value={form.city}
               onChange={(event) => onChange("city", event.target.value)}
-              placeholder="São Paulo, SP"
+              placeholder={t("services.placeholders.city")}
+              list={formCities.length ? cityListId : undefined}
             />
+            {formCities.length > 0 && (
+              <datalist id={cityListId}>
+                {formCities.map((city) => (
+                  <option key={city} value={city} />
+                ))}
+              </datalist>
+            )}
           </Field>
           {needsAddress && (
-            <Field label="Endereço físico">
+            <Field label={t("services.fields.address")}>
               <TextInput
                 value={form.address}
                 onChange={(event) => onChange("address", event.target.value)}
-                placeholder="Rua, número, bairro"
+                placeholder={t("services.placeholders.address")}
               />
             </Field>
           )}
           {needsServiceArea && (
-            <Field label="Área que atende" wide={!needsAddress}>
+            <Field label={t("services.fields.serviceArea")} wide={!needsAddress}>
               <TextInput
                 value={form.serviceArea}
                 onChange={(event) => onChange("serviceArea", event.target.value)}
-                placeholder="Zona Sul, ABC, até 20 km, condomínios, empresas..."
+                placeholder={t("services.placeholders.serviceArea")}
               />
             </Field>
           )}
 
           {needsAddress && hasMapAddress(form) && (
             <div className="md:col-span-2">
-              <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
-                Prévia do mapa
+              <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
+                {t("services.mapPreview")}
               </p>
               <MapPreview listing={form} />
             </div>
           )}
 
-          <Field label="WhatsApp">
+          <Field label={t("services.fields.whatsapp")}>
             <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-2 sm:grid-cols-[112px_minmax(0,1fr)]">
               <Select
-                value={form.whatsappCountry || "+55"}
+                value={form.whatsappCountry ||"+55"}
                 onChange={(event) => {
                   onChange("whatsappCountry", event.target.value);
                   onChange("whatsapp", formatPhoneInput(form.whatsapp, event.target.value));
                 }}
-                aria-label="Código do país"
+                aria-label={t("services.countryCode")}
               >
                 {phoneCountries.map((country) => (
                   <option key={country.code} value={country.code}>
@@ -1244,12 +1383,12 @@ function ListingEditorModal({
                     formatPhoneInput(event.target.value, form.whatsappCountry),
                   )
                 }
-                placeholder={form.whatsappCountry === "+1" ? "(555) 123-4567" : "(11) 99999-9999"}
+                placeholder={form.whatsappCountry ==="+1" ?"(555) 123-4567" :"(11) 99999-9999"}
                 inputMode="tel"
               />
             </div>
           </Field>
-          <Field label="E-mail">
+          <Field label={t("common.email")}>
             <TextInput
               type="email"
               value={form.email}
@@ -1257,52 +1396,52 @@ function ListingEditorModal({
               placeholder="contato@email.com"
             />
           </Field>
-          <Field label="Preço ou faixa">
+          <Field label={t("services.fields.price")}>
             <TextInput
               value={form.price}
               onChange={(event) => onChange("price", formatCurrencyInput(event.target.value))}
-              placeholder="A partir de R$ 120"
+              placeholder={t("services.placeholders.price")}
               inputMode="numeric"
             />
           </Field>
-          <Field label="Disponibilidade">
+          <Field label={t("services.fields.availability")}>
             <TextInput
               value={form.availability}
               onChange={(event) => onChange("availability", event.target.value)}
-              placeholder="Segunda a sábado, 8h às 18h"
+              placeholder={t("services.placeholders.availability")}
             />
           </Field>
-          <Field label="Experiência" wide>
+          <Field label={t("services.fields.experience")} wide>
             <TextInput
               value={form.experience}
               onChange={(event) => onChange("experience", event.target.value)}
-              placeholder="5 anos de experiência, atendimento para carros premium..."
+              placeholder={t("services.placeholders.experience")}
             />
           </Field>
-          <Field label="Tags separadas por vírgula" wide>
+          <Field label={t("services.fields.tags")} wide>
             <TextInput
               value={form.tags}
               onChange={(event) => onChange("tags", event.target.value)}
-              placeholder="delivery, polimento, higienização, urgente"
+              placeholder={t("services.placeholders.tags")}
             />
           </Field>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-200 p-5 dark:border-[#222] sm:flex-row sm:p-6">
+        <div className="engine-safe-bottom flex flex-col gap-3 border-t border-[var(--engine-border)] p-5 sm:flex-row sm:p-6">
           <button
             type="submit"
             disabled={saving || photoUploading}
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black uppercase italic text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-5 text-sm font-bold uppercase text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? <Wrench className="animate-spin" size={18} /> : <Plus size={18} />}
-            {saving ? "Enviando" : "Enviar para aprovação"}
+            {saving ? t("services.sending") : t("services.submitForApproval")}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--engine-border)] px-5 text-sm font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
           >
-            Cancelar
+            {t("common.cancel")}
           </button>
         </div>
       </form>
@@ -1317,14 +1456,15 @@ function SellerProfileModal({
   onEditProfile,
   onNewListing,
 }) {
+  const { t } = useTranslation();
   if (!sellerProfile) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5">
-      <section className="w-full max-w-lg rounded-t-2xl border border-gray-200 bg-white p-5 text-slate-950 shadow-2xl dark:border-[#222] dark:bg-[#111] dark:text-white sm:rounded-2xl sm:p-6">
+      <section className="w-full max-w-lg rounded-t-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-5 text-[var(--engine-text)] shadow-2xl dark:text-white sm:rounded-2xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-lg font-black uppercase italic text-white dark:bg-red-600">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[var(--engine-accent)] text-lg font-bold uppercase text-white">
               {sellerProfile.avatar ? (
                 <img src={sellerProfile.avatar} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -1332,13 +1472,13 @@ function SellerProfileModal({
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-                conta vendedor
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
+                {t("services.sellerAccount")}
               </p>
-              <h2 className="mt-1 truncate text-2xl font-black uppercase italic">
-                Perfil vendedor
+              <h2 className="mt-1 truncate text-lg font-extrabold tracking-tight">
+                {t("services.sellerProfile")}
               </h2>
-              <p className="mt-1 truncate text-xs font-bold text-gray-500 dark:text-gray-400">
+              <p className="mt-1 truncate text-xs font-bold text-[var(--engine-text-muted)]">
                 {sellerProfile.displayName}
               </p>
             </div>
@@ -1346,37 +1486,37 @@ function SellerProfileModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300"
-            title="Fechar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+            title={t("common.cancel")}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="mt-5 grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-[#262626] dark:bg-[#151515]">
+        <div className="mt-5 grid gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              Conta
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+              {t("services.account")}
             </span>
-            <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-300">
-              {sellerProfile.username || sellerProfile.email || "Engine"}
+            <span className="min-w-0 truncate text-xs font-bold text-[var(--engine-text-muted)]">
+              {sellerProfile.username || sellerProfile.email ||"Engine"}
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              Cidade
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+              {t("services.fields.city")}
             </span>
-            <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-300">
-              {sellerProfile.city || "Adicionar no perfil"}
+            <span className="min-w-0 truncate text-xs font-bold text-[var(--engine-text-muted)]">
+              {sellerProfile.city || t("services.addInProfile")}
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              Status
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+              {t("services.statusLabel")}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
               <ShieldCheck size={12} />
-              {listings.length ? "Vendedor ativo" : "Pronto"}
+              {listings.length ? t("services.activeSeller") : t("services.ready")}
             </span>
           </div>
         </div>
@@ -1385,18 +1525,18 @@ function SellerProfileModal({
           <button
             type="button"
             onClick={onEditProfile}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 text-xs font-black uppercase tracking-widest text-slate-900 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-white"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] px-4 text-xs font-black uppercase tracking-widest text-[var(--engine-text)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] dark:text-white"
           >
             <UserRoundCheck size={16} />
-            Editar perfil
+            {t("services.editProfile")}
           </button>
           <button
             type="button"
             onClick={onNewListing}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black uppercase italic text-white transition hover:bg-red-700"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 text-xs font-bold uppercase text-white transition hover:brightness-95"
           >
             <Plus size={16} />
-            Novo serviço
+            {t("services.newService")}
           </button>
         </div>
       </section>
@@ -1405,59 +1545,60 @@ function SellerProfileModal({
 }
 
 function SellerListingsModal({ listings, onClose, onEdit, onDelete, onNewListing }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const cleanSearch = search.trim().toLowerCase();
   const filtered = listings.filter((listing) =>
     [
       listing.title,
-      listing.category,
+      getServiceCategoryLabel(listing.category, t),
       listing.providerName,
       listing.city,
-      statusLabels[listing.moderationStatus],
+      t(statusLabelKeys[listing.moderationStatus] || statusLabelKeys.pending),
     ]
       .filter(Boolean)
-      .join(" ")
+      .join("")
       .toLowerCase()
       .includes(cleanSearch),
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5">
-      <section className="flex h-[88dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-gray-200 bg-white text-slate-950 shadow-2xl dark:border-[#222] dark:bg-[#111] dark:text-white sm:h-auto sm:max-h-[82vh] sm:rounded-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-5 dark:border-[#222] sm:p-6">
+      <section className="flex h-[88dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text)] shadow-2xl dark:text-white sm:h-auto sm:max-h-[82vh] sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--engine-border)] p-5 sm:p-6">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-              vitrine do vendedor
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
+              {t("services.sellerShowcase")}
             </p>
-            <h2 className="mt-1 truncate text-2xl font-black uppercase italic">
-              Meus anúncios
+            <h2 className="mt-1 truncate text-lg font-extrabold tracking-tight">
+              {t("services.myListings")}
             </h2>
-            <p className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm font-medium text-[var(--engine-text-muted)]">
               {listings.length === 1
-                ? "1 anúncio cadastrado"
+                ? t("services.oneListing")
                 : listings.length
-                  ? `${listings.length} anúncios cadastrados`
-                  : "Nenhum anúncio cadastrado"}
+                  ? t("services.listingCount", { value: listings.length })
+                  : t("services.noListingsRegistered")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300"
-            title="Fechar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+            title={t("common.cancel")}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="border-b border-gray-200 p-4 dark:border-[#222] sm:p-5">
-          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 dark:border-[#333] dark:bg-[#101010]">
-            <Search size={17} className="text-gray-400" />
+        <div className="border-b border-[var(--engine-border)] p-4 sm:p-5">
+          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4">
+            <Search size={17} className="text-[var(--engine-text-subtle)]" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por título, categoria ou status"
-              className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-600"
+              placeholder={t("services.searchMyListings")}
+              className="min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--engine-text)] outline-none placeholder:text-[var(--engine-text-subtle)] dark:text-white dark:placeholder:text-[var(--engine-text-muted)]"
             />
           </label>
         </div>
@@ -1468,7 +1609,7 @@ function SellerListingsModal({ listings, onClose, onEdit, onDelete, onNewListing
               {filtered.map((listing) => (
                 <article
                   key={listing.id}
-                  className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-[#262626] dark:bg-[#151515] sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-center"
+                  className="grid gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-center"
                 >
                   <img
                     src={listing.photos?.[0] || fallbackPhoto}
@@ -1481,18 +1622,18 @@ function SellerListingsModal({ listings, onClose, onEdit, onDelete, onNewListing
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={listing.moderationStatus} />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        {listing.category || "Serviço"}
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                        {getServiceCategoryLabel(listing.category, t)}
                       </span>
                     </div>
-                    <h3 className="mt-2 line-clamp-2 text-sm font-black uppercase italic">
-                      {listing.title || "Anúncio sem título"}
+                    <h3 className="mt-2 line-clamp-2 text-sm font-bold italic">
+                      {listing.title || t("services.untitledListing")}
                     </h3>
-                    <p className="mt-1 truncate text-xs font-bold text-gray-500 dark:text-gray-400">
-                      {listing.price || "Sob consulta"} / {listing.city || "Local a combinar"}
+                    <p className="mt-1 truncate text-xs font-bold text-[var(--engine-text-muted)]">
+                      {listing.price || t("services.priceFallback")} / {listing.city || t("services.locationFallback")}
                     </p>
                     {listing.moderationNote && (
-                      <p className="mt-2 line-clamp-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold leading-5 text-red-600 dark:text-red-300">
+                      <p className="mt-2 line-clamp-2 rounded-lg bg-[var(--engine-accent)]/10 px-3 py-2 text-xs font-bold leading-5 text-[var(--engine-accent)]">
                         {listing.moderationNote}
                       </p>
                     )}
@@ -1501,44 +1642,44 @@ function SellerListingsModal({ listings, onClose, onEdit, onDelete, onNewListing
                     <button
                       type="button"
                       onClick={() => onEdit(listing)}
-                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-600 dark:bg-[#262626]"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[var(--engine-accent)] px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-[var(--engine-accent)]"
                     >
                       <Edit3 size={15} />
-                      Editar
+                      {t("services.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(listing)}
-                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[var(--engine-border)] px-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
                     >
-                      <DeleteOutlineOutlined className="shrink-0" sx={{ fontSize: 17 }} />
-                      Excluir
+                      <Trash2 className="shrink-0" size={17} />
+                      {t("common.delete")}
                     </button>
                   </div>
                 </article>
               ))}
             </div>
           ) : (
-            <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-6 text-center dark:border-[#333]">
-              <BriefcaseBusiness className="mb-3 text-red-500" size={34} />
-              <h3 className="text-lg font-black uppercase italic">
-                Nenhum anúncio aqui
+            <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--engine-border)] p-6 text-center">
+              <BriefcaseBusiness className="mb-3 text-[var(--engine-accent)]" size={34} />
+              <h3 className="text-lg font-extrabold italic">
+                {t("services.noListingsHere")}
               </h3>
-              <p className="mt-2 max-w-xs text-sm font-medium text-gray-500 dark:text-gray-400">
-                {listings.length ? "Tente outro termo de busca." : "Cadastre um serviço para começar sua vitrine."}
+              <p className="mt-2 max-w-xs text-sm font-medium text-[var(--engine-text-muted)]">
+                {listings.length ? t("services.tryAnotherSearch") : t("services.createFirstListing")}
               </p>
             </div>
           )}
         </div>
 
-        <div className="border-t border-gray-200 p-4 dark:border-[#222] sm:p-5">
+        <div className="engine-safe-bottom border-t border-[var(--engine-border)] p-4 sm:p-5">
           <button
             type="button"
             onClick={onNewListing}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 text-sm font-bold uppercase text-white transition hover:brightness-95"
           >
             <Plus size={18} />
-            Cadastrar novo serviço
+            {t("services.createService")}
           </button>
         </div>
       </section>
@@ -1547,22 +1688,23 @@ function SellerListingsModal({ listings, onClose, onEdit, onDelete, onNewListing
 }
 
 function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
-  const pending = listings.filter((listing) => listing.moderationStatus === "pending");
+  const { t } = useTranslation();
+  const pending = listings.filter((listing) => listing.moderationStatus ==="pending");
   const reviewed = listings
     .filter((listing) =>
-      ["approved", "changes_requested", "rejected"].includes(listing.moderationStatus),
+      ["approved","changes_requested","rejected"].includes(listing.moderationStatus),
     )
     .slice(0, 8);
 
   if (!pending.length && !reviewed.length) {
     return (
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#222] dark:bg-[#111]">
-        <h2 className="flex items-center gap-2 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
+      <section className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-5">
+        <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--engine-text)] dark:text-white">
           <ShieldCheck size={18} className="text-emerald-500" />
-          Aprovação de serviços
+          {t("services.approvalTitle")}
         </h2>
-        <p className="mt-3 text-sm font-medium text-gray-500 dark:text-gray-400">
-          Nenhum anúncio aguardando revisão agora.
+        <p className="mt-3 text-sm font-medium text-[var(--engine-text-muted)]">
+          {t("services.noPendingApprovals")}
         </p>
       </section>
     );
@@ -1570,24 +1712,24 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
 
   return (
     <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 dark:bg-amber-500/5 sm:p-5">
-      <h2 className="flex items-center gap-2 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
+      <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--engine-text)] dark:text-white">
         <ShieldCheck size={18} className="text-amber-500" />
-        Aprovação de serviços
+        {t("services.approvalTitle")}
       </h2>
       <div className="mt-4 grid gap-3">
         {pending.map((listing) => (
           <div
             key={listing.id}
-            className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-[#222] dark:bg-[#151515] sm:p-4 md:grid-cols-[1fr_auto]"
+            className="grid gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-3 sm:p-4 md:grid-cols-[1fr_auto]"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
+              <p className="truncate text-sm font-bold italic text-[var(--engine-text)] dark:text-white">
                 {listing.title}
               </p>
-              <p className="mt-1 line-clamp-2 text-xs font-bold uppercase tracking-widest text-gray-400 sm:truncate">
-                {listing.providerName} / {listing.category} / {listing.city || "sem cidade"}
+              <p className="mt-1 line-clamp-2 text-xs font-medium text-[var(--engine-text-subtle)] sm:truncate">
+                {listing.providerName} · {getServiceCategoryLabel(listing.category, t)} · {listing.city || t("services.noCity")}
               </p>
-              <p className="mt-2 line-clamp-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+              <p className="mt-2 line-clamp-2 text-sm font-medium text-[var(--engine-text-muted)]">
                 {listing.description}
               </p>
             </div>
@@ -1595,10 +1737,10 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
               <button
                 type="button"
                 onClick={() => onEdit(listing)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] px-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
               >
                 <Edit3 size={15} />
-                Revisar
+                {t("services.review")}
               </button>
               <button
                 type="button"
@@ -1606,15 +1748,15 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-sky-700"
               >
                 <RotateCcw size={15} />
-                Retornar
+                {t("services.return")}
               </button>
               <button
                 type="button"
                 onClick={() => onReject(listing)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-600 dark:bg-[#262626] dark:hover:bg-red-600"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-[var(--engine-accent)] hover:brightness-95"
               >
                 <XCircle size={15} />
-                Recusar
+                {t("services.reject")}
               </button>
               <button
                 type="button"
@@ -1622,7 +1764,7 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-emerald-700"
               >
                 <CheckCircle2 size={15} />
-                Aprovar
+                {t("services.approve")}
               </button>
             </div>
           </div>
@@ -1630,11 +1772,11 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
       </div>
       <div className="mt-5 border-t border-amber-500/20 pt-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
-            Aprovações, retornos e recusas
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-text-muted)]">
+            {t("services.approvalHistory")}
           </p>
-          <span className="rounded-full bg-slate-950/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:bg-white/10 dark:text-gray-300">
-            {reviewed.length} registro{reviewed.length === 1 ? "" : "s"}
+          <span className="rounded-full bg-[var(--engine-accent)]/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] dark:bg-[var(--engine-surface)]/10">
+            {t("services.recordCount", { count: reviewed.length })}
           </span>
         </div>
         {reviewed.length ? (
@@ -1642,22 +1784,22 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
             {reviewed.map((listing) => (
               <article
                 key={listing.id}
-                className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#151515]"
+                className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={listing.moderationStatus} />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    {listing.category || "Serviço"}
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                    {getServiceCategoryLabel(listing.category, t)}
                   </span>
                 </div>
-                <h3 className="mt-2 line-clamp-2 text-sm font-black uppercase italic text-slate-950 dark:text-white">
-                  {listing.title || "Anúncio sem título"}
+                <h3 className="mt-2 line-clamp-2 text-sm font-bold italic text-[var(--engine-text)] dark:text-white">
+                  {listing.title || t("services.untitledListing")}
                 </h3>
-                <p className="mt-1 truncate text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {listing.providerName} / {listing.city || "sem cidade"}
+                <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-muted)]">
+                  {listing.providerName} · {listing.city || t("services.noCity")}
                 </p>
                 {listing.moderationNote && (
-                  <p className="mt-3 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold leading-5 text-gray-600 dark:bg-[#101010] dark:text-gray-300">
+                  <p className="mt-3 rounded-lg bg-[var(--engine-surface-2)] px-3 py-2 text-xs font-bold leading-5 text-[var(--engine-text-muted)]">
                     {listing.moderationNote}
                   </p>
                 )}
@@ -1665,9 +1807,9 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#222] dark:bg-[#151515]">
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
-              As decisões tomadas nos anúncios vão aparecer aqui, sem misturar com a fila pendente.
+          <div className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
+            <p className="text-sm font-bold text-[var(--engine-text-muted)]">
+              {t("services.approvalHistoryEmpty")}
             </p>
           </div>
         )}
@@ -1677,49 +1819,50 @@ function ApprovalQueue({ listings, onApprove, onReturn, onReject, onEdit }) {
 }
 
 function RejectionModal({ listing, note, action, onChangeNote, onCancel, onConfirm }) {
+  const { t } = useTranslation();
   if (!listing) return null;
-  const isReject = action === "rejected";
+  const isReject = action ==="rejected";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <section className="max-h-[100dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-gray-200 bg-white p-5 pb-8 shadow-2xl dark:border-[#222] dark:bg-[#111] sm:max-h-[92vh] sm:rounded-2xl sm:p-6">
+      <section className="max-h-[100dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-5 pb-8 shadow-2xl sm:max-h-[92vh] sm:rounded-2xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-              Feedback do anúncio
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
+              {t("services.feedbackTitle")}
             </p>
-            <h2 className="mt-1 text-2xl font-black uppercase italic text-slate-950 dark:text-white">
-              {isReject ? "Recusar anuncio" : "Retornar ajustes"}
+            <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
+              {isReject ? t("services.rejectListing") : t("services.returnAdjustments")}
             </h2>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#101010] dark:text-gray-300"
-            title="Fechar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+            title={t("common.cancel")}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-[#333] dark:bg-[#101010]">
-          <p className="truncate text-sm font-black uppercase italic text-slate-950 dark:text-white">
+        <div className="mt-5 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4">
+          <p className="truncate text-sm font-bold text-[var(--engine-text)] dark:text-white">
             {listing.title}
           </p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-gray-400">
-            {listing.providerName} / {listing.category}
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+            {listing.providerName} / {getServiceCategoryLabel(listing.category, t)}
           </p>
         </div>
 
         <label className="mt-5 grid gap-2">
-          <span className="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
-            Motivo ou orientação para o anunciante
+          <span className="text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
+            {t("services.feedbackReason")}
           </span>
           <textarea
             value={note}
             onChange={(event) => onChangeNote(event.target.value)}
-            placeholder="Ex.: inclua fotos mais claras, detalhe a área de atendimento ou ajuste o telefone de contato."
-            className="min-h-36 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold leading-6 text-slate-950 outline-none transition placeholder:text-gray-400 focus:border-red-500 focus:bg-white dark:border-[#333] dark:bg-[#101010] dark:text-white dark:[color-scheme:dark] dark:placeholder:text-gray-600 dark:focus:bg-[#151515]"
+            placeholder={t("services.feedbackPlaceholder")}
+            className="min-h-36 w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-sm font-bold leading-6 text-[var(--engine-text)] outline-none transition placeholder:text-[var(--engine-text-subtle)] focus:border-[var(--engine-accent)] focus:bg-[var(--engine-surface)] dark:text-white dark:[color-scheme:dark] dark:placeholder:text-[var(--engine-text-muted)] dark:focus:bg-[var(--engine-elevated)]"
           />
         </label>
 
@@ -1727,19 +1870,19 @@ function RejectionModal({ listing, note, action, onChangeNote, onCancel, onConfi
           <button
             type="button"
             onClick={onConfirm}
-            className={`inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-sm font-black uppercase italic text-white transition ${
-              isReject ? "bg-red-600 hover:bg-red-700" : "bg-sky-600 hover:bg-sky-700"
+            className={`inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold uppercase text-white transition ${
+              isReject ?"bg-[var(--engine-accent)] hover:brightness-95" :"bg-sky-600 hover:bg-sky-700"
             }`}
           >
             {isReject ? <XCircle size={18} /> : <RotateCcw size={18} />}
-            {isReject ? "Recusar anuncio" : "Retornar com alteracoes"}
+            {isReject ? t("services.rejectListing") : t("services.returnWithChanges")}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300 dark:hover:text-red-400"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--engine-border)] px-5 text-sm font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
           >
-            Cancelar
+            {t("common.cancel")}
           </button>
         </div>
       </section>
@@ -1748,23 +1891,29 @@ function RejectionModal({ listing, note, action, onChangeNote, onCancel, onConfi
 }
 
 export function Services({ user, settings }) {
+  const { t } = useTranslation();
+  const confirm = useConfirm();
+  const toast = useToast();
   const navigate = useNavigate();
   const [listings, setListings] = useState([]);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("Todos");
+  const [category, setCategory] = useState("all");
   const [mode, setMode] = useState("all");
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [form, setForm] = useState(() => makeInitialForm(settings, user));
   const [editorOpen, setEditorOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [notice, setNotice] = useState("");
   const [rejectionTarget, setRejectionTarget] = useState(null);
   const [rejectionNote, setRejectionNote] = useState("");
   const [moderationAction, setModerationAction] = useState("changes_requested");
   const [detailListing, setDetailListing] = useState(null);
   const [sellerProfileOpen, setSellerProfileOpen] = useState(false);
   const [sellerListingsOpen, setSellerListingsOpen] = useState(false);
-  const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email || "").toLowerCase());
+  const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email ||"").toLowerCase());
   const sellerProfile = useMemo(
     () => getSellerProfile(settings, user),
     [settings, user],
@@ -1780,47 +1929,133 @@ export function Services({ user, settings }) {
     [listings, user?.uid],
   );
   const pendingApprovalsCount = useMemo(
-    () => listings.filter((listing) => listing.moderationStatus === "pending").length,
+    () => listings.filter((listing) => listing.moderationStatus ==="pending").length,
     [listings],
   );
 
   const approvedListings = useMemo(
-    () => listings.filter((listing) => listing.moderationStatus === "approved"),
+    () => listings.filter((listing) => listing.moderationStatus ==="approved"),
     [listings],
   );
 
+  // Opções de país presentes nos anúncios aprovados (rótulos via dataset).
+  const countryOptions = useMemo(() => {
+    const codes = new Set(
+      approvedListings.map((listing) => listing.country?.trim()).filter(Boolean),
+    );
+    return Array.from(codes)
+      .map((code) => ({ code, name: getCountryName(code) || code }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [approvedListings]);
+
+  // Estados presentes, respeitando o país selecionado.
+  const stateOptions = useMemo(() => {
+    const codes = new Set(
+      approvedListings
+        .filter(
+          (listing) =>
+            countryFilter ==="all" ||
+            !listing.country ||
+            listing.country === countryFilter,
+        )
+        .map((listing) => listing.state?.trim())
+        .filter(Boolean),
+    );
+    return Array.from(codes)
+      .map((code) => ({
+        code,
+        name:
+          getStateName(countryFilter ==="all" ?"" : countryFilter, code) || code,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [approvedListings, countryFilter]);
+
+  // Cidades presentes, respeitando país + estado selecionados.
+  const cityOptions = useMemo(() => {
+    const cities = new Set(
+      approvedListings
+        .filter(
+          (listing) =>
+            (countryFilter ==="all" ||
+              !listing.country ||
+              listing.country === countryFilter) &&
+            (stateFilter ==="all" ||
+              !listing.state ||
+              listing.state === stateFilter),
+        )
+        .map((listing) => listing.city?.trim())
+        .filter(Boolean),
+    );
+    return Array.from(cities).sort((a, b) => a.localeCompare(b));
+  }, [approvedListings, countryFilter, stateFilter]);
+
   const stats = useMemo(() => {
     const mobileCount = approvedListings.filter((listing) =>
-      ["mobile", "hybrid"].includes(listing.serviceMode),
+      ["mobile","hybrid"].includes(listing.serviceMode),
     ).length;
-    const cities = new Set(approvedListings.map((listing) => listing.city).filter(Boolean));
-    return { total: approvedListings.length, mobileCount, cities: cities.size };
+    const cities = new Set(
+      approvedListings.map((listing) => listing.city?.trim()).filter(Boolean),
+    );
+    return {
+      total: approvedListings.length,
+      mobileCount,
+      cities: cities.size,
+    };
   }, [approvedListings]);
 
   const filteredListings = useMemo(() => {
     const cleanQuery = query.trim().toLowerCase();
     return approvedListings.filter((listing) => {
-      const matchesCategory = category === "Todos" || listing.category === category;
-      const matchesMode = mode === "all" || listing.serviceMode === mode;
+      const normalizedCategory = normalizeServiceCategory(listing.category);
+      const matchesCategory = category ==="all" || normalizedCategory === category;
+      const matchesMode = mode ==="all" || listing.serviceMode === mode;
+      const matchesCountry =
+        countryFilter ==="all" ||
+        !listing.country ||
+        listing.country === countryFilter;
+      const matchesState =
+        stateFilter ==="all" || !listing.state || listing.state === stateFilter;
+      const matchesCity =
+        cityFilter ==="all" || (listing.city?.trim() ||"") === cityFilter;
       const text = [
         listing.title,
         listing.providerName,
-        listing.category,
+        getServiceCategoryLabel(listing.category, t),
         listing.description,
         listing.city,
         listing.serviceArea,
         ...(listing.tags || []),
       ]
-        .join(" ")
+        .join("")
         .toLowerCase();
-      return matchesCategory && matchesMode && (!cleanQuery || text.includes(cleanQuery));
+      return (
+        matchesCategory &&
+        matchesMode &&
+        matchesCountry &&
+        matchesState &&
+        matchesCity &&
+        (!cleanQuery || text.includes(cleanQuery))
+      );
     });
-  }, [approvedListings, category, mode, query]);
+  }, [approvedListings, category, mode, countryFilter, stateFilter, cityFilter, query, t]);
 
-  const flash = (message) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(""), 2600);
+  const activeFilterCount =
+    (category !=="all" ? 1 : 0) +
+    (mode !=="all" ? 1 : 0) +
+    (countryFilter !=="all" ? 1 : 0) +
+    (stateFilter !=="all" ? 1 : 0) +
+    (cityFilter !=="all" ? 1 : 0);
+
+  const clearFilters = () => {
+    setCategory("all");
+    setMode("all");
+    setCountryFilter("all");
+    setStateFilter("all");
+    setCityFilter("all");
+    setQuery("");
   };
+
+  const flash = (message) => toast(message);
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -1836,8 +2071,10 @@ export function Services({ user, settings }) {
       setForm({
         ...emptyForm,
         ...listing,
+        country: listing.country || sellerProfile.country || "BR",
+        state: listing.state || sellerProfile.state || "",
         ...splitStoredPhone(listing.whatsapp, listing.whatsappCountry),
-        tags: (listing.tags || []).join(", "),
+        tags: (listing.tags || []).join(","),
         photos: listing.photos || [],
       });
     } else {
@@ -1853,17 +2090,17 @@ export function Services({ user, settings }) {
 
   const uploadPhotos = async (event) => {
     const files = Array.from(event.target.files || []);
-    event.target.value = "";
+    event.target.value ="";
     if (!files.length) return;
     if (!user?.uid) {
-      flash("Entre novamente para enviar fotos.");
+      flash(t("services.flash.signInAgain"));
       return;
     }
 
     const remainingSlots = MAX_PHOTOS - (form.photos || []).length;
     const selectedFiles = files.slice(0, remainingSlots);
     if (!selectedFiles.length) {
-      flash(`Limite de ${MAX_PHOTOS} fotos por anúncio.`);
+      flash(t("services.flash.photoLimit", { value: MAX_PHOTOS }));
       return;
     }
 
@@ -1872,22 +2109,22 @@ export function Services({ user, settings }) {
       const uploads = await Promise.all(
         selectedFiles.map(async (file) => {
           if (!file.type.startsWith("image/")) {
-            throw new Error("Arquivo inválido.");
+            throw new Error(t("services.flash.invalidFile"));
           }
           if (file.size > 6 * 1024 * 1024) {
-            throw new Error("Cada foto deve ter até 6 MB.");
+            throw new Error(t("services.flash.maxPhotoSize"));
           }
-          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"-");
           const path = `users/${user.uid}/services/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
           const fileRef = ref(storage, path);
           try {
             await withUploadTimeout(
               uploadBytes(fileRef, file, { contentType: file.type }),
-              "Upload da foto",
+              t("services.flash.photoUpload"),
             );
             const url = await withUploadTimeout(
               getDownloadURL(fileRef),
-              "Busca da foto",
+              t("services.flash.photoFetch"),
             );
             return { url, fallback: false };
           } catch (error) {
@@ -1906,12 +2143,12 @@ export function Services({ user, settings }) {
       }));
       flash(
         uploads.some((item) => item.fallback)
-          ? "Storage indisponível. Foto comprimida adicionada."
-          : "Foto adicionada.",
+          ? t("services.flash.compressedPhoto")
+          : t("services.flash.photoAdded"),
       );
     } catch (error) {
       console.error(error);
-      flash(error.message || "Não foi possível enviar a foto.");
+      flash(error.message || t("services.flash.photoUploadError"));
     } finally {
       setPhotoUploading(false);
     }
@@ -1927,74 +2164,84 @@ export function Services({ user, settings }) {
   const submitListing = async (event) => {
     event.preventDefault();
     if (!SUBSCRIPTION_GATE_OPEN) {
-      flash("Assinatura necessária para publicar.");
+      flash(t("services.flash.subscriptionRequired"));
       return;
     }
     if (!form.title.trim() || !form.description.trim()) {
-      flash("Preencha título e descrição do serviço.");
+      flash(t("services.flash.titleDescriptionRequired"));
       return;
     }
-    if (["place", "hybrid"].includes(form.serviceMode) && !form.address.trim()) {
-      flash("Informe o endereço para exibir o mapa.");
+    if (["place","hybrid"].includes(form.serviceMode) && !form.address.trim()) {
+      flash(t("services.flash.addressRequired"));
       return;
     }
-    if (["mobile", "hybrid"].includes(form.serviceMode) && !form.serviceArea.trim()) {
-      flash("Informe a área de atendimento.");
+    if (["mobile","hybrid"].includes(form.serviceMode) && !form.serviceArea.trim()) {
+      flash(t("services.flash.areaRequired"));
       return;
     }
 
     setSaving(true);
     try {
-      await engineDB.saveServiceListing(form, settings, user?.uid, { isAdmin });
-      flash("Anúncio enviado para aprovação.");
+      await engineDB.saveServiceListing(
+        { ...form, category: normalizeServiceCategory(form.category) },
+        settings,
+        user?.uid,
+        { isAdmin },
+      );
+      flash(t("services.flash.sentForApproval"));
       closeEditor();
     } catch (error) {
       console.error(error);
-      flash("Não foi possível salvar agora.");
+      flash(t("settings.status.saveError"));
     } finally {
       setSaving(false);
     }
   };
 
   const deleteListing = async (listing) => {
-    if (!window.confirm(`Excluir o anúncio "${listing.title}"?`)) return;
+    const ok = await confirm({
+      title: t("services.flash.deleteTitle"),
+      message: t("services.flash.deleteConfirm", { title: listing.title }),
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     try {
       await engineDB.deleteServiceListing(listing.id, user?.uid);
-      flash("Anúncio removido.");
+      flash(t("services.flash.removed"));
       if (detailListing?.id === listing.id) setDetailListing(null);
       if (form.id === listing.id) closeEditor();
     } catch (error) {
       console.error(error);
-      flash("Não foi possível remover agora.");
+      flash(t("services.flash.removeError"));
     }
   };
 
   const approveListing = async (listing) => {
     try {
-      await engineDB.moderateServiceListing(listing.id, "approved", "", user?.uid);
-      flash("Anúncio aprovado e publicado.");
+      await engineDB.moderateServiceListing(listing.id,"approved","", user?.uid);
+      flash(t("services.flash.approved"));
     } catch (error) {
       console.error(error);
-      flash("Não foi possível aprovar agora.");
+      flash(t("services.flash.approveError"));
     }
   };
 
   const openReturnListing = (listing) => {
     setModerationAction("changes_requested");
     setRejectionTarget(listing);
-    setRejectionNote(listing.moderationNote || "");
+    setRejectionNote(listing.moderationNote ||"");
   };
 
   const openRejectListing = (listing) => {
     setModerationAction("rejected");
     setRejectionTarget(listing);
-    setRejectionNote(listing.moderationNote || "");
+    setRejectionNote(listing.moderationNote ||"");
   };
 
   const confirmRejectListing = async () => {
     if (!rejectionTarget) return;
     if (!rejectionNote.trim()) {
-      flash("Escreva o comentÃ¡rio para o anunciante.");
+      flash(t("services.flash.feedbackRequired"));
       return;
     }
     try {
@@ -2005,62 +2252,57 @@ export function Services({ user, settings }) {
         user?.uid,
       );
       flash(
-        moderationAction === "changes_requested"
-          ? "Anuncio retornado com alteracoes."
-          : "Anuncio recusado com comentario.",
+        moderationAction ==="changes_requested"
+          ? t("services.flash.returned")
+          : t("services.flash.rejected"),
       );
       setRejectionTarget(null);
       setRejectionNote("");
       setModerationAction("changes_requested");
     } catch (error) {
       console.error(error);
-      flash("Não foi possível reprovar agora.");
+      flash(t("services.flash.rejectError"));
     }
   };
 
   return (
     <section className="space-y-5 pb-28 sm:space-y-8 sm:pb-10">
-      {notice && (
-        <div className="fixed inset-x-4 top-4 z-50 rounded-xl bg-slate-950 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-2xl sm:left-auto sm:right-6 sm:top-6 dark:bg-red-600">
-          {notice}
-        </div>
-      )}
 
-      <header className="-mx-4 overflow-hidden border-y border-gray-200 bg-white text-slate-950 shadow-none sm:mx-0 sm:rounded-2xl sm:border sm:shadow-xl dark:border-[#222] dark:bg-[#111] dark:text-white dark:shadow-none">
+      <header className="-mx-4 overflow-hidden border-y border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text)] shadow-none sm:mx-0 sm:rounded-2xl sm:border sm:shadow-xl dark:text-white dark:shadow-none">
         <div className="grid gap-6 p-5 sm:gap-8 sm:p-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:p-10">
           <div className="flex flex-col justify-between gap-6 sm:gap-8">
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
                   <Sparkles size={14} />
                   Engine Services
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500 sm:text-[10px] sm:tracking-[0.26em] dark:text-gray-400">
-                  profissionais / mapa / contato direto
+                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--engine-text-muted)] sm:text-[10px] sm:tracking-[0.26em]">
+                  {t("services.kicker")}
                 </span>
               </div>
-              <h1 className="max-w-4xl text-[2rem] font-black uppercase italic leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
-                Encontre quem resolve. Publique o que você faz.
+              <h1 className="max-w-4xl text-2xl font-extrabold uppercase italic leading-tight tracking-tight sm:text-3xl">
+                {t("services.title")}
               </h1>
-              <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-gray-600 sm:text-base sm:leading-7 dark:text-gray-300">
-                Busque serviços, veja fotos, confira se o profissional vai até você e entre em contato por WhatsApp ou e-mail.
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+                {t("services.subtitle")}
               </p>
             </div>
 
             <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
-              <HeroStat icon={BriefcaseBusiness} label="serviços ativos" value={stats.total} tone="red" />
-              <HeroStat icon={Navigation} label="vão até você" value={stats.mobileCount} tone="sky" />
-              <HeroStat icon={MapPin} label="cidades" value={stats.cities} tone="emerald" />
+              <HeroStat icon={BriefcaseBusiness} label={t("services.stats.active")} value={stats.total} tone="red" />
+              <HeroStat icon={Navigation} label={t("services.stats.mobile")} value={stats.mobileCount} tone="sky" />
+              <HeroStat icon={MapPin} label={t("services.stats.cities")} value={stats.cities} tone="emerald" />
             </div>
           </div>
 
-          <aside className="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5 dark:border-[#222] dark:bg-[#151515]">
+          <aside className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4 sm:p-5">
             <button
               type="button"
               onClick={() => setSellerProfileOpen(true)}
-              className="group flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-red-500/60 hover:shadow-lg dark:border-[#262626] dark:bg-[#101010] dark:shadow-none"
+              className="group flex w-full items-center gap-3 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-3 text-left transition hover:-translate-y-0.5 hover:border-[var(--engine-accent)]/60 hover:shadow-lg dark:shadow-none"
             >
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-lg font-black uppercase italic text-white dark:bg-red-600">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[var(--engine-accent)] text-lg font-bold uppercase text-white">
                 {sellerProfile.avatar ? (
                   <img src={sellerProfile.avatar} alt="" className="h-full w-full object-cover" />
                 ) : (
@@ -2068,34 +2310,34 @@ export function Services({ user, settings }) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-                  conta vendedor
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
+                  {t("services.sellerAccount")}
                 </p>
-                <h2 className="mt-1 truncate text-2xl font-black uppercase italic text-slate-950 dark:text-white">
-                  Perfil
+                <h2 className="mt-1 truncate text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
+                  {t("settings.sections.profile")}
                 </h2>
                 <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
                   <ShieldCheck size={12} />
-                  {myListings.length ? "Vendedor ativo" : "Pronto"}
+                  {myListings.length ? t("services.activeSeller") : t("services.ready")}
                 </span>
               </div>
             </button>
             <button
               type="button"
               onClick={() => openEditor()}
-              className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
+              className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 text-sm font-bold uppercase text-white transition hover:brightness-95"
             >
               <Plus size={18} />
-              Cadastrar novo serviço
+              {t("services.createService")}
             </button>
             <button
               type="button"
               onClick={() => setSellerListingsOpen(true)}
-              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-black uppercase tracking-widest text-slate-900 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:bg-[#101010] dark:text-white"
+              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4 text-sm font-black uppercase tracking-widest text-[var(--engine-text)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] dark:text-white"
             >
               <BriefcaseBusiness size={17} />
-              Meus anúncios
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500 dark:bg-[#202020] dark:text-gray-300">
+              {t("services.myListings")}
+              <span className="rounded-full bg-[var(--engine-surface-2)] px-2 py-0.5 text-[10px] text-[var(--engine-text-muted)]">
                 {myListings.length}
               </span>
             </button>
@@ -2106,7 +2348,7 @@ export function Services({ user, settings }) {
                 className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 text-sm font-black uppercase tracking-widest text-amber-700 transition hover:border-amber-500 hover:bg-amber-500/15 dark:text-amber-300"
               >
                 <ShieldCheck size={17} />
-                Aprovações
+                {t("services.approvals")}
                 <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px]">
                   {pendingApprovalsCount}
                 </span>
@@ -2116,69 +2358,205 @@ export function Services({ user, settings }) {
         </div>
       </header>
 
-      <div className="space-y-3 sm:space-y-4">
-        <label className="flex min-h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 shadow-sm sm:min-h-12 sm:rounded-xl sm:shadow-none dark:border-[#222] dark:bg-[#111]">
-          <Search size={18} className="text-gray-400" />
+      <div className="engine-card p-4 sm:p-5">
+        {/* Cabeçalho: alterna a exibição dos filtros avançados */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-bold text-[var(--engine-text)] transition-colors hover:text-[var(--engine-accent)]"
+          >
+            <SlidersHorizontal size={18} className="text-[var(--engine-accent)]" />
+            {t("services.filtersTitle")}
+            {activeFilterCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1.5 text-[11px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+            <ChevronRight
+              size={16}
+              className={`text-[var(--engine-text-subtle)] transition-transform duration-300 ${
+                filtersOpen ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+            >
+              <RotateCcw size={14} />
+              {t("services.clearFilters")}
+            </button>
+          )}
+        </div>
+
+        {/* Busca — sempre visível */}
+        <label className="mt-4 flex h-12 items-center gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 transition-colors focus-within:border-[var(--engine-accent)]">
+          <Search size={18} className="shrink-0 text-[var(--engine-text-subtle)]" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar serviço, bairro, profissional ou tag"
-            className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-600"
+            placeholder={t("services.search")}
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none placeholder:text-[var(--engine-text-subtle)]"
           />
         </label>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-[#222] dark:bg-[#111] sm:rounded-xl sm:shadow-none">
-          <div className="mb-2 flex items-center gap-2 px-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
-            <Filter size={15} />
-            Categoria
-          </div>
-          <div className="-mx-1">
-            <div className="engine-chip-scroll flex gap-2 overflow-x-auto px-1 pb-2">
-            {["Todos", ...categories].map((item) => {
-              const active = category === item;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setCategory(item)}
-                  className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black uppercase tracking-widest transition ${
-                    active
-                      ? "bg-red-600 text-white shadow-sm"
-                      : "border border-gray-200 text-gray-500 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
-                  }`}
-                >
-                  {item}
-                </button>
-              );
-            })}
-            </div>
-          </div>
-        </div>
+        {/* Filtros avançados — recolhíveis */}
+        <div
+          className={`grid transition-all duration-300 ease-out ${
+            filtersOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="space-y-5 pt-5">
+              <div>
+                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                  {t("services.location")}
+                </p>
+                {/* País → Estado → Cidade (condicional em cascata) */}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="relative">
+                    <Globe
+                      size={18}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--engine-text-subtle)]"
+                    />
+                    <select
+                      value={countryFilter}
+                      onChange={(event) => {
+                        setCountryFilter(event.target.value);
+                        setStateFilter("all");
+                        setCityFilter("all");
+                      }}
+                      className="h-12 w-full appearance-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] pl-11 pr-9 text-sm font-medium text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)]"
+                    >
+                      <option value="all">{t("services.filters.allCountries")}</option>
+                      {countryOptions.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight
+                      size={16}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[var(--engine-text-subtle)]"
+                    />
+                  </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-[#222] dark:bg-[#111] sm:rounded-xl sm:shadow-none">
-          <div className="mb-2 flex items-center gap-2 px-1 text-[10px] font-black uppercase tracking-widest text-gray-400">
-            <UserRoundCheck size={15} />
-            Atendimento
-          </div>
-          <div className="-mx-1">
-            <div className="engine-chip-scroll flex gap-2 overflow-x-auto px-1 pb-2">
-            {modeFilters.map((item) => {
-              const active = mode === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setMode(item.value)}
-                  className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black uppercase tracking-widest transition ${
-                    active
-                      ? "bg-slate-950 text-white shadow-sm dark:bg-red-600"
-                      : "border border-gray-200 text-gray-500 hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
+                  <div className="relative">
+                    <MapPin
+                      size={18}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--engine-text-subtle)]"
+                    />
+                    <select
+                      value={stateFilter}
+                      onChange={(event) => {
+                        setStateFilter(event.target.value);
+                        setCityFilter("all");
+                      }}
+                      disabled={!stateOptions.length}
+                      className="h-12 w-full appearance-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] pl-11 pr-9 text-sm font-medium text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-50"
+                    >
+                      <option value="all">{t("services.filters.allStates")}</option>
+                      {stateOptions.map((state) => (
+                        <option key={state.code} value={state.code}>
+                          {state.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight
+                      size={16}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[var(--engine-text-subtle)]"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <Navigation
+                      size={18}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--engine-text-subtle)]"
+                    />
+                    <select
+                      value={cityFilter}
+                      onChange={(event) => setCityFilter(event.target.value)}
+                      disabled={!cityOptions.length}
+                      className="h-12 w-full appearance-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] pl-11 pr-9 text-sm font-medium text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-50"
+                    >
+                      <option value="all">{t("services.filters.allCities")}</option>
+                      {cityOptions.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight
+                      size={16}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[var(--engine-text-subtle)]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                  {t("services.fields.category")}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {[{ value: "all", labelKey: "services.filters.all" }, ...serviceCategories].map(
+                    (item) => {
+                      const active = category === item.value;
+                      const Icon = categoryIcons[item.value] || Store;
+                      return (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setCategory(item.value)}
+                          className={`flex items-center gap-2.5 rounded-xl border p-3 text-left transition-colors ${
+                            active
+                              ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                              : "border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:border-[var(--engine-border-strong)] hover:text-[var(--engine-text)]"
+                          }`}
+                        >
+                          <Icon size={18} strokeWidth={active ? 2.4 : 2} className="shrink-0" />
+                          <span className="truncate text-xs font-semibold">
+                            {t(item.labelKey)}
+                          </span>
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                  {t("services.serviceMode")}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {modeFilters.map((item) => {
+                    const active = mode === item.value;
+                    const Icon = modeFilterIcons[item.value] || BriefcaseBusiness;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setMode(item.value)}
+                        className={`flex items-center gap-2.5 rounded-xl border p-3 text-left transition-colors ${
+                          active
+                            ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                            : "border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:border-[var(--engine-border-strong)] hover:text-[var(--engine-text)]"
+                        }`}
+                      >
+                        <Icon size={18} strokeWidth={active ? 2.4 : 2} className="shrink-0" />
+                        <span className="truncate text-xs font-semibold">
+                          {t(item.labelKey)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2197,13 +2575,13 @@ export function Services({ user, settings }) {
             />
           ))
         ) : (
-          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center dark:border-[#333] dark:bg-[#151515] sm:col-span-2 xl:col-span-3 2xl:col-span-4">
-            <BriefcaseBusiness className="mb-4 text-red-500" size={42} />
-            <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
-              Nenhum serviço encontrado
+          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface)] p-8 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
+            <BriefcaseBusiness className="mb-4 text-[var(--engine-accent)]" size={42} />
+            <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
+              {t("services.emptyTitle")}
             </h2>
-            <p className="mt-3 max-w-sm text-sm font-medium text-gray-500 dark:text-gray-400">
-              Ajuste os filtros ou cadastre um serviço pela área do anunciante.
+            <p className="mt-3 max-w-sm text-sm font-medium text-[var(--engine-text-muted)]">
+              {t("services.emptyCopy")}
             </p>
           </div>
         )}
@@ -2280,14 +2658,15 @@ export function Services({ user, settings }) {
 }
 
 export function ServiceApprovals({ user }) {
+  const { t } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
   const [listings, setListings] = useState([]);
-  const [notice, setNotice] = useState("");
   const [detailListing, setDetailListing] = useState(null);
   const [rejectionTarget, setRejectionTarget] = useState(null);
   const [rejectionNote, setRejectionNote] = useState("");
   const [moderationAction, setModerationAction] = useState("changes_requested");
-  const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email || "").toLowerCase());
+  const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email ||"").toLowerCase());
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -2297,31 +2676,28 @@ export function ServiceApprovals({ user }) {
     });
   }, [isAdmin, user?.uid]);
 
-  const flash = (message) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(""), 2600);
-  };
+  const flash = (message) => toast(message);
 
   const approveListing = async (listing) => {
     try {
-      await engineDB.moderateServiceListing(listing.id, "approved", "", user?.uid);
-      flash("Anuncio aprovado e publicado.");
+      await engineDB.moderateServiceListing(listing.id,"approved","", user?.uid);
+      flash(t("services.flash.approved"));
     } catch (error) {
       console.error(error);
-      flash("Nao foi possivel aprovar agora.");
+      flash(t("services.flash.approveError"));
     }
   };
 
   const openReturnListing = (listing) => {
     setModerationAction("changes_requested");
     setRejectionTarget(listing);
-    setRejectionNote(listing.moderationNote || "");
+    setRejectionNote(listing.moderationNote ||"");
   };
 
   const openRejectListing = (listing) => {
     setModerationAction("rejected");
     setRejectionTarget(listing);
-    setRejectionNote(listing.moderationNote || "");
+    setRejectionNote(listing.moderationNote ||"");
   };
 
   const closeFeedback = () => {
@@ -2333,7 +2709,7 @@ export function ServiceApprovals({ user }) {
   const confirmFeedback = async () => {
     if (!rejectionTarget) return;
     if (!rejectionNote.trim()) {
-      flash("Escreva o comentario para o anunciante.");
+      flash(t("services.flash.feedbackRequired"));
       return;
     }
 
@@ -2345,28 +2721,28 @@ export function ServiceApprovals({ user }) {
         user?.uid,
       );
       flash(
-        moderationAction === "changes_requested"
-          ? "Anuncio retornado com alteracoes."
-          : "Anuncio recusado com comentario.",
+        moderationAction ==="changes_requested"
+          ? t("services.flash.returned")
+          : t("services.flash.rejected"),
       );
       closeFeedback();
     } catch (error) {
       console.error(error);
-      flash("Nao foi possivel enviar o feedback agora.");
+      flash(t("services.flash.feedbackError"));
     }
   };
 
   if (!isAdmin) {
     return (
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#222] dark:bg-[#111]">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
-          acesso restrito
+      <section className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-6">
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
+          {t("services.restrictedAccess")}
         </p>
-        <h1 className="mt-2 text-3xl font-black uppercase italic text-slate-950 dark:text-white">
-          Aprovações
+        <h1 className="mt-2 text-xl font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
+          {t("services.approvals")}
         </h1>
-        <p className="mt-3 text-sm font-bold text-gray-500 dark:text-gray-400">
-          Esta área é exclusiva para administradores de serviços.
+        <p className="mt-2 text-sm font-medium text-[var(--engine-text-muted)]">
+          {t("services.adminOnly")}
         </p>
       </section>
     );
@@ -2374,28 +2750,23 @@ export function ServiceApprovals({ user }) {
 
   return (
     <section className="space-y-5 pb-10">
-      {notice && (
-        <div className="fixed inset-x-4 top-4 z-50 rounded-xl bg-slate-950 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-2xl sm:left-auto sm:right-6 sm:top-6 dark:bg-red-600">
-          {notice}
-        </div>
-      )}
 
-      <header className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#222] dark:bg-[#111] sm:p-6">
+      <header className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-5 sm:p-6">
         <button
           type="button"
           onClick={() => navigate("/services")}
-          className="mb-5 inline-flex min-h-10 items-center justify-center rounded-xl border border-gray-200 px-4 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:border-red-500 hover:text-red-600 dark:border-[#333] dark:text-gray-300"
+          className="mb-5 inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--engine-border)] px-4 text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
         >
-          Voltar aos serviços
+          {t("services.backToServices")}
         </button>
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
-          admin / serviços
+          {t("services.adminKicker")}
         </p>
-        <h1 className="mt-2 text-3xl font-black uppercase italic leading-none text-slate-950 dark:text-white sm:text-5xl">
-          Aprovações
+        <h1 className="mt-2 text-xl font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white sm:text-2xl">
+          {t("services.approvals")}
         </h1>
-        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-gray-500 dark:text-gray-400">
-          Fila de revisão e histórico de decisões ficam nesta página, separados da vitrine pública.
+        <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+          {t("services.approvalsCopy")}
         </p>
       </header>
 
@@ -2430,16 +2801,16 @@ export function ServiceApprovals({ user }) {
 function HeroStat({ icon, value, label, tone }) {
   const Icon = icon;
   const tones = {
-    red: "text-red-500",
-    sky: "text-sky-500",
-    emerald: "text-emerald-500",
+    red:"text-[var(--engine-accent)]",
+    sky:"text-sky-500",
+    emerald:"text-emerald-500",
   };
 
   return (
-    <div className="min-w-[150px] rounded-xl border border-gray-200 bg-gray-50 p-4 sm:min-w-0 dark:border-white/10 dark:bg-white/5">
+    <div className="min-w-[150px] rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4 sm:min-w-0 dark:border-white/10 dark:bg-[var(--engine-surface)]/5">
       <Icon className={tones[tone]} size={20} />
-      <p className="mt-3 text-2xl font-black text-slate-950 dark:text-white">{value}</p>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+      <p className="mt-3 text-2xl font-black text-[var(--engine-text)] dark:text-white">{value}</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-muted)]">
         {label}
       </p>
     </div>

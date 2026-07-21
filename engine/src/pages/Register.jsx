@@ -6,17 +6,22 @@ import { useTranslation } from "react-i18next";
 import { auth } from "../services/firebase";
 import { engineDB } from "../services/db";
 import { AuthShell } from "../components/AuthShell";
+import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
 
 export function Register() {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
+  const [state, setState] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const stateOptions = getStates(country);
 
   const handleRegister = async (event) => {
     event.preventDefault();
@@ -48,6 +53,8 @@ export function Register() {
             displayName: name.trim(),
             username: normalizedUsername,
             phone: engineDB.normalizePhone(phone),
+            country,
+            state,
           },
         },
         userCredential.user.uid,
@@ -111,6 +118,43 @@ export function Register() {
             autoComplete="tel"
             required
           />
+        </label>
+        <label className="auth-field">
+          <span>{t("auth.country")}</span>
+          <select
+            value={country}
+            onChange={(event) => {
+              setCountry(event.target.value);
+              setState("");
+            }}
+            required
+          >
+            {countries.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.flag} {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="auth-field">
+          <span>{t("auth.state")}</span>
+          <select
+            value={state}
+            onChange={(event) => setState(event.target.value)}
+            disabled={!stateOptions.length}
+            required={stateOptions.length > 0}
+          >
+            <option value="">
+              {stateOptions.length
+                ? t("auth.selectState")
+                : t("auth.stateUnavailable")}
+            </option>
+            {stateOptions.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="auth-field auth-span-two">
           <span>{t("common.email")}</span>

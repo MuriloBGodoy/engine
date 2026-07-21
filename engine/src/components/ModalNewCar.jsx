@@ -6,6 +6,11 @@ import { useTranslation } from "react-i18next";
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
 
+const fieldClass =
+  "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
+const fieldLabelClass =
+  "ml-1 text-[10px] font-bold uppercase tracking-widest";
+
 export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const { i18n, t } = useTranslation();
   const [brands, setBrands] = useState([]);
@@ -171,35 +176,39 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#181818] w-full max-w-md rounded-3xl border border-white/5 p-8 shadow-2xl overflow-y-auto max-h-[95vh]">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-black italic text-white tracking-tighter uppercase">
+    <div className="engine-modal-overlay">
+      <div className="engine-modal-panel engine-pop sm:max-w-md">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--engine-border)] px-5 py-4 sm:px-7">
+          <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)]">
             {carToEdit ? t("modalCar.editTitle") : t("modalCar.newTitle")}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-white transition-colors"
+            aria-label={t("common.cancel")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
-            <X size={28} />
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="engine-modal-body engine-scroll engine-safe-bottom space-y-5 px-5 pt-5 sm:px-7 sm:pt-6"
+        >
           <div
             onClick={() => fileInputRef.current.click()}
-            className="w-full h-48 bg-[#121212] border-2 border-dashed border-[#222] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-red-600/40 transition-all overflow-hidden"
+            className="flex h-40 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[var(--engine-border-strong)] bg-[var(--engine-surface-2)] transition-colors hover:border-[var(--engine-accent)] sm:h-48"
           >
             {customImage ? (
               <img
                 src={customImage}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
                 alt="Car preview"
               />
             ) : (
               <div className="text-center">
-                <Upload className="text-gray-600 mx-auto mb-2" size={32} />
-                <span className="text-[10px] text-gray-500 uppercase font-bold">
+                <Upload className="mx-auto mb-2 text-[var(--engine-text-subtle)]" size={30} />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                   {t("modalCar.photo")}
                 </span>
               </div>
@@ -219,7 +228,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
                 onChange={(e) => handleBrandChange(e.target.value)}
                 required={!carToEdit}
                 value={selectedBrand}
-                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none"
+                className={fieldClass}
               >
                 <option value="">
                   {carToEdit
@@ -238,7 +247,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
                 disabled={!models.length && !carToEdit}
                 required={!carToEdit}
                 value={selectedModel}
-                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none disabled:opacity-20"
+                className={fieldClass}
               >
                 <option value="">
                   {carToEdit
@@ -257,7 +266,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
                 disabled={!years.length && !carToEdit}
                 required={!carToEdit}
                 value={selectedYear}
-                className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none disabled:opacity-20"
+                className={fieldClass}
               >
                 <option value="">
                   {carToEdit
@@ -272,33 +281,33 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-red-500 uppercase tracking-widest ml-1">
+                <label className={`${fieldLabelClass} text-[var(--engine-accent)]`}>
                   {t("modalCar.fipePrice")}
                 </label>
                 <input
                   value={formatDisplayValue(targetValue)}
                   readOnly
-                  className="w-full bg-[#121212] border border-red-600/20 rounded-xl px-4 py-3 text-white font-bold outline-none cursor-not-allowed"
+                  className="w-full cursor-not-allowed rounded-xl border border-[var(--engine-accent)]/20 bg-[var(--engine-accent-soft)] px-4 py-3 font-bold text-[var(--engine-text)] outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">
+                <label className={`${fieldLabelClass} text-[var(--engine-text-subtle)]`}>
                   {t("modalCar.savedValue")}
                 </label>
                 <input
                   type="text"
                   value={formatDisplayValue(savedValue)}
                   onChange={handleMoneyChange}
-                  className="w-full bg-[#121212] border border-[#222] rounded-xl px-4 py-3 text-white focus:border-red-600 outline-none"
+                  className={fieldClass}
                 />
               </div>
             </div>
           </div>
 
           {error && (
-            <p className="text-center text-xs font-bold uppercase italic text-red-500">
+            <p className="text-center text-sm font-semibold text-red-500">
               {error}
             </p>
           )}
@@ -306,12 +315,12 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-black italic py-4 rounded-xl mt-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-red-900/10 disabled:opacity-50"
+            className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] py-3 font-semibold tracking-tight text-white shadow-[0_2px_10px_var(--engine-accent-soft)] transition-colors hover:brightness-95 disabled:opacity-50"
           >
             {loading ? (
-              <Loader2 className="animate-spin" />
+              <Loader2 size={18} className="animate-spin" />
             ) : (
-              <Save size={20} />
+              <Save size={18} />
             )}
             {carToEdit ? t("modalCar.update") : t("modalCar.confirm")}
           </button>

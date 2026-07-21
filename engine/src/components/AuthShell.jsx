@@ -1,4 +1,4 @@
-import { Gauge, ShieldCheck, Zap } from "lucide-react";
+import { ShieldCheck, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export function AuthShell({ children, kicker, title, subtitle, compact = false }) {
@@ -8,10 +8,6 @@ export function AuthShell({ children, kicker, title, subtitle, compact = false }
     <div className="auth-screen">
       <div className={compact ? "auth-shell auth-shell-compact" : "auth-shell"}>
         <section className="auth-hero">
-          <div className="auth-badge">
-            <Gauge size={14} />
-            {t("auth.heroBadge")}
-          </div>
           <div className="auth-brand-block">
             <h1>Engine</h1>
             <p>{t("auth.heroText")}</p>

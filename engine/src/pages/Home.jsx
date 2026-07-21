@@ -1,34 +1,104 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ArrowRight, ArrowUpRight, Car, LayoutDashboard, Users } from "lucide-react";
+import { Button } from "../components/Button";
 
 export function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  return (
-    /* Ajustado o padding-top (pt-6) para dar um respiro em relação à Topbar global */
-    <div className="flex min-h-[75vh] flex-col items-center justify-center text-center pt-6">
-      <h1 className="mb-4 text-6xl font-black uppercase italic tracking-tight text-slate-950 dark:text-white">
-        Engine{" "}
-        <span className="text-red-600 underline decoration-red-600/30">
-          Garage
-        </span>
-      </h1>
-      <p className="mb-10 max-w-md font-medium text-gray-500 dark:text-gray-400">
-        {t("home.subtitle")}
-      </p>
-      <button
-        onClick={() => navigate("/garagem")}
-        className="rounded-xl bg-red-600 px-10 py-4 font-black uppercase italic text-white shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all hover:scale-105 hover:bg-red-700"
-      >
-        {t("home.cta")}
-      </button>
+  const shortcuts = [
+    { to: "/garagem", icon: Car, title: t("nav.garage"), desc: t("home.links.garage") },
+    { to: "/dashboard", icon: LayoutDashboard, title: t("nav.dashboard"), desc: t("home.links.dashboard") },
+    { to: "/community", icon: Users, title: t("nav.community"), desc: t("home.links.community") },
+  ];
 
-      <div className="mt-20 grid grid-cols-3 gap-8 text-[10px] font-bold uppercase italic tracking-[0.3em] opacity-50">
-        <span>{t("home.select")}</span>
-        <span>{t("home.track")}</span>
-        <span>{t("home.conquer")}</span>
-      </div>
+  return (
+    <div className="relative flex flex-1 flex-col justify-center overflow-hidden py-6 sm:py-10">
+      {/* Glow de acento sutil atrás do título — decorativo, não captura clique */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 -top-24 -z-10 mx-auto h-[420px] max-w-4xl opacity-70"
+        style={{
+          background:
+            "radial-gradient(60% 60% at 50% 40%, var(--engine-accent-soft), transparent 70%)",
+        }}
+      />
+
+      <section className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+        <span className="engine-rise mb-6 inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--engine-text-muted)] shadow-[var(--engine-shadow-sm)] sm:text-[11px]">
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--engine-accent)] opacity-60" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--engine-accent)]" />
+          </span>
+          <span>{t("home.select")}</span>
+          <span className="text-[var(--engine-text-subtle)]">·</span>
+          <span>{t("home.track")}</span>
+          <span className="text-[var(--engine-text-subtle)]">·</span>
+          <span>{t("home.conquer")}</span>
+        </span>
+
+        <h1
+          className="engine-rise mb-5 font-display font-black uppercase italic leading-[0.9] tracking-tight text-[var(--engine-text)]"
+          style={{ fontSize: "clamp(2.75rem, 11vw, 6rem)", animationDelay: "0.06s" }}
+        >
+          Engine <span className="text-[var(--engine-accent)]">Garage</span>
+        </h1>
+
+        <p
+          className="engine-rise mb-8 max-w-xl text-balance text-base font-medium leading-relaxed text-[var(--engine-text-muted)] sm:text-lg"
+          style={{ animationDelay: "0.12s" }}
+        >
+          {t("home.subtitle")}
+        </p>
+
+        <div
+          className="engine-rise flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center"
+          style={{ animationDelay: "0.18s" }}
+        >
+          <Button size="lg" className="w-full sm:w-auto" onClick={() => navigate("/garagem")}>
+            {t("home.cta")}
+            <ArrowRight size={18} />
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            className="w-full sm:w-auto"
+            onClick={() => navigate("/dashboard")}
+          >
+            {t("home.ctaSecondary")}
+          </Button>
+        </div>
+      </section>
+
+      <section
+        className="engine-rise mx-auto mt-12 grid w-full max-w-4xl grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-3 sm:gap-4"
+        style={{ animationDelay: "0.24s" }}
+      >
+        {shortcuts.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            className="engine-card engine-card-hover group flex items-start gap-3 p-4 text-left sm:flex-col sm:gap-4 sm:p-5"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]">
+              <item.icon size={20} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-[var(--engine-text)]">{item.title}</h3>
+                <ArrowUpRight
+                  size={15}
+                  className="shrink-0 text-[var(--engine-text-subtle)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--engine-accent)]"
+                />
+              </div>
+              <p className="mt-1 text-[13px] leading-relaxed text-[var(--engine-text-muted)]">
+                {item.desc}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </section>
     </div>
   );
 }

@@ -8,23 +8,29 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
   setDoc,
+  startAfter,
   updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
 import { auth, firestore } from "./firebase";
+import { inferLocation } from "./locations";
+import { normalizeOwnershipInputs } from "./ownership";
 
 const defaultSettings = {
   profile: {
     displayName: "",
     username: "",
     phone: "",
+    country: "BR",
+    state: "",
     location: "",
     bio: "",
     avatar: "",
@@ -35,6 +41,7 @@ const defaultSettings = {
     timezone: "America/Sao_Paulo",
     theme: "dark",
     density: "comfortable",
+    navLayout: "sidebar",
     startPage: "/",
     defaultGarageSort: "progress-desc",
     annualIncomeGoal: "",
@@ -74,6 +81,7 @@ const SERVICE_STATUS_CHANGES_REQUESTED = "changes_requested";
 const SERVICE_STATUS_REJECTED = "rejected";
 const FIRESTORE_TIMEOUT_MS = 7000;
 const ENGINE_API_URL = import.meta.env.VITE_API_URL || "";
+const COMMUNITY_GOALS_PAGE_SIZE = 20;
 const defaultCommunityState = {
   interactions: {},
   following: [],
@@ -81,6 +89,8 @@ const defaultCommunityState = {
   savedVideos: [],
 };
 let currentUserId = null;
+let communityGoalsCursorDoc = null;
+let communityGoalsHasMore = true;
 
 const apiEnabled = () => Boolean(ENGINE_API_URL && auth.currentUser);
 
@@ -163,6 +173,8 @@ const normalizeSettings = (settings = {}) => {
       displayName: merged.profile.displayName.trim().slice(0, 80),
       username: normalizeUsername(merged.profile.username),
       phone: normalizePhone(merged.profile.phone),
+      country: String(merged.profile.country || "").trim().slice(0, 4).toUpperCase(),
+      state: String(merged.profile.state || "").trim().slice(0, 8).toUpperCase(),
       location: merged.profile.location.trim().slice(0, 80),
       bio: merged.profile.bio.trim().slice(0, 280),
     },
@@ -214,6 +226,14 @@ const normalizeCar = (car) => ({
   targetValue: Math.max(Number(car.targetValue) || 0, 0),
   savedValue: Math.max(Number(car.savedValue) || 0, 0),
   image: String(car.image || "").trim(),
+  // Simulação de custo real de posse (inputs do usuário), quando existir.
+  ownership: car.ownership
+    ? {
+        ...normalizeOwnershipInputs(car.ownership),
+        country: String(car.ownership.country || "").trim().slice(0, 4).toUpperCase(),
+        state: String(car.ownership.state || "").trim().slice(0, 8).toUpperCase(),
+      }
+    : null,
   updatedAt: car.updatedAt || new Date().toISOString(),
 });
 
@@ -446,7 +466,18 @@ const normalizeCommunityState = (state = {}) => ({
 const normalizeServiceListing = (listing = {}) => {
   const title = String(listing.title || "").trim().slice(0, 90);
   const providerName = String(listing.providerName || "").trim().slice(0, 80);
+  let country = String(listing.country || "").trim().slice(0, 4).toUpperCase();
+  let state = String(listing.state || "").trim().slice(0, 8).toUpperCase();
   const city = String(listing.city || "").trim().slice(0, 80);
+  // Anúncios legados (sem país/estado): tenta inferir pela cidade, se o nome
+  // for único no dataset. Assim eles deixam de aparecer "soltos" no filtro.
+  if ((!country || !state) && city) {
+    const inferred = inferLocation(city);
+    if (inferred) {
+      country = country || inferred.country;
+      state = state || inferred.state;
+    }
+  }
   const address = String(listing.address || "").trim().slice(0, 160);
   const whatsappCountry = String(listing.whatsappCountry || "+55")
     .trim()
@@ -473,6 +504,8 @@ const normalizeServiceListing = (listing = {}) => {
     serviceMode: ["place", "mobile", "hybrid"].includes(listing.serviceMode)
       ? listing.serviceMode
       : "hybrid",
+    country,
+    state,
     city,
     address,
     serviceArea: String(listing.serviceArea || "").trim().slice(0, 160),
@@ -759,10 +792,10 @@ export const engineDB = {
       const load = async () => {
         try {
           const goals = await apiRequest("/community/goals");
-          if (active) callback(goals);
+          if (active) callback(goals, { hasMore: false });
         } catch (error) {
           warnFirestoreFallback("subscribeCommunityGoals", error);
-          if (active) callback([]);
+          if (active) callback([], { hasMore: false });
         }
       };
       load();
@@ -773,25 +806,56 @@ export const engineDB = {
       };
     }
 
+    communityGoalsCursorDoc = null;
+    communityGoalsHasMore = true;
+
     const communityQuery = query(
       collection(firestore, COMMUNITY_COLLECTION),
       orderBy("updatedAt", "desc"),
+      limit(COMMUNITY_GOALS_PAGE_SIZE),
     );
 
     return onSnapshot(
       communityQuery,
       (snapshot) => {
+        communityGoalsCursorDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+        communityGoalsHasMore = snapshot.docs.length === COMMUNITY_GOALS_PAGE_SIZE;
         callback(
           snapshot.docs.map((item) =>
             normalizeCommunityGoal({ id: item.id, ...item.data() }),
           ),
+          { hasMore: communityGoalsHasMore },
         );
       },
       (error) => {
         warnFirestoreFallback("subscribeCommunityGoals", error);
-        callback([]);
+        callback([], { hasMore: false });
       },
     );
+  },
+
+  async loadMoreCommunityGoals() {
+    if (apiEnabled() || !communityGoalsCursorDoc || !communityGoalsHasMore) {
+      return { goals: [], hasMore: false };
+    }
+
+    const nextPageQuery = query(
+      collection(firestore, COMMUNITY_COLLECTION),
+      orderBy("updatedAt", "desc"),
+      startAfter(communityGoalsCursorDoc),
+      limit(COMMUNITY_GOALS_PAGE_SIZE),
+    );
+
+    const snapshot = await getDocs(nextPageQuery);
+    communityGoalsCursorDoc = snapshot.docs[snapshot.docs.length - 1] || communityGoalsCursorDoc;
+    communityGoalsHasMore = snapshot.docs.length === COMMUNITY_GOALS_PAGE_SIZE;
+
+    return {
+      goals: snapshot.docs.map((item) =>
+        normalizeCommunityGoal({ id: item.id, ...item.data() }),
+      ),
+      hasMore: communityGoalsHasMore,
+    };
   },
 
   subscribePublicProfiles(callback) {
@@ -898,6 +962,8 @@ export const engineDB = {
       ...listing,
       ownerId: isAdmin && listing.ownerId ? listing.ownerId : userId,
       providerName: listing.providerName || profile.author,
+      country: listing.country || settings?.profile?.country || "",
+      state: listing.state || settings?.profile?.state || "",
       city: listing.city || profile.city,
       email: listing.email || auth.currentUser?.email || "",
       moderationStatus,

@@ -8,9 +8,12 @@ import { useThemeMode } from "./hooks/useThemeMode";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
+import { TopNav } from "./components/TopNav";
+import { MobileNav } from "./components/MobileNav";
 import { Topbar } from "./components/TopBar"; // Importando em .jsx
 import { ModalNewCar } from "./components/ModalNewCar";
-import { DeleteModal } from "./components/DeleteModal";
+import { OwnershipModal } from "./components/OwnershipModal";
+import { useConfirm } from "./components/ConfirmProvider";
 import { Home } from "./pages/Home";
 import { Garagem } from "./pages/Garagem";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -24,6 +27,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 
 function App() {
   const { i18n, t } = useTranslation();
+  const confirm = useConfirm();
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [dbLoading, setDbLoading] = useState(true);
@@ -31,11 +35,10 @@ function App() {
   const [settings, setSettings] = useState(engineDB.getDefaultSettings());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [carToEdit, setCarToEdit] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [carToDelete, setCarToDelete] = useState(null);
-  const [deleteMessage, setDeleteMessage] = useState("");
+  const [ownershipCar, setOwnershipCar] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const userId = user?.uid;
+  const isTopNav = settings.preferences.navLayout === "topnav";
 
   useThemeMode(settings.preferences.theme);
 
@@ -103,34 +106,42 @@ function App() {
     }
   };
 
-  const openDeleteConfirmation = (car) => {
+  const saveOwnershipAction = async (car, ownershipInputs) => {
+    try {
+      await engineDB.saveCar({ ...car, ownership: ownershipInputs });
+      const updatedCars = await engineDB.getCars();
+      setCars(updatedCars);
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  };
+
+  const openDeleteConfirmation = async (car) => {
     const percentage = car.targetValue
       ? (car.savedValue / car.targetValue) * 100
       : 0;
     const carName = `${car.brand} ${car.model}`;
 
-    setCarToDelete(car);
-    setDeleteMessage(
-      t("deleteModal.message", {
+    const ok = await confirm({
+      title: t("deleteModal.title"),
+      message: t("deleteModal.message", {
         carName,
         percentage: percentage.toFixed(0),
       }),
-    );
-    setIsDeleteModalOpen(true);
-  };
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("deleteModal.keep"),
+    });
+    if (!ok) return;
 
-  const confirmDelete = async () => {
-    if (!carToDelete) return;
-
-    await engineDB.deleteCar(carToDelete.id);
+    await engineDB.deleteCar(car.id);
     const updatedCars = await engineDB.getCars();
     setCars(updatedCars);
-    setIsDeleteModalOpen(false);
-    setCarToDelete(null);
   };
 
   if (authLoading) {
-    return <div className="min-h-screen bg-white dark:bg-[#080808]" />;
+    return <div className="min-h-screen bg-[var(--engine-bg)]" />;
   }
 
   if (!user) {
@@ -148,26 +159,59 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen flex-col overflow-hidden bg-gray-50 font-sans text-slate-950 transition-colors lg:flex-row dark:bg-[#080808] dark:text-white">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
+      <div
+        className={`flex min-h-[100dvh] flex-col bg-[var(--engine-bg)] font-sans text-[var(--engine-text)] transition-colors ${
+          isTopNav ? "" : "lg:h-screen lg:flex-row lg:overflow-hidden"
+        }`}
+      >
+        {/* No mobile a rolagem é a do documento (barra de endereço recolhe,
+            pull-to-refresh funciona); o painel com rolagem interna só entra
+            no desktop, onde a sidebar precisa ficar fixa. */}
+        <MobileNav
           profileSettings={settings.profile}
-          privacySettings={settings.privacy}
+          settings={settings}
+          onSettingsUpdate={setSettings}
+          user={user}
         />
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-3 py-4 pb-28 sm:p-6 sm:pb-24 lg:h-screen lg:p-10">
-          {/* Renderiza a Topbar rápida global após carregar o banco */}
-          {!dbLoading && (
-            <Topbar settings={settings} onSettingsUpdate={setSettings} user={user} />
+        {isTopNav ? (
+          <TopNav
+            settings={settings}
+            onSettingsUpdate={setSettings}
+            user={user}
+            profileSettings={settings.profile}
+          />
+        ) : (
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
+            profileSettings={settings.profile}
+            privacySettings={settings.privacy}
+          />
+        )}
+
+        <main
+          className={`engine-scroll flex min-h-0 min-w-0 flex-1 flex-col px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-10 lg:py-8 lg:pb-8 ${
+            isTopNav ? "" : "lg:h-screen lg:overflow-y-auto"
+          }`}
+        >
+          {/* No layout sidebar, a Topbar global fica no topo do conteúdo (só
+              no desktop — no mobile as mesmas ações vivem no header fixo).
+              No layout top-nav, ela já está embutida no TopNav. */}
+          {!dbLoading && !isTopNav && (
+            <div className="engine-container hidden lg:block">
+              <Topbar settings={settings} onSettingsUpdate={setSettings} user={user} />
+            </div>
           )}
 
           {dbLoading ? (
-            <div className="flex h-full items-center justify-center text-gray-500 italic">
+            <div className="flex h-full items-center justify-center text-[var(--engine-text-subtle)] italic">
               {t("common.loading")}
             </div>
           ) : (
-            <div className="mt-3 flex-1 sm:mt-4">
+            <div
+              className={`engine-container flex flex-1 flex-col ${isTopNav ? "" : "lg:mt-6"}`}
+            >
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route
@@ -177,6 +221,7 @@ function App() {
                       cars={cars}
                       onOpenModal={handleOpenModal}
                       onOpenDelete={openDeleteConfirmation}
+                      onOpenOwnership={setOwnershipCar}
                       defaultSort={settings.preferences.defaultGarageSort}
                       hideValues={settings.privacy.lockSensitiveValues}
                     />
@@ -184,7 +229,13 @@ function App() {
                 />
                 <Route
                   path="/dashboard"
-                  element={<DashboardPage cars={cars} />}
+                  element={
+                    <DashboardPage
+                      cars={cars}
+                      settings={settings}
+                      onOpenOwnership={setOwnershipCar}
+                    />
+                  }
                 />
                 <Route
                   path="/community"
@@ -224,14 +275,12 @@ function App() {
           carToEdit={carToEdit}
         />
 
-        <DeleteModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={confirmDelete}
-          message={deleteMessage}
-          carName={
-            carToDelete ? `${carToDelete.brand} ${carToDelete.model}` : ""
-          }
+        <OwnershipModal
+          isOpen={Boolean(ownershipCar)}
+          car={ownershipCar}
+          settings={settings}
+          onClose={() => setOwnershipCar(null)}
+          onSave={saveOwnershipAction}
         />
       </div>
     </BrowserRouter>

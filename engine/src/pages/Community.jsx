@@ -32,6 +32,8 @@ import {
   X,
 } from "lucide-react";
 import { engineDB } from "../services/db";
+import { useConfirm } from "../components/ConfirmProvider";
+import { useToast } from "../components/ToastProvider";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=900";
@@ -189,7 +191,7 @@ function AvatarButton({ person, onClick, size = "md" }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 font-black italic text-white transition hover:ring-2 hover:ring-red-500/40`}
+      className={`flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] font-black italic text-white transition hover:ring-2 hover:ring-red-500/40`}
       title={label}
     >
       {isImageUrl(avatar) ? (
@@ -305,8 +307,8 @@ function GoalCard({
   };
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl transition-all hover:border-red-600/40 dark:border-[#222] dark:bg-[#151515] dark:shadow-none">
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-[#222] sm:gap-4 sm:p-5">
+    <article className="overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-xl transition-all hover:border-[var(--engine-accent)]/40   dark:shadow-none">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--engine-border)] p-4  sm:gap-4 sm:p-5">
         <div className="flex min-w-0 items-center gap-3">
           <AvatarButton person={goal} onClick={() => onOpenProfile(goal.ownerId, goal)} />
           <div className="min-w-0">
@@ -314,19 +316,19 @@ function GoalCard({
               <button
                 type="button"
                 onClick={() => onOpenProfile(goal.ownerId, goal)}
-                className="min-w-0 truncate text-left text-sm font-black uppercase italic text-slate-950 transition hover:text-red-600 dark:text-white"
+                className="min-w-0 truncate text-left text-sm font-bold text-[var(--engine-text)] transition hover:text-[var(--engine-accent)] dark:text-white"
               >
                 {goal.author}
               </button>
-              {goal.verified && <ShieldCheck size={15} className="text-red-500" />}
+              {goal.verified && <ShieldCheck size={15} className="text-[var(--engine-accent)]" />}
             </div>
-            <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-400">
-              {goal.username} / {goal.city}
+            <p className="truncate text-xs font-medium text-[var(--engine-text-subtle)]">
+              {goal.username} · {goal.city}
             </p>
           </div>
         </div>
         {goal.isMine ? (
-          <span className="shrink-0 rounded-full border border-red-600/20 bg-red-600/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 sm:px-3 sm:text-[10px]">
+          <span className="shrink-0 rounded-full border border-[var(--engine-accent)]/20 bg-[var(--engine-accent)]/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--engine-accent)] sm:px-3 sm:text-[10px]">
             {shared ? t("community.shared") : t("community.privateDraft")}
           </span>
         ) : (
@@ -335,8 +337,8 @@ function GoalCard({
             onClick={() => onFollow(goal)}
             className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-2 text-[9px] font-black uppercase tracking-widest transition sm:gap-2 sm:px-3 sm:text-[10px] ${
               isFollowing
-                ? "bg-red-600 text-white"
-                : "border border-gray-200 text-gray-500 hover:border-red-500 hover:text-red-600 dark:border-[#333]"
+                ? "bg-[var(--engine-accent)] text-white"
+                : "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] "
             }`}
           >
             {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
@@ -345,7 +347,7 @@ function GoalCard({
         )}
       </div>
 
-      <div className="relative aspect-[4/3] bg-gray-100 sm:aspect-auto sm:h-72 dark:bg-[#101010]">
+      <div className="relative aspect-[4/3] bg-[var(--engine-surface-2)] sm:aspect-auto sm:h-72 ">
         <img
           src={goal.image}
           alt={goal.title}
@@ -355,10 +357,10 @@ function GoalCard({
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white sm:p-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-300">
-            {goal.brand} / {goal.year}
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--engine-accent)]">
+            {goal.brand} · {goal.year}
           </p>
-          <h3 className="mt-1 line-clamp-2 text-2xl font-black italic tracking-tight sm:text-3xl">
+          <h3 className="mt-1 line-clamp-2 text-lg font-extrabold italic tracking-tight sm:text-xl">
             {goal.model}
           </h3>
         </div>
@@ -366,32 +368,32 @@ function GoalCard({
 
       <div className="space-y-4 p-4 sm:space-y-5 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-red-600/20 bg-red-600/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600">
+          <span className="rounded-full border border-[var(--engine-accent)]/20 bg-[var(--engine-accent)]/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
             {t(goal.tagKey)}
           </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333]">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--engine-border)] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] ">
             <EyeOff size={13} />
             {t(getGoalRangeKey(goal.targetValue))}
           </span>
         </div>
 
-        <p className="text-sm font-medium leading-6 text-gray-600 dark:text-gray-300">
+        <p className="text-sm font-medium leading-6 text-[var(--engine-text-muted)] ">
           {goal.note || t(goal.noteKey)}
         </p>
 
         <div>
           <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-            <span className="text-gray-400">{t("community.goalProgress")}</span>
-            <span className="text-red-500">{progress.toFixed(1)}%</span>
+            <span className="text-[var(--engine-text-subtle)]">{t("community.goalProgress")}</span>
+            <span className="text-[var(--engine-accent)]">{progress.toFixed(1)}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-red-950/30">
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--engine-surface-2)] dark:bg-red-950/30">
             <div
-              className="h-full rounded-full bg-red-600 shadow-[0_0_12px_rgba(220,38,38,0.55)]"
+              className="h-full rounded-full bg-[var(--engine-accent)] shadow-[0_0_12px_rgba(220,38,38,0.55)]"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-3 flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400">
-            <ShieldCheck size={15} className="text-red-500" />
+          <p className="mt-3 flex items-center gap-2 text-xs font-bold text-[var(--engine-text-muted)] ">
+            <ShieldCheck size={15} className="text-[var(--engine-accent)]" />
             {t("community.privacyLine")}
           </p>
         </div>
@@ -406,7 +408,7 @@ function GoalCard({
           <Metric icon={Star} label={t("community.rating")} value={rating.toFixed(1)} />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-gray-100 py-3 dark:border-[#222]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[var(--engine-border)] py-3 ">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ActionButton
               active={liked}
@@ -444,7 +446,7 @@ function GoalCard({
             <button
               type="button"
               onClick={() => setCommentsOpen(true)}
-              className="text-xs font-black uppercase tracking-widest text-gray-400 transition hover:text-red-600"
+              className="text-xs font-black uppercase tracking-widest text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
             >
               Ver todos os {comments.length} comentários
             </button>
@@ -478,7 +480,7 @@ function GoalCard({
             return (
             <div
               key={`${goal.id}-comment-${comment.id || index}`}
-              className="group flex gap-3 rounded-xl px-1 py-1.5 text-sm transition hover:bg-gray-50 dark:hover:bg-[#101010]"
+              className="group flex gap-3 rounded-xl px-1 py-1.5 text-sm transition hover:bg-[var(--engine-surface-2)] hover:bg-[var(--engine-surface-2)]"
             >
               <AvatarButton
                 person={commentPerson}
@@ -490,10 +492,10 @@ function GoalCard({
                   <button
                     type="button"
                     onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
-                    className="min-w-0 truncate text-left text-xs font-black uppercase tracking-widest text-slate-700 transition hover:text-red-600 dark:text-white"
+                    className="min-w-0 truncate text-left text-xs font-bold text-[var(--engine-text-muted)] transition hover:text-[var(--engine-accent)] dark:text-white"
                   >
                     {commentAuthor}{" "}
-                    <span className="text-gray-400">{commentUsername}</span>
+                    <span className="text-[var(--engine-text-subtle)]">{commentUsername}</span>
                   </button>
                   {(canEdit || canDelete) && !isEditing && (
                     <div className="flex shrink-0 items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
@@ -501,7 +503,7 @@ function GoalCard({
                         <button
                           type="button"
                           onClick={() => startEditComment(comment)}
-                          className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-red-600 dark:hover:bg-[#181818]"
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--engine-text-subtle)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)] hover:bg-[var(--engine-surface-2)]"
                           title="Editar comentário"
                         >
                           <Edit3 size={13} />
@@ -511,7 +513,7 @@ function GoalCard({
                         <button
                           type="button"
                           onClick={() => onDeleteComment(goal.id, comment.id)}
-                          className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-red-600 dark:hover:bg-[#181818]"
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--engine-text-subtle)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)] hover:bg-[var(--engine-surface-2)]"
                           title="Excluir comentário"
                         >
                           <Trash2 size={13} />
@@ -528,12 +530,12 @@ function GoalCard({
                     <input
                       value={editingDraft}
                       onChange={(event) => setEditingDraft(event.target.value)}
-                      className="min-h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white"
+                      className="min-h-10 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 text-sm font-semibold text-[var(--engine-text)] outline-none focus:border-[var(--engine-accent)]   dark:text-white"
                     />
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="submit"
-                        className="rounded-lg bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                        className="rounded-lg bg-[var(--engine-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
                       >
                         Salvar
                       </button>
@@ -543,7 +545,7 @@ function GoalCard({
                           setEditingCommentId("");
                           setEditingDraft("");
                         }}
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333]"
+                        className="rounded-lg border border-[var(--engine-border)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] "
                       >
                         Cancelar
                       </button>
@@ -551,11 +553,11 @@ function GoalCard({
                   </form>
                 ) : (
                   <>
-                    <p className="font-medium text-gray-600 dark:text-gray-300">
+                    <p className="font-medium text-[var(--engine-text-muted)] ">
                       {commentText}
                     </p>
                     {typeof comment !== "string" && comment.editedAt && (
-                      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                         editado
                       </p>
                     )}
@@ -566,7 +568,7 @@ function GoalCard({
           );
           })}
           {!comments.length && (
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+            <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
               {t("community.noComments")}
             </p>
           )}
@@ -577,11 +579,11 @@ function GoalCard({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={t("community.commentPlaceholder")}
-            className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none transition focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white"
+            className="min-w-0 flex-1 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-sm font-bold outline-none transition focus:border-[var(--engine-accent)]   dark:text-white"
           />
           <button
             type="submit"
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-600 text-white transition hover:bg-red-700"
+            className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--engine-accent)] text-white transition hover:brightness-95"
             title={t("community.send")}
           >
             <Send size={18} />
@@ -640,20 +642,20 @@ function CommentsModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5">
-      <section className="flex h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-gray-200 bg-white text-slate-950 shadow-2xl dark:border-[#222] dark:bg-[#111] dark:text-white sm:h-[78vh] sm:rounded-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-[#222] sm:gap-4 sm:px-5 sm:py-4">
+      <section className="flex h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text)] shadow-2xl   dark:text-white sm:h-[78vh] sm:rounded-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3  sm:gap-4 sm:px-5 sm:py-4">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
               Comentários
             </p>
-            <h2 className="mt-1 line-clamp-2 text-base font-black uppercase italic sm:truncate sm:text-lg">
+            <h2 className="mt-1 line-clamp-2 text-base font-extrabold italic sm:truncate sm:text-lg">
               {goal.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919] dark:text-gray-300 sm:h-10 sm:w-10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white   sm:h-10 sm:w-10"
             title="Fechar"
           >
             <X size={18} />
@@ -686,8 +688,8 @@ function CommentsModal({
             </div>
           ) : (
             <div className="flex h-full min-h-64 flex-col items-center justify-center text-center">
-              <MessageCircle className="mb-3 text-gray-400" size={34} />
-              <p className="text-sm font-black uppercase italic text-slate-950 dark:text-white">
+              <MessageCircle className="mb-3 text-[var(--engine-text-subtle)]" size={34} />
+              <p className="text-sm font-bold text-[var(--engine-text)] dark:text-white">
                 {t("community.noComments")}
               </p>
             </div>
@@ -696,17 +698,17 @@ function CommentsModal({
 
         <form
           onSubmit={onSubmitComment}
-          className="flex gap-2 border-t border-gray-200 p-3 dark:border-[#222] sm:p-4"
+          className="flex gap-2 border-t border-[var(--engine-border)] p-3  sm:p-4"
         >
           <input
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             placeholder={t("community.commentPlaceholder")}
-            className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-bold outline-none transition focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white sm:px-4"
+            className="min-w-0 flex-1 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-3 text-sm font-bold outline-none transition focus:border-[var(--engine-accent)]   dark:text-white sm:px-4"
           />
           <button
             type="submit"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white transition hover:bg-red-700"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-accent)] text-white transition hover:brightness-95"
             title={t("community.send")}
           >
             <Send size={18} />
@@ -759,7 +761,7 @@ function CommentRow({
   const isEditing = canEdit && editingCommentId === comment.id;
 
   return (
-    <div className="group flex gap-3 rounded-xl px-1 py-1.5 text-sm transition hover:bg-gray-50 dark:hover:bg-[#101010]">
+    <div className="group flex gap-3 rounded-xl px-1 py-1.5 text-sm transition hover:bg-[var(--engine-surface-2)] hover:bg-[var(--engine-surface-2)]">
       <AvatarButton
         person={commentPerson}
         size="sm"
@@ -770,9 +772,9 @@ function CommentRow({
           <button
             type="button"
             onClick={() => onOpenProfile(commentPerson.userId, commentPerson)}
-            className="min-w-0 truncate text-left text-xs font-black uppercase tracking-widest text-slate-700 transition hover:text-red-600 dark:text-white"
+            className="min-w-0 truncate text-left text-xs font-bold text-[var(--engine-text-muted)] transition hover:text-[var(--engine-accent)] dark:text-white"
           >
-            {commentAuthor} <span className="text-gray-400">{commentUsername}</span>
+            {commentAuthor} <span className="text-[var(--engine-text-subtle)]">{commentUsername}</span>
           </button>
           {(canEdit || canDelete) && !isEditing && (
             <div className="relative shrink-0">
@@ -783,13 +785,13 @@ function CommentRow({
                     current === comment.id ? "" : comment.id,
                   )
                 }
-                className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-slate-900 dark:hover:bg-[#181818] dark:hover:text-white"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--engine-text-subtle)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)] hover:bg-[var(--engine-surface-2)] dark:hover:text-white"
                 title="Opções"
               >
                 <MoreHorizontal size={16} />
               </button>
               {commentMenuId === comment.id && (
-                <div className="absolute right-0 top-8 z-20 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl dark:border-[#2a2a2a] dark:bg-[#111]">
+                <div className="absolute right-0 top-8 z-20 w-36 overflow-hidden rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface)] py-1 shadow-xl  ">
                   {canEdit && (
                     <button
                       type="button"
@@ -797,7 +799,7 @@ function CommentRow({
                         onStartEditComment(comment);
                         onCommentMenuChange("");
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-[#1a1a1a]"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]  hover:bg-[var(--engine-surface-2)]"
                     >
                       <Edit3 size={14} />
                       Editar
@@ -810,7 +812,7 @@ function CommentRow({
                         onDeleteComment(goal.id, comment.id);
                         onCommentMenuChange("");
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-[#1a1a1a]"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]  hover:bg-[var(--engine-surface-2)]"
                     >
                       <Trash2 size={14} />
                       Excluir
@@ -829,19 +831,19 @@ function CommentRow({
             <input
               value={editingDraft}
               onChange={(event) => onEditingDraftChange(event.target.value)}
-              className="min-h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-red-500 dark:border-[#222] dark:bg-[#101010] dark:text-white"
+              className="min-h-10 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 text-sm font-semibold text-[var(--engine-text)] outline-none focus:border-[var(--engine-accent)]   dark:text-white"
             />
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
-                className="rounded-lg bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
+                className="rounded-lg bg-[var(--engine-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white"
               >
                 Salvar
               </button>
               <button
                 type="button"
                 onClick={onCancelEdit}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:border-[#333]"
+                className="rounded-lg border border-[var(--engine-border)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] "
               >
                 Cancelar
               </button>
@@ -849,11 +851,11 @@ function CommentRow({
           </form>
         ) : (
           <>
-            <p className="font-medium text-gray-600 dark:text-gray-300">
+            <p className="font-medium text-[var(--engine-text-muted)] ">
               {commentText}
             </p>
             {typeof comment !== "string" && comment.editedAt && (
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                 editado
               </p>
             )}
@@ -868,10 +870,10 @@ function Metric({ icon, value, label }) {
   const IconComponent = icon;
 
   return (
-    <div className="rounded-xl bg-gray-50 p-3 dark:bg-[#101010]">
-      <IconComponent size={18} className="mb-2 text-red-500" />
-      <p className="text-lg font-black text-slate-950 dark:text-white">{value}</p>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
+    <div className="rounded-xl bg-[var(--engine-surface-2)] p-3 ">
+      <IconComponent size={18} className="mb-2 text-[var(--engine-accent)]" />
+      <p className="text-lg font-black text-[var(--engine-text)] dark:text-white">{value}</p>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
         {label}
       </p>
     </div>
@@ -885,8 +887,8 @@ function ActionButton({ active = false, title, icon, onClick }) {
       onClick={onClick}
       className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
         active
-          ? "bg-red-600 text-white"
-          : "bg-gray-100 text-gray-500 hover:text-red-600 dark:bg-[#101010]"
+          ? "bg-[var(--engine-accent)] text-white"
+          : "bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
       }`}
       title={title}
     >
@@ -897,7 +899,7 @@ function ActionButton({ active = false, title, icon, onClick }) {
 
 function VideoCard({ video, t, saved, liked, onSave, onLike }) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-[#222] dark:bg-[#151515] dark:shadow-none">
+    <article className="overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-xl   dark:shadow-none">
       <div className="relative bg-black">
         <video
           controls
@@ -914,24 +916,24 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
       </div>
       <div className="space-y-4 p-5">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-red-500">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
             {video.username}
           </p>
-          <h2 className="mt-1 text-2xl font-black italic text-slate-950 dark:text-white">
+          <h2 className="mt-1 text-2xl font-black italic text-[var(--engine-text)] dark:text-white">
             {t(video.titleKey)}
           </h2>
-          <p className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-300">
+          <p className="mt-2 text-sm font-medium text-[var(--engine-text-muted)] ">
             {t(video.captionKey)}
           </p>
         </div>
-        <div className="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-[#222]">
+        <div className="flex items-center justify-between border-t border-[var(--engine-border)] pt-4 ">
           <button
             type="button"
             onClick={() => onLike(video.id)}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest transition ${
               liked
-                ? "bg-red-600 text-white"
-                : "bg-gray-100 text-gray-500 hover:text-red-600 dark:bg-[#101010]"
+                ? "bg-[var(--engine-accent)] text-white"
+                : "bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
             }`}
           >
             <Heart size={16} fill={liked ? "currentColor" : "none"} />
@@ -942,8 +944,8 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
             onClick={() => onSave(video.id)}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest transition ${
               saved
-                ? "bg-slate-950 text-white dark:bg-red-600"
-                : "bg-gray-100 text-gray-500 hover:text-red-600 dark:bg-[#101010]"
+                ? "bg-[var(--engine-accent)] text-white "
+                : "bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
             }`}
           >
             <Bookmark size={16} fill={saved ? "currentColor" : "none"} />
@@ -957,34 +959,34 @@ function VideoCard({ video, t, saved, liked, onSave, onLike }) {
 
 function ShareModal({ goals, sharedGoalIds, userId, t, onClose, onShare, onUnshare }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6 dark:border-[#222] dark:bg-[#111]">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+    <div className="engine-modal-overlay">
+      <div className="engine-modal-panel engine-pop sm:max-w-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] p-4 sm:p-6">
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
               {t("community.shareModalTitle")}
             </h2>
-            <p className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm font-medium text-[var(--engine-text-muted)] ">
               {t("community.shareModalCopy")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:text-red-600 dark:bg-[#191919]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
             title={t("common.cancel")}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-3 p-4 sm:p-6">
           {goals.map((goal) => {
             const shared = isGoalShared(goal, sharedGoalIds, userId);
             return (
               <div
                 key={goal.id}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 transition hover:border-red-500 dark:border-[#222]"
+                className="flex w-full items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:border-[var(--engine-accent)] "
               >
                 <button
                   type="button"
@@ -997,16 +999,16 @@ function ShareModal({ goals, sharedGoalIds, userId, t, onClose, onShare, onUnsha
                     className="h-16 w-20 rounded-lg object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-black italic text-slate-950 dark:text-white">
+                    <p className="truncate font-black italic text-[var(--engine-text)] dark:text-white">
                       {goal.title}
                     </p>
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                       {getProgress(goal).toFixed(1)}% / {t(getGoalRangeKey(goal.targetValue))}
                     </p>
                   </div>
                   <span
                     className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      shared ? "bg-red-600 text-white" : "bg-gray-100 text-gray-400"
+                      shared ? "bg-[var(--engine-accent)] text-white" : "bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
                     }`}
                     title={shared ? t("community.shared") : t("community.publishGoal")}
                   >
@@ -1017,7 +1019,7 @@ function ShareModal({ goals, sharedGoalIds, userId, t, onClose, onShare, onUnsha
                   <button
                     type="button"
                     onClick={() => onUnshare(goal)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-red-600 hover:text-white dark:bg-[#191919]"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white "
                     title={t("community.unshare")}
                   >
                     <Trash2 size={16} />
@@ -1027,9 +1029,9 @@ function ShareModal({ goals, sharedGoalIds, userId, t, onClose, onShare, onUnsha
             );
           })}
           {!goals.length && (
-            <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center dark:border-[#333]">
-              <Car className="mx-auto mb-3 text-red-500" size={34} />
-              <p className="font-bold uppercase italic text-gray-500">
+            <div className="rounded-xl border border-dashed border-[var(--engine-border)] p-8 text-center ">
+              <Car className="mx-auto mb-3 text-[var(--engine-accent)]" size={34} />
+              <p className="font-medium text-[var(--engine-text-muted)]">
                 {t("community.noPersonalGoals")}
               </p>
             </div>
@@ -1045,11 +1047,11 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
   const stats = getProfileStats(profile);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-[#222] dark:bg-[#111]">
-        <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5 dark:border-[#222]">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 text-xl font-black italic text-white">
+    <div className="engine-modal-overlay">
+      <div className="engine-modal-panel engine-pop sm:max-w-3xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] p-4 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-lg font-black italic text-white sm:h-16 sm:w-16 sm:text-xl">
               {isImageUrl(profile?.avatar) ? (
                 <img src={profile.avatar} alt={profile.author} className="h-full w-full object-cover" />
               ) : (
@@ -1057,13 +1059,13 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-500">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
                 {t("community.profileTitle")}
               </p>
-              <h2 className="truncate text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+              <h2 className="truncate text-xl font-extrabold italic text-[var(--engine-text)] dark:text-white sm:text-2xl">
                 {loading ? t("common.loading") : profile?.author || "Usuário Engine"}
               </h2>
-              <div className="mt-2 flex flex-wrap gap-3 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-[var(--engine-text-subtle)] sm:text-sm">
                 <span className="inline-flex items-center gap-1">
                   <AtSign size={14} />
                   {profile?.username || "@engine"}
@@ -1078,16 +1080,16 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:text-red-600 dark:bg-[#191919]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)] "
             title={t("common.cancel")}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-5 p-5">
+        <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-5 p-4 sm:p-5">
           {profile?.note && (
-            <p className="rounded-xl bg-gray-50 p-4 text-sm font-medium leading-6 text-gray-600 dark:bg-[#101010] dark:text-gray-300">
+            <p className="rounded-xl bg-[var(--engine-surface-2)] p-4 text-sm font-medium leading-6 text-[var(--engine-text-muted)]  ">
               {profile.note}
             </p>
           )}
@@ -1099,7 +1101,7 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
           </div>
 
           <div>
-            <h3 className="mb-3 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-[var(--engine-text)] dark:text-white">
               {t("community.profileGoals")}
             </h3>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1108,7 +1110,7 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
                   key={goal.id}
                   type="button"
                   onClick={() => onOpenGoal(goal.id)}
-                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 text-left transition hover:border-red-500 dark:border-[#222]"
+                  className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 text-left transition hover:border-[var(--engine-accent)] "
                 >
                   <img
                     src={goal.image || fallbackImage}
@@ -1119,17 +1121,17 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
                     }}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black italic text-slate-950 dark:text-white">
+                    <p className="truncate text-sm font-black italic text-[var(--engine-text)] dark:text-white">
                       {goal.title}
                     </p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                       {getProgress(goal).toFixed(0)}% / {goal.likes} likes
                     </p>
                   </div>
                 </button>
               ))}
               {!loading && !goals.length && (
-                <p className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-xs font-black uppercase italic text-gray-400 dark:border-[#333]">
+                <p className="rounded-xl border border-dashed border-[var(--engine-border)] p-5 text-center text-sm font-medium text-[var(--engine-text-subtle)] ">
                   {t("community.profileEmpty")}
                 </p>
               )}
@@ -1143,12 +1145,16 @@ function UserProfileModal({ profile, loading, t, onClose, onOpenGoal }) {
 
 export function Community({ cars = [], settings, user }) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState("feed");
   const [query, setQuery] = useState("");
   const [communityState, setCommunityState] = useState(
     engineDB.getDefaultCommunityState(),
   );
   const [communityGoals, setCommunityGoals] = useState([]);
+  const [hasMoreGoals, setHasMoreGoals] = useState(false);
+  const [loadingMoreGoals, setLoadingMoreGoals] = useState(false);
   const [publicProfiles, setPublicProfiles] = useState({});
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState({
@@ -1156,7 +1162,6 @@ export function Community({ cars = [], settings, user }) {
     loading: false,
     profile: null,
   });
-  const [notice, setNotice] = useState("");
 
   const personalGoals = useMemo(
     () => buildUserGoals(cars, settings, user),
@@ -1216,9 +1221,29 @@ export function Community({ cars = [], settings, user }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = engineDB.subscribeCommunityGoals(setCommunityGoals);
+    const unsubscribe = engineDB.subscribeCommunityGoals((goals, meta) => {
+      setCommunityGoals(goals);
+      setHasMoreGoals(Boolean(meta?.hasMore));
+    });
     return () => unsubscribe();
   }, []);
+
+  const handleLoadMoreGoals = async () => {
+    if (loadingMoreGoals || !hasMoreGoals) return;
+    setLoadingMoreGoals(true);
+    try {
+      const { goals: moreGoals, hasMore } = await engineDB.loadMoreCommunityGoals();
+      setCommunityGoals((current) => {
+        const existingIds = new Set(current.map((goal) => goal.id));
+        return [...current, ...moreGoals.filter((goal) => !existingIds.has(goal.id))];
+      });
+      setHasMoreGoals(hasMore);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingMoreGoals(false);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = engineDB.subscribePublicProfiles(setPublicProfiles);
@@ -1247,10 +1272,7 @@ export function Community({ cars = [], settings, user }) {
     });
   };
 
-  const flash = (message) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(""), 2400);
-  };
+  const flash = (message) => toast(message);
 
   const filteredGoals = goals.filter((goal) =>
     `${goal.author} ${goal.title} ${goal.username}`
@@ -1320,12 +1342,17 @@ export function Community({ cars = [], settings, user }) {
     flash("Comentário atualizado.");
   };
 
-  const handleDeleteComment = (goalId, commentId) => {
-    if (!window.confirm("Excluir este comentário?")) return;
+  const handleDeleteComment = async (goalId, commentId) => {
+    const ok = await confirm({
+      title: t("community.deleteCommentTitle"),
+      message: t("community.deleteCommentConfirm"),
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     engineDB.deleteCommunityComment(goalId, commentId, user?.uid).catch((error) =>
       console.error(error),
     );
-    flash("Comentário excluído.");
+    flash(t("community.commentDeleted"));
   };
 
   const handleRate = (goalId, rating) => {
@@ -1408,11 +1435,21 @@ export function Community({ cars = [], settings, user }) {
     ).toFixed(1)}%`;
     const shareUrl = buildShareUrl(goal);
 
+    const payload = `${shareText} ${shareUrl}`;
     try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
       } else {
-        window.prompt(t("community.copyPrompt"), `${shareText} ${shareUrl}`);
+        // Fallback sem diálogo nativo: copia via textarea temporária.
+        const textarea = document.createElement("textarea");
+        textarea.value = payload;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
       }
       flash(t("community.linkCopied"));
     } catch {
@@ -1461,7 +1498,12 @@ export function Community({ cars = [], settings, user }) {
   };
 
   const handleClearMyPublications = async () => {
-    if (!window.confirm(t("community.clearPublishedConfirm"))) return;
+    const ok = await confirm({
+      title: t("community.clearPublishedTitle"),
+      message: t("community.clearPublishedConfirm"),
+      confirmLabel: t("community.clearPublishedAction"),
+    });
+    if (!ok) return;
 
     try {
       await engineDB.resetMyCommunityPublications(user?.uid);
@@ -1502,35 +1544,32 @@ export function Community({ cars = [], settings, user }) {
   ];
 
   return (
-    <section className="space-y-8 pb-10">
-      {notice && (
-        <div className="fixed inset-x-4 top-4 z-50 rounded-xl bg-slate-950 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-2xl sm:left-auto sm:right-6 sm:top-6 sm:text-sm dark:bg-red-600">
-          {notice}
-        </div>
-      )}
+    <section className="space-y-5 pb-6 sm:space-y-8 sm:pb-10">
 
-      <header className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-slate-950 shadow-xl dark:border-[#222] dark:bg-[#111] dark:text-white dark:shadow-none">
-        <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.35fr_0.65fr] lg:p-10">
-          <div className="flex flex-col justify-between gap-8">
+      {/* No celular o cabeçalho encosta nas bordas (ganha ~32px de largura
+          útil) e volta a ser cartão a partir de sm. */}
+      <header className="-mx-4 overflow-hidden border-y border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text)] dark:text-white sm:mx-0 sm:rounded-2xl sm:border sm:shadow-xl sm:dark:shadow-none">
+        <div className="grid gap-6 p-4 sm:gap-8 sm:p-8 lg:grid-cols-[1.35fr_0.65fr] lg:p-10">
+          <div className="flex flex-col justify-between gap-6 sm:gap-8">
             <div>
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest">
+              <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--engine-accent)] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white sm:px-4 sm:py-2">
                   <Sparkles size={14} />
                   Engine Social
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-gray-500 dark:text-gray-400">
+                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--engine-text-muted)] sm:text-[10px] sm:tracking-[0.26em]">
                   {t("community.kicker")}
                 </span>
               </div>
-              <h1 className="max-w-3xl text-3xl font-black uppercase italic tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="max-w-3xl text-2xl font-extrabold uppercase italic leading-tight tracking-tight sm:text-3xl">
                 {t("community.title")}
               </h1>
-              <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-gray-600 dark:text-gray-300">
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[var(--engine-text-muted)] ">
                 {t("community.subtitle")}
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <HeroStat icon={Users} label={t("community.stats.goals")} value={goals.length} />
               <HeroStat icon={Heart} label={t("community.stats.interactions")} value={stats.likes} />
               <HeroStat
@@ -1541,11 +1580,11 @@ export function Community({ cars = [], settings, user }) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xl dark:border-[#222] dark:bg-[#151515] dark:shadow-none">
-            <p className="mb-4 text-[10px] font-black uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
+          <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4 sm:bg-[var(--engine-surface)] sm:p-5 sm:shadow-xl sm:dark:shadow-none">
+            <p className="mb-3 text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-text-muted)] sm:mb-4">
               {t("community.publishTitle")}
             </p>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {personalGoals.slice(0, 3).map(
                 (goal) => {
                   const progress = getProgress(goal);
@@ -1553,18 +1592,18 @@ export function Community({ cars = [], settings, user }) {
                   return (
                     <div
                       key={goal.id}
-                      className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-[#222] dark:bg-[#101010]"
+                      className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3  "
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600 text-white">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--engine-accent)] text-white">
                         <Car size={18} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black italic text-slate-950 dark:text-white">
+                        <p className="truncate text-sm font-black italic text-[var(--engine-text)] dark:text-white">
                           {goal.title}
                         </p>
-                        <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-white/10">
+                        <div className="mt-2 h-1.5 rounded-full bg-[var(--engine-surface-2)] dark:bg-[var(--engine-surface)]/10">
                           <div
-                            className="h-full rounded-full bg-red-500"
+                            className="h-full rounded-full bg-[var(--engine-accent)]"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -1572,16 +1611,16 @@ export function Community({ cars = [], settings, user }) {
                       {shared ? (
                         <CheckCircle2 size={18} className="text-emerald-400" />
                       ) : (
-                        <EyeOff size={18} className="text-gray-500" />
+                        <EyeOff size={18} className="text-[var(--engine-text-muted)]" />
                       )}
                     </div>
                   );
                 },
               )}
               {!personalGoals.length && (
-                <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center dark:border-[#333]">
-                  <Car className="mx-auto mb-3 text-red-500" size={30} />
-                  <p className="text-xs font-black uppercase italic text-gray-500">
+                <div className="rounded-xl border border-dashed border-[var(--engine-border)] p-5 text-center ">
+                  <Car className="mx-auto mb-3 text-[var(--engine-accent)]" size={30} />
+                  <p className="text-sm font-medium text-[var(--engine-text-muted)]">
                     {t("community.noPersonalGoals")}
                   </p>
                 </div>
@@ -1590,7 +1629,7 @@ export function Community({ cars = [], settings, user }) {
             <button
               type="button"
               onClick={() => setShareModalOpen(true)}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-black uppercase italic text-white transition hover:bg-red-700"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 py-3 text-sm font-bold uppercase text-white transition hover:brightness-95"
             >
               <Plus size={18} />
               {t("community.shareNewGoal")}
@@ -1598,7 +1637,7 @@ export function Community({ cars = [], settings, user }) {
             <button
               type="button"
               onClick={handleClearMyPublications}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-600/25 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 transition hover:border-red-600 hover:bg-red-600 hover:text-white"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--engine-accent)]/25 px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-accent)] transition hover:border-[var(--engine-accent)] hover:bg-[var(--engine-accent)] hover:text-white"
             >
               <Trash2 size={16} />
               {t("community.clearPublished")}
@@ -1608,7 +1647,7 @@ export function Community({ cars = [], settings, user }) {
       </header>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="hide-scrollbar flex w-full overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 sm:w-fit dark:border-[#222] dark:bg-[#111]">
+        <div className="hide-scrollbar flex w-full overflow-x-auto rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-1 sm:w-fit  ">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1619,8 +1658,8 @@ export function Community({ cars = [], settings, user }) {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-3 text-xs font-black uppercase tracking-widest transition sm:px-5 ${
                   isActive
-                    ? "bg-red-600 text-white"
-                    : "text-gray-500 hover:text-red-600"
+                    ? "bg-[var(--engine-accent)] text-white"
+                    : "text-[var(--engine-text-muted)] hover:text-[var(--engine-accent)]"
                 }`}
               >
                 <Icon size={16} />
@@ -1630,8 +1669,8 @@ export function Community({ cars = [], settings, user }) {
           })}
         </div>
 
-        <label className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 lg:max-w-sm dark:border-[#222] dark:bg-[#111]">
-          <Search size={18} className="text-gray-400" />
+        <label className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4 lg:max-w-sm  ">
+          <Search size={18} className="text-[var(--engine-text-subtle)]" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -1642,8 +1681,8 @@ export function Community({ cars = [], settings, user }) {
       </div>
 
       {activeTab === "feed" && (
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <div className="grid gap-5 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-5 sm:gap-8 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {filteredGoals.length ? (
               filteredGoals.map((goal) => (
                 <GoalCard
@@ -1672,6 +1711,17 @@ export function Community({ cars = [], settings, user }) {
             ) : (
               <EmptyFeed t={t} />
             )}
+
+            {hasMoreGoals && !query && (
+              <button
+                type="button"
+                onClick={handleLoadMoreGoals}
+                disabled={loadingMoreGoals}
+                className="rounded-xl border border-[var(--engine-border)] py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] disabled:opacity-50 "
+              >
+                {loadingMoreGoals ? t("common.loading") : t("community.loadMore")}
+              </button>
+            )}
           </div>
 
           <aside className="space-y-6">
@@ -1688,7 +1738,7 @@ export function Community({ cars = [], settings, user }) {
       )}
 
       {activeTab === "videos" && (
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 sm:gap-8 md:grid-cols-2 xl:grid-cols-3">
           {videoPosts.map((video) => (
             <VideoCard
               key={video.id}
@@ -1700,12 +1750,12 @@ export function Community({ cars = [], settings, user }) {
               onLike={handleVideoLike}
             />
           ))}
-          <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center dark:border-[#333] dark:bg-[#151515]">
-            <Clapperboard className="mb-4 text-red-500" size={44} />
-            <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+          <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface)] p-8 text-center  ">
+            <Clapperboard className="mb-4 text-[var(--engine-accent)]" size={44} />
+            <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
               {t("community.videos.slotTitle")}
             </h2>
-            <p className="mt-3 max-w-sm text-sm font-medium text-gray-500 dark:text-gray-400">
+            <p className="mt-3 max-w-sm text-sm font-medium text-[var(--engine-text-muted)] ">
               {t("community.videos.slotCopy")}
             </p>
           </div>
@@ -1743,10 +1793,12 @@ function HeroStat({ icon, value, label }) {
   const IconComponent = icon;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
-      <IconComponent className="mb-3 text-red-400" size={20} />
-      <p className="text-2xl font-black text-slate-950 dark:text-white">{value}</p>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+    <div className="min-w-0 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3 dark:border-white/10 dark:bg-[var(--engine-surface)]/5 sm:p-4">
+      <IconComponent className="mb-2 text-[var(--engine-accent)] sm:mb-3" size={18} />
+      <p className="truncate text-xl font-black text-[var(--engine-text)] dark:text-white sm:text-2xl">
+        {value}
+      </p>
+      <p className="truncate text-[9px] font-bold uppercase tracking-wider text-[var(--engine-text-muted)] sm:text-[10px] sm:tracking-widest">
         {label}
       </p>
     </div>
@@ -1755,12 +1807,12 @@ function HeroStat({ icon, value, label }) {
 
 function EmptyFeed({ t }) {
   return (
-    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center lg:col-span-2 xl:col-span-1 2xl:col-span-2 dark:border-[#333] dark:bg-[#151515]">
-      <Search className="mb-4 text-red-500" size={40} />
-      <h2 className="text-2xl font-black uppercase italic text-slate-950 dark:text-white">
+    <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface)] p-8 text-center lg:col-span-2 xl:col-span-1 2xl:col-span-2  ">
+      <Search className="mb-4 text-[var(--engine-accent)]" size={40} />
+      <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
         {t("community.noSearchResults")}
       </h2>
-      <p className="mt-3 max-w-sm text-sm font-medium text-gray-500 dark:text-gray-400">
+      <p className="mt-3 max-w-sm text-sm font-medium text-[var(--engine-text-muted)] ">
         {t("community.noSearchResultsCopy")}
       </p>
     </div>
@@ -1769,24 +1821,24 @@ function EmptyFeed({ t }) {
 
 function SidebarRanking({ ranking, t }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#222] dark:bg-[#151515]">
-      <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
-        <Trophy size={18} className="text-red-500" />
+    <section className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-5  ">
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--engine-text)] dark:text-white">
+        <Trophy size={18} className="text-[var(--engine-accent)]" />
         {t("community.weekTop")}
       </h2>
       <div className="space-y-3">
         {ranking.slice(0, 3).map((goal, index) => (
           <div key={goal.id} className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-xs font-black text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--engine-accent)] text-xs font-black text-white">
               {index + 1}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-slate-950 dark:text-white">
+              <p className="truncate text-sm font-black text-[var(--engine-text)] dark:text-white">
                 {getRankingVehicleLabel(goal)}
-                <span className="font-bold text-gray-400"> / {goal.author}</span>
+                <span className="font-bold text-[var(--engine-text-subtle)]"> / {goal.author}</span>
               </p>
-              <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                {goal.username} / {goal.likes} likes / {getProgress(goal).toFixed(0)}%
+              <p className="truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
+                {goal.username} · {goal.likes} likes · {getProgress(goal).toFixed(0)}%
               </p>
             </div>
           </div>
@@ -1798,9 +1850,9 @@ function SidebarRanking({ ranking, t }) {
 
 function Suggestions({ t, following, onFollow }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#222] dark:bg-[#151515]">
-      <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase italic tracking-widest text-slate-950 dark:text-white">
-        <UserPlus size={18} className="text-red-500" />
+    <section className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-5  ">
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--engine-text)] dark:text-white">
+        <UserPlus size={18} className="text-[var(--engine-accent)]" />
         {t("community.suggestions.title")}
       </h2>
       <div className="space-y-3">
@@ -1809,10 +1861,10 @@ function Suggestions({ t, following, onFollow }) {
           return (
             <div key={friend.handle} className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-black text-slate-950 dark:text-white">
+                <p className="truncate text-sm font-black text-[var(--engine-text)] dark:text-white">
                   {friend.name}
                 </p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                   {t(friend.matchKey)}
                 </p>
               </div>
@@ -1821,8 +1873,8 @@ function Suggestions({ t, following, onFollow }) {
                 onClick={() => onFollow(friend.handle)}
                 className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
                   isFollowing
-                    ? "bg-red-600 text-white"
-                    : "bg-gray-100 text-red-600 hover:bg-red-600 hover:text-white dark:bg-[#101010]"
+                    ? "bg-[var(--engine-accent)] text-white"
+                    : "bg-[var(--engine-surface-2)] text-[var(--engine-accent)] hover:bg-[var(--engine-accent)] hover:text-white "
                 }`}
                 title={isFollowing ? t("community.following") : t("community.follow")}
               >
@@ -1838,17 +1890,17 @@ function Suggestions({ t, following, onFollow }) {
 
 function RankingPanel({ ranking, t }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#222] dark:bg-[#151515]">
-      <div className="mb-6 flex items-end justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black uppercase italic tracking-tight text-slate-950 dark:text-white">
+    <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4 sm:p-6">
+      <div className="mb-5 flex items-end justify-between gap-4 sm:mb-6">
+        <div className="min-w-0">
+          <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white">
             {t("community.rankingTitle")}
           </h2>
-          <p className="mt-1 text-sm font-medium text-gray-500">
+          <p className="mt-1 text-sm font-medium text-[var(--engine-text-muted)]">
             {t("community.rankingSubtitle")}
           </p>
         </div>
-        <Trophy size={36} className="text-red-500" />
+        <Trophy size={30} className="shrink-0 text-[var(--engine-accent)] sm:size-9" />
       </div>
 
       <div className="space-y-4">
@@ -1857,30 +1909,30 @@ function RankingPanel({ ranking, t }) {
           return (
             <div
               key={goal.id}
-              className="grid gap-4 rounded-xl border border-gray-100 p-4 md:grid-cols-[64px_1fr_160px] md:items-center dark:border-[#222]"
+              className="grid gap-4 rounded-xl border border-[var(--engine-border)] p-4 md:grid-cols-[64px_1fr_160px] md:items-center "
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-950 text-xl font-black italic text-white dark:bg-red-600">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--engine-accent)] text-xl font-black italic text-white ">
                 #{index + 1}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-lg font-black italic text-slate-950 dark:text-white">
+                <p className="truncate text-lg font-black italic text-[var(--engine-text)] dark:text-white">
                   {goal.title}
                 </p>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                   {goal.author} / {goal.username}
                 </p>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-red-950/30">
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--engine-surface-2)] dark:bg-red-950/30">
                   <div
-                    className="h-full rounded-full bg-red-600"
+                    className="h-full rounded-full bg-[var(--engine-accent)]"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center md:grid-cols-1 md:text-right">
-                <p className="text-sm font-black text-red-500">
+                <p className="text-sm font-black text-[var(--engine-accent)]">
                   {progress.toFixed(1)}%
                 </p>
-                <p className="text-sm font-black text-slate-950 dark:text-white">
+                <p className="text-sm font-black text-[var(--engine-text)] dark:text-white">
                   {goal.likes} likes
                 </p>
                 <p className="text-sm font-black text-amber-500">

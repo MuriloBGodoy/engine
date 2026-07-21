@@ -1,0 +1,128 @@
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Car,
+  BriefcaseBusiness,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Users,
+} from "lucide-react";
+import { signOut } from "firebase/auth";
+import { auth } from "../services/firebase";
+import { useTranslation } from "react-i18next";
+import { Logo } from "./Logo";
+import { Topbar } from "./TopBar";
+
+const getInitials = (name) => {
+  if (!name) return "U";
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+/**
+ * Layout de navegação horizontal (alternativa à Sidebar). Desktop-only —
+ * no mobile continua valendo o MobileNav. Embute as ações globais
+ * (notificações, tema, idioma) da Topbar à direita.
+ */
+export function TopNav({
+  settings,
+  onSettingsUpdate,
+  user,
+  profileSettings = {},
+}) {
+  const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const displayName = profileSettings.displayName || user?.displayName;
+  const avatar = profileSettings.avatar || user?.photoURL;
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/login");
+    } catch (error) {
+      console.error("Erro ao deslogar:", error);
+    }
+  };
+
+  const menuItems = [
+    { name: t("nav.home"), path: "/", icon: Home },
+    { name: t("nav.dashboard"), path: "/dashboard", icon: LayoutDashboard },
+    { name: t("nav.garage"), path: "/garagem", icon: Car },
+    { name: t("nav.community"), path: "/community", icon: Users },
+    { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
+    { name: t("nav.settings"), path: "/settings", icon: Settings },
+  ];
+
+  const isActivePath = (path) =>
+    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
+  return (
+    <header className="sticky top-0 z-40 hidden border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/85 backdrop-blur-xl lg:block">
+      <div className="engine-container flex h-16 items-center gap-4 px-6 lg:px-10">
+        <Link to="/" className="shrink-0">
+          <Logo markSize={30} />
+        </Link>
+
+        <nav className="ml-2 flex items-center gap-1">
+          {menuItems.map((item) => {
+            const active = isActivePath(item.path);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium transition-colors ${
+                  active
+                    ? "bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                    : "text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+                }`}
+              >
+                <Icon size={17} strokeWidth={active ? 2.4 : 2} />
+                <span className="hidden xl:inline">{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-1">
+          <Topbar
+            settings={settings}
+            onSettingsUpdate={onSettingsUpdate}
+            user={user}
+            variant="embedded"
+          />
+          <span className="mx-1.5 h-6 w-px bg-[var(--engine-border)]" />
+          <Link
+            to="/settings"
+            title={t("settings.sections.profile")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95"
+          >
+            {avatar ? (
+              <img
+                src={avatar}
+                alt={displayName || "Perfil"}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              getInitials(displayName)
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-accent-soft)] hover:text-[var(--engine-accent)]"
+            title={t("nav.logout")}
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}

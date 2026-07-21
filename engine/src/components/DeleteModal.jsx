@@ -6,34 +6,32 @@ export function DeleteModal({ isOpen, onClose, onConfirm, carName, message }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-red-600/30 bg-[#181818] p-8 text-center shadow-2xl">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-red-600/20 bg-red-600/10">
-          <AlertTriangle className="text-red-600" size={32} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="engine-pop w-full max-w-sm rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-elevated)] p-8 text-center shadow-[var(--engine-shadow-lg)]">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--engine-accent)]/20 bg-[var(--engine-accent-soft)]">
+          <AlertTriangle className="text-[var(--engine-accent)]" size={30} />
         </div>
 
-        <h2 className="mb-2 text-xl font-black uppercase italic tracking-tight text-white">
+        <h2 className="mb-2 text-lg font-extrabold tracking-tight text-[var(--engine-text)]">
           {t("deleteModal.title")}
         </h2>
 
-        <p className="mb-4 text-xs font-black uppercase tracking-widest text-red-600">
-          {carName}
-        </p>
+        <p className="mb-4 text-sm font-bold text-[var(--engine-accent)]">{carName}</p>
 
-        <p className="mb-8 text-sm font-medium leading-relaxed text-gray-400">
+        <p className="mb-8 text-sm font-medium leading-relaxed text-[var(--engine-text-muted)]">
           {message}
         </p>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={onClose}
-            className="rounded-xl bg-[#222] px-4 py-3 font-bold text-white transition-all hover:bg-[#333] active:scale-95"
+            className="rounded-xl border border-[var(--engine-border-strong)] px-4 py-3 font-semibold text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             {t("deleteModal.keep")}
           </button>
           <button
             onClick={onConfirm}
-            className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 font-black uppercase italic text-white shadow-lg shadow-red-900/20 transition-all hover:bg-red-700 active:scale-95"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 py-3 font-semibold tracking-tight text-white transition-colors hover:brightness-95"
           >
             <Trash2 size={16} /> {t("common.delete")}
           </button>

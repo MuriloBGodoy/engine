@@ -1,6 +1,8 @@
-import { Target } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CarCard } from "../components/CarCard";
+import { PageHeader } from "../components/PageHeader";
+import { Button } from "../components/Button";
 
 const sortCars = (cars, sortMode) => {
   const getProgress = (car) => {
@@ -27,6 +29,7 @@ export function Garagem({
   cars,
   onOpenModal,
   onOpenDelete,
+  onOpenOwnership,
   defaultSort = "progress-desc",
   hideValues = false,
 }) {
@@ -35,24 +38,18 @@ export function Garagem({
 
   return (
     <section>
-      <header className="mb-10 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-extrabold uppercase italic tracking-tight text-slate-950 dark:text-white">
-            {t("garage.title")}
-          </h1>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            {t("garage.subtitle")}
-          </p>
-        </div>
-        <button
-          onClick={() => onOpenModal()}
-          className="rounded-lg bg-red-600 px-6 py-3 font-black uppercase italic text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all hover:bg-red-700"
-        >
-          {t("garage.addCar")} +
-        </button>
-      </header>
+      <PageHeader
+        title={t("garage.title")}
+        subtitle={t("garage.subtitle")}
+        actions={
+          <Button className="w-full sm:w-auto" onClick={() => onOpenModal()}>
+            <Plus size={17} />
+            {t("garage.addCar")}
+          </Button>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {sortedCars.map((car) => (
           <div
             key={car.id}
@@ -62,6 +59,7 @@ export function Garagem({
             <CarCard
               car={car}
               hideValues={hideValues}
+              onOpenOwnership={onOpenOwnership}
               onDelete={(event) => {
                 event.stopPropagation();
                 onOpenDelete(car);
@@ -71,9 +69,9 @@ export function Garagem({
         ))}
 
         {cars.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-gray-200 bg-white p-20 text-center dark:border-[#222] dark:bg-[#151515]">
-            <Target className="mb-4 text-red-600" size={48} />
-            <p className="font-bold uppercase italic text-gray-500">
+          <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface)] p-8 text-center sm:p-16">
+            <Target className="mb-4 text-[var(--engine-accent)]" size={40} />
+            <p className="font-semibold text-[var(--engine-text-muted)]">
               {t("garage.empty")}
             </p>
           </div>

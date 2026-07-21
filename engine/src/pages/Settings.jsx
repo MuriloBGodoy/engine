@@ -34,11 +34,15 @@ import { useTranslation } from "react-i18next";
 import { engineDB } from "../services/db";
 import { storage } from "../services/firebase";
 import { languageOptions } from "../services/languages";
+import { countries, getStates } from "../services/locations";
+import { PageHeader } from "../components/PageHeader";
+import { useConfirm } from "../components/ConfirmProvider";
 
 const inputClass =
-  "w-full rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-4 py-3 text-slate-950 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none transition-colors focus:border-red-600 dark:focus:border-red-500";
+  "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] outline-none transition-colors focus:border-[var(--engine-accent)]";
 const labelClass =
-  "text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400";
+  "text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-muted)]";
+const cardClass = "engine-card p-4 sm:p-6";
 
 function Field({ label, children }) {
   return (
@@ -54,15 +58,15 @@ function Toggle({ label, checked, onChange }) {
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-xl border border-gray-300 bg-white px-4 py-3 text-left transition-colors hover:border-red-600/50 dark:border-[#252525] dark:bg-[#111] dark:hover:border-red-500/50"
+      className="flex w-full items-center justify-between gap-4 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4 py-3 text-left transition-colors hover:border-[var(--engine-accent)]/50"
     >
-      <span className="text-sm font-bold text-slate-800 dark:text-gray-200">
+      <span className="text-sm font-semibold text-[var(--engine-text)]">
         {label}
       </span>
 
       <span
-        className={`relative h-6 w-11 rounded-full transition-colors ${
-          checked ? "bg-red-600" : "bg-gray-300 dark:bg-[#2a2a2a]"
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+          checked ? "bg-[var(--engine-accent)]" : "bg-[var(--engine-border-strong)]"
         }`}
       >
         <span
@@ -156,6 +160,7 @@ const withTimeout = (promise, label, ms = 4500) =>
 
 export function Settings({ user, settings, onSettingsUpdate }) {
   const { i18n, t } = useTranslation();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const fileRef = useRef(null);
   const [activeSection, setActiveSection] = useState("profile");
@@ -390,7 +395,12 @@ export function Settings({ user, settings, onSettingsUpdate }) {
   };
 
   const handleResetLocalData = async () => {
-    if (!window.confirm(t("settings.status.resetConfirm"))) return;
+    const ok = await confirm({
+      title: t("settings.status.resetTitle"),
+      message: t("settings.status.resetConfirm"),
+      confirmLabel: t("settings.status.resetAction"),
+    });
+    if (!ok) return;
 
     await engineDB.resetDatabase();
     const resetSettings = await engineDB.resetSettings();
@@ -404,6 +414,13 @@ export function Settings({ user, settings, onSettingsUpdate }) {
       setStatus({ type: "error", text: t("settings.status.deleteConfirm") });
       return;
     }
+
+    const ok = await confirm({
+      title: t("settings.status.deleteAccountTitle"),
+      message: t("settings.status.deleteAccountConfirm"),
+      confirmLabel: t("settings.actions.deleteAccountPermanent"),
+    });
+    if (!ok) return;
 
     try {
       await engineDB.resetDatabase();
@@ -422,34 +439,33 @@ export function Settings({ user, settings, onSettingsUpdate }) {
   };
 
   return (
-    <section className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-0">
-      <header className="flex flex-col gap-6 border-b border-gray-200 pb-8 dark:border-[#1f1f1f] lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-600 dark:text-red-500">
-            Engine Control
-          </p>
-          <h1 className="mt-2 text-4xl font-black uppercase italic tracking-tight text-slate-950 dark:text-white lg:text-5xl">
-            {t("settings.title")}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm font-medium text-gray-500 dark:text-gray-400">
-            {t("settings.subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-[#252525] bg-white dark:bg-[#111] px-5 py-4">
-          <div className="h-2 w-28 overflow-hidden rounded-full bg-gray-200 dark:bg-[#252525]">
-            <div
-              className="h-full rounded-full bg-red-600"
-              style={{ width: `${completion}%` }}
-            />
-          </div>
-          <span className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
-            {t("settings.profileCompletion", { value: completion })}
-          </span>
-        </div>
-      </header>
+    <section className="space-y-6 sm:space-y-8">
+      <div className="border-b border-[var(--engine-border)] pb-4 sm:pb-2">
+        <PageHeader
+          eyebrow="Engine Control"
+          title={t("settings.title")}
+          subtitle={t("settings.subtitle")}
+          actions={
+            <div className="engine-card flex w-full items-center gap-3 rounded-xl px-4 py-3 sm:w-auto sm:gap-4 sm:px-5 sm:py-4">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)] sm:w-28 sm:flex-none">
+                <div
+                  className="h-full rounded-full bg-[var(--engine-accent)]"
+                  style={{ width: `${completion}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-[var(--engine-text-muted)]">
+                {t("settings.profileCompletion", { value: completion })}
+              </span>
+            </div>
+          }
+        />
+      </div>
 
-      <div className="grid gap-8 lg:grid-cols-[250px_1fr]">
-        <nav className="space-y-2 lg:sticky lg:top-8 lg:self-start">
+      <div className="grid gap-5 lg:grid-cols-[250px_1fr] lg:gap-8">
+        {/* No mobile as seções viram uma faixa horizontal rolável: uma lista
+            vertical de 6 botões em caixa alta empurrava todo o conteúdo para
+            fora da primeira tela. */}
+        <nav className="engine-rail -mx-4 gap-2 px-4 lg:mx-0 lg:sticky lg:top-8 lg:block lg:space-y-2 lg:self-start lg:overflow-visible lg:px-0">
           {sections.map((section) => {
             const Icon = section.icon;
             const isActive = activeSection === section.id;
@@ -458,13 +474,14 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-widest transition-colors ${
+                className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-bold tracking-wide transition-colors lg:w-full lg:gap-3 lg:px-4 lg:py-3 lg:text-sm lg:font-black lg:uppercase lg:tracking-widest ${
                   isActive
-                    ? "bg-red-600 text-white"
-                    : "bg-white text-gray-500 hover:bg-gray-100 hover:text-slate-950 dark:bg-[#111] dark:text-gray-400 dark:hover:bg-[#191919] dark:hover:text-white"
+                    ? "bg-[var(--engine-accent)] text-white shadow-[0_2px_10px_var(--engine-accent-soft)]"
+                    : "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)] lg:border-0"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} className="shrink-0 lg:hidden" />
+                <Icon size={18} className="hidden shrink-0 lg:block" />
                 {section.label}
               </button>
             );
@@ -476,10 +493,10 @@ export function Settings({ user, settings, onSettingsUpdate }) {
 
           <form onSubmit={handleSaveSettings} className="space-y-6">
             {activeSection === "profile" && (
-              <div className="rounded-2xl border border-gray-200 dark:border-[#222] bg-white dark:bg-[#151515] p-6">
-                <div className="grid gap-8 xl:grid-cols-[260px_1fr]">
+              <div className={cardClass}>
+                <div className="grid gap-6 xl:grid-cols-[260px_1fr] xl:gap-8">
                   <div className="space-y-4">
-                    <div className="relative mx-auto h-44 w-44 overflow-hidden rounded-2xl border border-gray-200 dark:border-[#292929] bg-gray-50 dark:bg-[#0f0f0f]">
+                    <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] sm:h-44 sm:w-44">
                       {draft?.profile?.avatar ? (
                         <img
                           src={draft.profile.avatar}
@@ -487,7 +504,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-5xl font-black italic text-red-600 dark:text-red-500">
+                        <div className="flex h-full w-full items-center justify-center text-5xl font-black italic text-[var(--engine-accent)]">
                           {(
                             draft?.profile?.displayName ||
                             user?.displayName ||
@@ -500,7 +517,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="absolute bottom-3 right-3 rounded-lg bg-red-600 p-2 text-white shadow-xl transition-colors hover:bg-red-700"
+                        className="absolute bottom-3 right-3 rounded-lg bg-[var(--engine-accent)] p-2 text-white shadow-xl transition-colors hover:brightness-95"
                         title={t("common.upload")}
                       >
                         <Camera size={18} />
@@ -513,13 +530,13 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                       className="hidden"
                       onChange={handleAvatarChange}
                     />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="mx-auto grid w-full max-w-xs grid-cols-2 gap-3 xl:max-w-none">
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white hover:border-red-600 dark:hover:border-red-500"
+                        className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-[11px] font-black uppercase tracking-wider text-[var(--engine-text)] hover:border-[var(--engine-accent)] sm:px-4 sm:py-3 sm:text-xs sm:tracking-widest"
                       >
-                        <Upload size={16} />
+                        <Upload size={16} className="shrink-0" />
                         {t("common.upload")}
                       </button>
                       <button
@@ -528,9 +545,9 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                           setPendingAvatarBlob(null);
                           updateGroup("profile", "avatar", "");
                         }}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:border-red-600 hover:text-slate-900 dark:hover:border-red-500 dark:hover:text-white"
+                        className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-[11px] font-black uppercase tracking-wider text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-text)] sm:px-4 sm:py-3 sm:text-xs sm:tracking-widest"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={16} className="shrink-0" />
                         {t("common.remove")}
                       </button>
                     </div>
@@ -573,6 +590,43 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                         placeholder={t("settings.placeholders.phone")}
                       />
                     </Field>
+                    <Field label={t("settings.fields.country")}>
+                      <select
+                        className={inputClass}
+                        value={draft?.profile?.country || "BR"}
+                        onChange={(e) => {
+                          updateGroup("profile", "country", e.target.value);
+                          updateGroup("profile", "state", "");
+                        }}
+                      >
+                        {countries.map((item) => (
+                          <option key={item.code} value={item.code}>
+                            {item.flag} {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t("settings.fields.state")}>
+                      <select
+                        className={inputClass}
+                        value={draft?.profile?.state || ""}
+                        onChange={(e) =>
+                          updateGroup("profile", "state", e.target.value)
+                        }
+                        disabled={!getStates(draft?.profile?.country || "BR").length}
+                      >
+                        <option value="">
+                          {getStates(draft?.profile?.country || "BR").length
+                            ? t("auth.selectState")
+                            : t("auth.stateUnavailable")}
+                        </option>
+                        {getStates(draft?.profile?.country || "BR").map((item) => (
+                          <option key={item.code} value={item.code}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
                     <Field label={t("settings.fields.location")}>
                       <input
                         className={inputClass}
@@ -601,7 +655,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
             )}
 
             {activeSection === "preferences" && (
-              <div className="rounded-2xl border border-gray-200 dark:border-[#222] bg-white dark:bg-[#151515] p-6">
+              <div className={cardClass}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label={t("settings.fields.language")}>
                     <select
@@ -678,6 +732,22 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                       </option>
                       <option value="compact">
                         {t("settings.options.compact")}
+                      </option>
+                    </select>
+                  </Field>
+                  <Field label={t("settings.fields.navLayout")}>
+                    <select
+                      className={inputClass}
+                      value={draft?.preferences?.navLayout || "sidebar"}
+                      onChange={(e) =>
+                        updateGroup("preferences", "navLayout", e.target.value)
+                      }
+                    >
+                      <option value="sidebar">
+                        {t("settings.options.navSidebar")}
+                      </option>
+                      <option value="topnav">
+                        {t("settings.options.navTopnav")}
                       </option>
                     </select>
                   </Field>
@@ -774,7 +844,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center justify-center gap-3 rounded-xl bg-red-600 px-6 py-4 text-sm font-black uppercase tracking-widest text-white transition-colors hover:bg-red-700 disabled:opacity-50 dark:bg-red-600 dark:hover:bg-red-700"
+                className="flex w-full items-center justify-center gap-3 rounded-xl bg-[var(--engine-accent)] px-6 py-3.5 text-sm font-black uppercase tracking-widest text-white transition-colors hover:brightness-95 disabled:opacity-50 sm:w-auto sm:py-4"
               >
                 {saving ? <Loader2 className="animate-spin" /> : <Save />}
                 {saving ? t("common.saving") : t("common.save")}
@@ -784,10 +854,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
 
           {activeSection === "security" && (
             <div className="space-y-6">
-              <form
-                onSubmit={handleSecuritySave}
-                className="rounded-2xl border border-gray-200 dark:border-[#222] bg-white dark:bg-[#151515] p-6"
-              >
+              <form onSubmit={handleSecuritySave} className={cardClass}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label={t("common.email")}>
                     <input
@@ -822,11 +889,11 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                     />
                   </Field>
                 </div>
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
                   <button
                     type="submit"
                     disabled={securityLoading}
-                    className="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-red-700 disabled:opacity-50"
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:brightness-95 disabled:opacity-50"
                   >
                     {securityLoading ? (
                       <Loader2 className="animate-spin" size={18} />
@@ -838,7 +905,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                   <button
                     type="button"
                     onClick={handleSendVerification}
-                    className="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white hover:border-red-600 dark:hover:border-red-500"
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-5 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text)] hover:border-[var(--engine-accent)]"
                   >
                     <Mail size={18} />
                     {t("settings.actions.verifyEmail")}
@@ -846,7 +913,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                   <button
                     type="button"
                     onClick={handlePasswordReset}
-                    className="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white hover:border-red-600 dark:hover:border-red-500"
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-5 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text)] hover:border-[var(--engine-accent)]"
                   >
                     <KeyRound size={18} />
                     {t("settings.actions.resetEmail")}
@@ -893,44 +960,42 @@ export function Settings({ user, settings, onSettingsUpdate }) {
           )}
 
           {activeSection === "data" && (
-            <div className="rounded-2xl border border-gray-200 dark:border-[#222] bg-white dark:bg-[#151515] p-6 space-y-6">
+            <div className={`${cardClass} space-y-6`}>
               <div>
-                <h3 className="text-lg font-bold text-slate-950 dark:text-white uppercase tracking-tight">
+                <h3 className="text-base font-bold uppercase tracking-tight text-[var(--engine-text)] sm:text-lg">
                   {t("settings.sections.data")}
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Gerencie as informações locais do aplicativo e backups de
-                  segurança.
+                <p className="mt-1 text-sm text-[var(--engine-text-muted)]">
+                  {t("settings.data.manageDesc")}
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="grid gap-3 pt-2 sm:flex sm:flex-wrap sm:gap-4">
                 <button
                   type="button"
                   onClick={handleExport}
-                  className="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white hover:border-red-600 dark:hover:border-red-500"
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-5 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text)] hover:border-[var(--engine-accent)]"
                 >
                   <Download size={18} />
-                  Exportar Backup JSON
+                  {t("settings.actions.exportBackup")}
                 </button>
                 <button
                   type="button"
                   onClick={handleResetLocalData}
-                  className="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-[#252525] bg-white dark:bg-[#111] px-5 py-3 text-xs font-black uppercase tracking-widest text-amber-600 hover:border-amber-500"
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-5 py-3 text-xs font-black uppercase tracking-widest text-amber-600 hover:border-amber-500"
                 >
                   <RefreshCw size={18} />
-                  Resetar Banco Local
+                  {t("settings.actions.resetLocal")}
                 </button>
               </div>
 
-              <div className="border-t border-gray-100 dark:border-[#222] pt-6 space-y-4">
+              <div className="border-t border-[var(--engine-border)] pt-6 space-y-4">
                 <div>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-red-600 dark:text-red-500">
-                    Zona de Perigo
+                  <h4 className="text-sm font-black uppercase tracking-widest text-[var(--engine-accent)]">
+                    {t("settings.data.danger")}
                   </h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    A exclusão da conta é permanente e removerá todos os seus
-                    dados salvos do ecossistema.
+                  <p className="text-xs text-[var(--engine-text-muted)] mt-1">
+                    {t("settings.data.deleteDesc")}
                   </p>
                 </div>
 
@@ -938,17 +1003,17 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                   <input
                     type="text"
                     className={inputClass}
-                    placeholder='Digite "APAGAR" para confirmar'
+                    placeholder={t("settings.placeholders.deleteConfirm")}
                     value={deleteConfirmation}
                     onChange={(e) => setDeleteConfirmation(e.target.value)}
                   />
                   <button
                     type="button"
                     onClick={handleDeleteAccount}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-red-700 dynamic shadow-md"
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-md hover:brightness-95"
                   >
                     <Trash2 size={18} />
-                    Excluir Minha Conta Permanentemente
+                    {t("settings.actions.deleteAccountPermanent")}
                   </button>
                 </div>
               </div>

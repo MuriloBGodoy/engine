@@ -1,8 +1,12 @@
-import { Trash2 } from "lucide-react";
+import { Calculator, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { estimateOwnership } from "../services/ownership";
 
-export function CarCard({ car, onDelete, hideValues = false }) {
+export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) {
   const { i18n, t } = useTranslation();
+  const ownershipTotal = car.ownership
+    ? estimateOwnership(car, car.ownership, car.ownership).totals.monthlyTotal
+    : null;
   const percentage = Math.min(
     car.targetValue ? (car.savedValue / car.targetValue) * 100 : 0,
     100,
@@ -12,56 +16,63 @@ export function CarCard({ car, onDelete, hideValues = false }) {
     "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
 
   return (
-    <div className="group relative bg-white dark:bg-[#181818] rounded-2xl overflow-hidden border border-gray-200 dark:border-[#222] hover:border-red-600/50 transition-all shadow-xl dark:shadow-none flex flex-col">
-      <div className="relative h-48 w-full overflow-hidden bg-gray-100 dark:bg-[#121212]">
+    <div className="engine-card engine-card-hover group relative flex flex-col overflow-hidden">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--engine-surface-2)]">
         <img
           src={car.image}
           alt={car.model}
+          loading="lazy"
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = fallbackImage;
-            e.target.classList.add("opacity-50");
+            e.target.classList.add("opacity-60");
           }}
-          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
         <button
           onClick={onDelete}
-          className="absolute top-3 right-3 p-2 rounded-lg bg-black/50 text-gray-200 hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg bg-black/45 text-white opacity-0 backdrop-blur-sm transition hover:bg-[var(--engine-accent)] focus-visible:opacity-100 group-hover:opacity-100 max-lg:opacity-100"
+          title={t("common.delete")}
         >
           <Trash2 size={16} />
         </button>
       </div>
 
-      <div className="p-6 flex-1 flex flex-col justify-between">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div>
-          <p className="text-red-600 font-black italic text-[10px] tracking-widest">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--engine-accent)]">
             {car.brand?.toUpperCase()}
           </p>
-          <h3 className="text-2xl font-black text-slate-900 dark:text-white italic">
+          <h3 className="mt-1 text-xl font-extrabold italic tracking-tight text-[var(--engine-text)]">
             {car.model}
           </h3>
-          <p className="text-gray-500 text-xs font-bold mb-4">{car.year}</p>
+          <p className="mt-1 text-xs font-medium text-[var(--engine-text-subtle)]">
+            {car.year}
+          </p>
         </div>
 
-        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-[#222]">
-          <div className="flex justify-between text-[10px] font-bold mb-2 uppercase tracking-widest">
-            <span className="text-gray-400 dark:text-gray-500">{t("car.progress")}</span>
-            <span className="text-red-500">{percentage}%</span>
+        <div className="mt-auto pt-5">
+          <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
+            <span className="text-[var(--engine-text-subtle)]">
+              {t("car.progress")}
+            </span>
+            <span className="tabular-nums text-[var(--engine-accent)]">
+              {percentage}%
+            </span>
           </div>
-          <div className="w-full h-1.5 bg-gray-200 dark:bg-red-950/30 rounded-full overflow-hidden">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
             <div
-              className="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)] transition-all duration-700"
+              className="h-full rounded-full bg-[var(--engine-accent)] transition-all duration-700"
               style={{ width: `${percentage}%` }}
-            ></div>
+            />
           </div>
-        </div>
 
-        <div className="mt-4 flex justify-between items-end">
-          <div>
-            <p className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tighter">
+          <div className="mt-4 flex items-end justify-between border-t border-[var(--engine-border)] pt-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
               {t("car.remaining")}
             </p>
-            <p className="text-lg font-black text-slate-900 dark:text-white">
+            <p className="text-lg font-extrabold tabular-nums text-[var(--engine-text)]">
               {hideValues
                 ? "R$ --"
                 : new Intl.NumberFormat(i18n.language, {
@@ -70,6 +81,32 @@ export function CarCard({ car, onDelete, hideValues = false }) {
                   }).format(car.targetValue - car.savedValue)}
             </p>
           </div>
+
+          {onOpenOwnership && (
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenOwnership(car);
+              }}
+              className="mt-3 flex w-full items-center justify-between rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
+            >
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+                <Calculator size={14} className="text-[var(--engine-accent)]" />
+                {t("ownership.cardMonthly")}
+              </span>
+              <span className="text-sm font-extrabold tabular-nums text-[var(--engine-text)]">
+                {ownershipTotal === null
+                  ? t("ownership.cardSimulate")
+                  : hideValues
+                    ? "R$ --"
+                    : new Intl.NumberFormat(i18n.language, {
+                        style: "currency",
+                        currency: "BRL",
+                        maximumFractionDigits: 0,
+                      }).format(ownershipTotal)}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>

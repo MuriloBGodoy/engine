@@ -3,48 +3,156 @@
 /* Ajuste da variante dark para o Tailwind v4 ler a classe .dark injetada pelo seu hook */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ===== Design system Engine =====
+   Tipografia: Inter (UI, variável, com optical sizing) para o corpo e Sora
+   para display/marca — dá uma pegada premium e consistente, com fallback de
+   sistema enquanto a fonte carrega. Tokens de superfície/cor padronizam os
+   tons antes dispersos (#111 / #151515 / #181818 / #222 ...). */
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+
+  /* Marca */
+  --color-brand: #e11d2a;
+  --color-brand-strong: #b3121d;
+}
+
 :root {
-  background-color: #f9fafb;
-  /* Removemos o 'color' travado daqui para o Tailwind e o MUI controlarem livremente */
+  color-scheme: light;
+  background-color: #e9ebf0;
+
+  /* Superfícies (modo claro) — tons suaves, sem branco puro que "estoura". */
+  --engine-bg: #e9ebf0;
+  --engine-surface: #f7f8fb;
+  --engine-surface-2: #eceef3;
+  --engine-elevated: #fcfcfe;
+  --engine-border: #dde1e9;
+  --engine-border-strong: #cbd0da;
+
+  /* Texto */
+  --engine-text: #131722;
+  --engine-text-muted: #5b6472;
+  --engine-text-subtle: #8a93a3;
+
+  /* Marca / acento */
+  --engine-accent: #e11d2a;
+  --engine-accent-soft: rgba(225, 29, 42, 0.1);
+
+  /* Sombras */
+  --engine-ring: rgba(225, 29, 42, 0.35);
+  --engine-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06),
+    0 1px 3px rgba(15, 23, 42, 0.06);
+  --engine-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06),
+    0 12px 28px rgba(15, 23, 42, 0.08);
+  --engine-shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.14);
 }
 
 :root.dark {
-  background-color: #080808; /* Alinhado com o preto absoluto do seu App.jsx */
+  color-scheme: dark;
+  background-color: #08090c; /* Shell escuro, levemente azulado */
+
+  /* Superfícies (modo escuro) */
+  --engine-bg: #08090c;
+  --engine-surface: #101216;
+  --engine-surface-2: #171a20;
+  --engine-elevated: #14171d;
+  --engine-border: #23262e;
+  --engine-border-strong: #2d313b;
+
+  /* Texto */
+  --engine-text: #f4f6fa;
+  --engine-text-muted: #9aa3b2;
+  --engine-text-subtle: #6b7480;
+
+  /* Marca / acento */
+  --engine-accent: #ff3b47;
+  --engine-accent-soft: rgba(255, 59, 71, 0.14);
+
+  /* Sombras */
+  --engine-ring: rgba(255, 59, 71, 0.4);
+  --engine-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --engine-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --engine-shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+html {
+  /* Evita o "inflar" de fonte do iOS ao girar o aparelho */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  font-family: sans-serif;
-  min-height: 100vh;
+  font-family: var(--font-sans);
+  min-height: 100dvh;
   overflow-x: hidden;
+  letter-spacing: -0.011em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Sem flash cinza ao tocar em links/botões no Android */
+  -webkit-tap-highlight-color: transparent;
 }
 
-html,
-body,
-#root {
-  width: 100%;
-  min-width: 0;
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
-* {
-  min-width: 0;
+::selection {
+  background: var(--engine-accent);
+  color: #fff;
 }
 
-img,
-video,
-canvas,
-svg {
-  max-width: 100%;
+/* Foco visível e consistente em todo elemento interativo */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--engine-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+/* Estes resets ficam em @layer base de propósito: fora de uma layer eles
+   venceriam QUALQUER utilitária do Tailwind — era o caso do `min-width: 0`,
+   que anulava silenciosamente todo `min-w-*` do projeto (cards de estatística
+   encolhiam e quebravam palavras no meio). Dentro da base, as utilitárias
+   continuam mandando quando alguém pede explicitamente. */
+@layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Padrão saudável para filhos de flex/grid não estourarem a largura */
+  * {
+    min-width: 0;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
 
 @media (max-width: 640px) {
+  /* `anywhere` quebrava palavras normais no meio ("CIDADE/S"); `break-word`
+     só entra em ação quando a palavra realmente não cabe. */
   h1,
   h2,
   h3,
@@ -52,7 +160,16 @@ select {
   span,
   button,
   a {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+  }
+
+  /* iOS dá zoom automático em campos com fonte < 16px. Esta regra fica fora
+     de qualquer @layer, então vence as utilitárias do Tailwind (text-sm etc.)
+     e mantém o formulário estável ao focar no celular. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }
 
@@ -264,7 +381,8 @@ select {
   font-weight: 800;
 }
 
-.auth-field input {
+.auth-field input,
+.auth-field select {
   min-height: 48px;
   width: 100%;
   min-width: 0;
@@ -280,11 +398,31 @@ select {
     background 0.2s ease;
 }
 
+.auth-field select {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.auth-field select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-field select option {
+  background: #18181b;
+  color: white;
+}
+
 .auth-field input::placeholder {
   color: #71717a;
 }
 
-.auth-field input:focus {
+.auth-field input:focus,
+.auth-field select:focus {
   border-color: #ef4444;
   background: #1f1f23;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
@@ -467,4 +605,231 @@ select {
 
 .dark .engine-chip-scroll::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.11);
+}
+
+
+/* ===== Componentes reutilizáveis ===== */
+
+/* Cartão de superfície padrão — usa tokens para claro/escuro */
+.engine-card {
+  background: var(--engine-surface);
+  border: 1px solid var(--engine-border);
+  border-radius: 16px;
+  box-shadow: var(--engine-shadow-sm);
+}
+
+.engine-card-hover {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.engine-card-hover:hover {
+  border-color: var(--engine-border-strong);
+  box-shadow: var(--engine-shadow-md);
+}
+
+/* Container centralizado com largura de leitura confortável */
+.engine-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+/* ===== Modais =====
+   No celular todo modal vira uma "folha" que ocupa a tela inteira (padrão de
+   app nativo: nada de caixinha flutuando com o conteúdo espremido). A partir
+   de sm volta a ser o cartão centralizado de sempre. */
+.engine-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.engine-modal-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  border: 1px solid var(--engine-border);
+  background: var(--engine-elevated);
+  box-shadow: var(--engine-shadow-lg);
+}
+
+/* Corpo rolável do modal — o cabeçalho e o rodapé ficam fixos */
+.engine-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+  .engine-modal-overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .engine-modal-panel {
+    height: auto;
+    max-height: min(92vh, 60rem);
+    border-radius: 1rem;
+  }
+}
+
+/* Respeita a barra de gestos do iPhone em rodapés fixos */
+.engine-safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+/* Faixa horizontal rolável (abas/chips) — vale só abaixo de lg; a partir daí
+   o elemento volta a obedecer às classes do Tailwind (ex.: lg:block), já que
+   CSS sem @layer vence as utilitárias. */
+@media (max-width: 1023px) {
+  .engine-rail {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .engine-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .engine-rail > * {
+    scroll-snap-align: start;
+    flex: none;
+  }
+}
+
+/* Barra de rolagem discreta e consistente no shell */
+.engine-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--engine-border-strong) transparent;
+}
+
+.engine-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.engine-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: var(--engine-border-strong);
+}
+
+.engine-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--engine-text-subtle);
+}
+
+/* Animação suave de entrada dos menus/popovers */
+@keyframes engine-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.engine-pop {
+  transform-origin: top;
+  animation: engine-pop-in 0.16s ease-out;
+}
+
+/* Entrada suave (fade + subida) — usada no hero da Home com stagger */
+@keyframes engine-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.engine-rise {
+  animation: engine-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ===== Toggle do menu com carrinho animado ===== */
+.engine-car-toggle {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rastros de velocidade que surgem no hover */
+.engine-car-line {
+  position: absolute;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0;
+  transform: translateX(6px);
+}
+
+.engine-car-toggle:hover .engine-car-line {
+  animation: engine-speed 0.6s ease-out;
+}
+
+.engine-car-toggle:hover .engine-car-line:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.engine-car-toggle:hover .engine-car-line:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+@keyframes engine-speed {
+  0% {
+    opacity: 0;
+    transform: translateX(8px) scaleX(0.4);
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-14px) scaleX(1);
+  }
+}
+
+/* O carro acelera pra frente e volta */
+.engine-car {
+  transition: transform 0.3s ease;
+}
+
+.engine-car-toggle:hover .engine-car {
+  animation: engine-drive 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes engine-drive {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(6px); }
+  45% { transform: translateX(6px) rotate(-2deg); }
+  70% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
 }

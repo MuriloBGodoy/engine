@@ -11,6 +11,7 @@ import {
 import { signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { useTranslation } from "react-i18next";
+import { Logo } from "./Logo";
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -22,22 +23,12 @@ const getInitials = (name) => {
     .slice(0, 2);
 };
 
-function BrandMark({ compact = false }) {
-  return (
-    <div
-      className={`flex items-center gap-2 font-black uppercase italic tracking-tighter text-slate-900 dark:text-white ${
-        compact ? "text-xl" : "text-3xl"
-      }`}
-    >
-      <div className="flex h-8 w-8 items-center justify-center rounded bg-red-600 text-sm italic text-white">
-        E
-      </div>
-      Engine
-    </div>
-  );
-}
-
-export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
+export function Sidebar({
+  collapsed = false,
+  onToggleCollapsed,
+  profileSettings = {},
+  privacySettings = {},
+}) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -56,18 +47,25 @@ export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
   };
 
   const menuItems = [
-    { name: t("nav.home"), path: "/", icon: <Home size={20} /> },
-    { name: t("nav.dashboard"), path: "/dashboard", icon: <LayoutDashboard size={20} /> },
-    { name: t("nav.garage"), path: "/garagem", icon: <Car size={20} /> },
-    { name: t("nav.community"), path: "/community", icon: <Users size={20} /> },
-    { name: t("nav.services"), path: "/services", icon: <BriefcaseBusiness size={20} /> },
-    { name: t("nav.settings"), path: "/settings", icon: <Settings size={20} /> },
+    { name: t("nav.home"), path: "/", icon: Home },
+    { name: t("nav.dashboard"), path: "/dashboard", icon: LayoutDashboard },
+    { name: t("nav.garage"), path: "/garagem", icon: Car },
+    { name: t("nav.community"), path: "/community", icon: Users },
+    { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
+    { name: t("nav.settings"), path: "/settings", icon: Settings },
   ];
 
+  const isActivePath = (path) =>
+    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
   const profileAvatar = (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 font-black italic text-white">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white">
       {avatar ? (
-        <img src={avatar} alt={displayName || "Perfil"} className="h-full w-full object-cover" />
+        <img
+          src={avatar}
+          alt={displayName || "Perfil"}
+          className="h-full w-full object-cover"
+        />
       ) : (
         getInitials(displayName)
       )}
@@ -75,98 +73,126 @@ export function Sidebar({ profileSettings = {}, privacySettings = {} }) {
   );
 
   return (
-    <>
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden dark:border-[#181818] dark:bg-[#080808]/95">
-        <BrandMark compact />
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate("/settings")}
-            className="h-9 w-9 overflow-hidden rounded-full"
-            title={t("settings.sections.profile")}
-          >
-            {profileAvatar}
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-gray-400 transition-colors hover:text-red-600"
-            title={t("nav.logout")}
-          >
-            <LogOut size={19} />
-          </button>
-        </div>
-      </header>
+    <aside
+      className={`hidden h-screen shrink-0 flex-col border-r border-[var(--engine-border)] bg-[var(--engine-surface)] transition-[width] duration-300 ease-out lg:flex ${
+        collapsed ? "w-[76px]" : "w-[260px]"
+      }`}
+    >
+      {/* Marca */}
+      <div
+        className={`flex h-[68px] items-center border-b border-[var(--engine-border)] ${
+          collapsed ? "justify-center px-3" : "px-5"
+        }`}
+      >
+        <Logo collapsed={collapsed} markSize={32} />
+      </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-gray-200 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden dark:border-[#181818] dark:bg-[#080808]/95">
+      {/* Navegação */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const active = isActivePath(item.path);
+          const Icon = item.icon;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-black uppercase tracking-tight transition ${
-                isActive
-                  ? "bg-red-600 text-white"
-                  : "text-gray-500 hover:text-red-600 dark:text-gray-400"
+              title={collapsed ? item.name : undefined}
+              className={`group relative flex h-11 items-center rounded-xl text-[14px] font-medium transition-colors ${
+                collapsed ? "justify-center" : "gap-3 px-3"
+              } ${
+                active
+                  ? "bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                  : "text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
               }`}
             >
-              {item.icon}
-              <span className="w-full truncate text-center">{item.name}</span>
+              {active && !collapsed && (
+                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--engine-accent)]" />
+              )}
+              <Icon size={20} strokeWidth={active ? 2.4 : 2} className="shrink-0" />
+              <span
+                className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+                  collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                }`}
+              >
+                {item.name}
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      <aside className="hidden h-screen w-72 shrink-0 flex-col border-r border-gray-200 bg-white p-8 transition-colors duration-300 lg:flex dark:border-[#181818] dark:bg-[#080808]">
-        <div className="mb-12">
-          <BrandMark />
-        </div>
+      {/* Recolher / expandir — carrinho que acelera no hover */}
+      <div className="px-3 pb-2">
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
+          title={collapsed ? t("nav.expand") : t("nav.collapse")}
+          className="engine-car-toggle flex h-10 w-full items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+        >
+          <span className="relative flex h-5 w-9 items-center justify-center">
+            <span
+              className="engine-car-line"
+              style={{ top: "22%", right: "58%", width: "11px" }}
+            />
+            <span
+              className="engine-car-line"
+              style={{ top: "50%", right: "56%", width: "15px" }}
+            />
+            <span
+              className="engine-car-line"
+              style={{ top: "78%", right: "58%", width: "9px" }}
+            />
+            <Car
+              className="engine-car shrink-0"
+              size={22}
+              strokeWidth={2.1}
+              style={{ transform: collapsed ? "scaleX(-1)" : "none" }}
+            />
+          </span>
+        </button>
+      </div>
 
-        <nav className="flex-1 space-y-2">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-4 rounded-xl px-4 py-4 font-bold transition-all duration-300 ${
-                  isActive
-                    ? "scale-105 bg-red-600 text-white shadow-[0_10px_20px_rgba(220,38,38,0.2)]"
-                    : "text-gray-500 hover:bg-gray-100 hover:text-slate-900 dark:hover:bg-[#222] dark:hover:text-white"
-                }`}
-              >
-                {item.icon}
-                <span className="text-sm uppercase tracking-widest">{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-auto flex items-center justify-between border-t border-gray-200 pt-8 dark:border-[#222]">
-          <div className="flex min-w-0 items-center gap-3">
-            {profileAvatar}
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black italic text-slate-900 dark:text-white">
-                {displayName || t("settings.sections.profile")}
-              </p>
-              {showEmail && (
-                <p className="truncate text-[9px] font-bold uppercase tracking-tighter text-gray-400">
-                  {user?.email}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="shrink-0 text-gray-400 transition-colors hover:text-red-600"
-            title={t("nav.logout")}
+      {/* Perfil / logout */}
+      <div className="border-t border-[var(--engine-border)] p-3">
+        <div
+          className={`flex items-center rounded-xl p-2 ${
+            collapsed ? "justify-center" : "gap-3"
+          }`}
+        >
+          <Link
+            to="/settings"
+            title={t("settings.sections.profile")}
+            className="shrink-0 rounded-full transition-transform active:scale-95"
           >
-            <LogOut size={20} />
-          </button>
+            {profileAvatar}
+          </Link>
+          <div
+            className={`min-w-0 flex-1 overflow-hidden transition-all duration-300 ${
+              collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+            }`}
+          >
+            <p className="truncate text-[13px] font-semibold text-[var(--engine-text)]">
+              {displayName || t("settings.sections.profile")}
+            </p>
+            {showEmail && user?.email && (
+              <p className="truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
+                {user.email}
+              </p>
+            )}
+          </div>
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-accent-soft)] hover:text-[var(--engine-accent)]"
+              title={t("nav.logout")}
+            >
+              <LogOut size={17} />
+            </button>
+          )}
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 }

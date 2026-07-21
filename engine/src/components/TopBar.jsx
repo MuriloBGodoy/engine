@@ -1,24 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
-import {
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-  Translate as TranslateIcon,
-} from "@mui/icons-material";
 import {
   Bell,
   CheckCircle2,
   Heart,
   MessageCircle,
+  Moon,
   RotateCcw,
   Star,
+  Sun,
   UserPlus,
   XCircle,
 } from "lucide-react";
 import { engineDB } from "../services/db";
-import { languageOptions } from "../services/languages";
 
 const notificationLabels = {
   follow: "Novo seguidor",
@@ -138,16 +133,47 @@ const getNotificationCopy = (notification) => {
   };
 };
 
-export function Topbar({ settings, onSettingsUpdate, user }) {
-  const { i18n, t } = useTranslation();
+function useClickOutside(refs, onOutside) {
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      const clickedInside = refs.some((ref) => ref.current?.contains(event.target));
+      if (!clickedInside) onOutside();
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [refs, onOutside]);
+}
+
+function TopbarIconButton({ onClick, title, active = false, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+        active
+          ? "bg-[var(--engine-accent)] text-white"
+          : "text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function Topbar({ settings, onSettingsUpdate, user, variant = "page" }) {
+  const embedded = variant === "embedded";
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [notificationsAnchor, setNotificationsAnchor] = useState(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const notificationsRef = useRef(null);
 
   const currentTheme = settings.preferences.theme;
-  const isDark = currentTheme === "dark";
   const unreadCount = notifications.filter((notification) => !notification.read).length;
+
+  useClickOutside([notificationsRef], () => setNotificationsOpen(false));
 
   useEffect(() => {
     if (!user?.uid) return undefined;
@@ -168,255 +194,161 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
     await engineDB.saveSettings(updatedSettings);
   };
 
-  const handleChangeLanguage = async (lng) => {
-    const updatedSettings = {
-      ...settings,
-      preferences: {
-        ...settings.preferences,
-        language: lng,
-      },
-    };
-
-    onSettingsUpdate(updatedSettings);
-    i18n.changeLanguage(lng);
-    await engineDB.saveSettings(updatedSettings);
-    setAnchorEl(null);
-  };
-
-  const handleNotificationsOpen = (event) => {
-    setNotificationsAnchor(event.currentTarget);
+  const handleNotificationsOpen = () => {
+    setNotificationsOpen((current) => !current);
     engineDB.markNotificationsRead(user?.uid).catch((error) => console.error(error));
   };
 
   const handleNotificationClick = (notification) => {
     const target = getNotificationTarget(notification);
-    setNotificationsAnchor(null);
+    setNotificationsOpen(false);
     if (target) navigate(target);
   };
 
   return (
-    <div className="flex w-full items-center justify-end gap-3 border-b border-slate-200/60 pb-4 dark:border-slate-800/50">
-      <Tooltip title={t("notifications.title")}>
-        <button
-          type="button"
+    <div
+      className={
+        embedded
+          ? "flex items-center gap-1"
+          : "flex w-full items-center justify-end gap-1.5 border-b border-[var(--engine-border)] pb-4"
+      }
+    >
+      <div ref={notificationsRef} className="relative">
+        <TopbarIconButton
           onClick={handleNotificationsOpen}
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 transition hover:bg-red-500/10 hover:text-red-600 dark:text-white"
+          title={t("notifications.title")}
+          active={notificationsOpen}
         >
           <Bell size={21} />
           {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white">
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1 text-[9px] font-black text-white">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
-        </button>
-      </Tooltip>
+        </TopbarIconButton>
 
-      <Tooltip title={currentTheme === "dark" ? "Modo Claro" : "Modo Escuro"}>
-        <IconButton
-          onClick={handleToggleTheme}
-          sx={{
-            color: currentTheme === "dark" ? "#ffffff" : "#1e293b",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              color: "#ef4444",
-              backgroundColor: "rgba(239,68,68,0.08)",
-            },
-          }}
-        >
-          {currentTheme === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip title="Alterar idioma">
-        <IconButton
-          onClick={(event) => setAnchorEl(event.currentTarget)}
-          sx={{
-            color: currentTheme === "dark" ? "#ffffff" : "#1e293b",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              color: "#ef4444",
-              backgroundColor: "rgba(239,68,68,0.08)",
-            },
-          }}
-        >
-          <TranslateIcon />
-        </IconButton>
-      </Tooltip>
-
-      <Menu
-        anchorEl={notificationsAnchor}
-        open={Boolean(notificationsAnchor)}
-        onClose={() => setNotificationsAnchor(null)}
-        disableScrollLock
-        slotProps={{
-          paper: {
-            className:
-              "mt-2 w-[min(94vw,440px)] max-h-[76vh] overflow-hidden bg-white dark:bg-[#080808] text-slate-950 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg shadow-2xl",
-            sx: {
-              backgroundColor: isDark ? "#080808" : "#ffffff",
-              color: isDark ? "#ffffff" : "#0f172a",
-              border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`,
-              boxShadow: isDark
-                ? "0 24px 70px rgba(0,0,0,0.55)"
-                : "0 24px 70px rgba(15,23,42,0.18)",
-            },
-          },
-        }}
-      >
-        <div
-          className="flex items-center justify-between gap-4 border-b px-4 py-3"
-          style={{ borderColor: isDark ? "#1e293b" : "#f1f5f9" }}
-        >
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-600">
-              {t("notifications.title")}
-            </p>
-            <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-              {unreadCount
-                ? `${unreadCount} não lida${unreadCount === 1 ? "" : "s"}`
-                : "Nenhuma notificação pendente"}
-            </p>
-          </div>
-          {unreadCount > 0 && (
-            <span className="rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-black text-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </div>
-        {notifications.length ? (
-          <div className="max-h-[58vh] overflow-y-auto">
-            {notifications.slice(0, 12).map((notification) => {
-              const style =
-                notificationStyles[notification.type] || defaultNotificationStyle;
-              const Icon = style.icon;
-              const createdAt = formatNotificationTime(notification.createdAt);
-              const copy = getNotificationCopy(notification);
-              const target = getNotificationTarget(notification);
-
-              return (
-                <MenuItem
-                  key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className="block whitespace-normal rounded-xl p-0"
-                  sx={{
-                    display: "block",
-                    whiteSpace: "normal",
-                    padding: 0,
-                    borderRadius: 0,
-                    backgroundColor: "transparent",
-                    "&:hover": {
-                      backgroundColor: isDark ? "#101010" : "#f8fafc",
-                    },
-                  }}
-                >
-                  <div
-                    className={`relative grid grid-cols-[28px_minmax(0,1fr)] gap-3 border-b px-4 py-3 transition ${
-                      notification.read
-                        ? "border-slate-100 bg-white dark:border-[#171717] dark:bg-[#080808]"
-                        : "border-slate-100 bg-slate-50 dark:border-[#171717] dark:bg-[#0e0e0e]"
-                    }`}
-                  >
-                    {!notification.read && (
-                      <span className="absolute left-0 top-0 h-full w-0.5 bg-red-600" />
-                    )}
-                    <div className="pt-0.5">
-                      <Icon className={style.iconClass} size={18} strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 items-center justify-between gap-3">
-                        <span
-                          className={`min-w-0 truncate text-[10px] font-black uppercase tracking-[0.16em] ${style.badgeClass}`}
-                        >
-                          {copy.title}
-                        </span>
-                        {createdAt && (
-                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            {createdAt}
-                          </span>
-                        )}
-                      </div>
-                      <p
-                        className="mt-1 text-sm font-semibold leading-5"
-                        style={{ color: isDark ? "#ffffff" : "#0f172a" }}
-                      >
-                        {copy.body}
-                      </p>
-                      {notification.goalTitle && !notification.moderationNote && (
-                        <p className="mt-1 truncate text-xs font-semibold text-gray-500 dark:text-gray-400">
-                          {notification.goalTitle}
-                        </p>
-                      )}
-                      {notification.moderationNote && (
-                        <div className="mt-2 border-l-2 border-red-500/60 bg-red-500/[0.06] px-3 py-2">
-                          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-red-500">
-                            Comentário do admin
-                          </p>
-                          <p className="mt-1 text-xs font-semibold leading-5 text-gray-700 dark:text-gray-300">
-                            {notification.moderationNote}
-                          </p>
-                        </div>
-                      )}
-                      {notification.actorUsername && (
-                        <p className="mt-2 truncate text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                          {notification.actorUsername}
-                        </p>
-                      )}
-                      {target && (
-                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">
-                          Abrir
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </MenuItem>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="px-6 py-10 text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-400 dark:border-[#222] dark:text-gray-500">
-              <Bell size={18} />
+        {notificationsOpen && (
+          /* No mobile o painel é ancorado na viewport (o sino fica no meio do
+             header, então "right-0" jogaria metade do painel para fora da
+             tela); no desktop volta a ser um popover preso ao botão. */
+          <div className="engine-pop fixed inset-x-3 top-[4.25rem] z-50 max-h-[76vh] overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-elevated)] text-[var(--engine-text)] shadow-[var(--engine-shadow-lg)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(94vw,440px)]">
+            <div className="flex items-center justify-between gap-4 border-b border-[var(--engine-border)] px-4 py-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-accent)]">
+                  {t("notifications.title")}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-[var(--engine-text-subtle)]">
+                  {unreadCount
+                    ? `${unreadCount} não lida${unreadCount === 1 ? "" : "s"}`
+                    : "Nenhuma notificação pendente"}
+                </p>
+              </div>
+              {unreadCount > 0 && (
+                <span className="rounded-full bg-[var(--engine-accent)] px-2.5 py-1 text-[10px] font-black text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </div>
-            <p className="mt-4 text-sm font-black uppercase text-slate-950 dark:text-white">
-              {t("notifications.empty")}
-            </p>
-            <p className="mt-2 text-xs font-semibold leading-5 text-gray-500 dark:text-gray-400">
-              Quando algo importante acontecer, o alerta aparece aqui.
-            </p>
+            {notifications.length ? (
+              <div className="max-h-[58vh] overflow-y-auto">
+                {notifications.slice(0, 12).map((notification) => {
+                  const style =
+                    notificationStyles[notification.type] || defaultNotificationStyle;
+                  const Icon = style.icon;
+                  const createdAt = formatNotificationTime(notification.createdAt);
+                  const copy = getNotificationCopy(notification);
+                  const target = getNotificationTarget(notification);
+
+                  return (
+                    <button
+                      key={notification.id}
+                      type="button"
+                      onClick={() => handleNotificationClick(notification)}
+                      className="block w-full text-left"
+                    >
+                      <div
+                        className={`relative grid grid-cols-[28px_minmax(0,1fr)] gap-3 border-b border-[var(--engine-border)] px-4 py-3 transition hover:bg-[var(--engine-surface-2)] ${
+                          notification.read
+                            ? "bg-transparent"
+                            : "bg-[var(--engine-accent-soft)]"
+                        }`}
+                      >
+                        {!notification.read && (
+                          <span className="absolute left-0 top-0 h-full w-0.5 bg-[var(--engine-accent)]" />
+                        )}
+                        <div className="pt-0.5">
+                          <Icon className={style.iconClass} size={18} strokeWidth={2} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 items-center justify-between gap-3">
+                            <span
+                              className={`min-w-0 truncate text-[10px] font-black uppercase tracking-[0.16em] ${style.badgeClass}`}
+                            >
+                              {copy.title}
+                            </span>
+                            {createdAt && (
+                              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                                {createdAt}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm font-semibold leading-5 text-[var(--engine-text)]">
+                            {copy.body}
+                          </p>
+                          {notification.goalTitle && !notification.moderationNote && (
+                            <p className="mt-1 truncate text-xs font-semibold text-[var(--engine-text-muted)]">
+                              {notification.goalTitle}
+                            </p>
+                          )}
+                          {notification.moderationNote && (
+                            <div className="mt-2 border-l-2 border-[var(--engine-accent)]/50 bg-[var(--engine-accent-soft)] px-3 py-2">
+                              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--engine-accent)]">
+                                Comentário do admin
+                              </p>
+                              <p className="mt-1 text-xs font-semibold leading-5 text-[var(--engine-text-muted)]">
+                                {notification.moderationNote}
+                              </p>
+                            </div>
+                          )}
+                          {notification.actorUsername && (
+                            <p className="mt-2 truncate text-[11px] font-semibold text-[var(--engine-text-subtle)]">
+                              {notification.actorUsername}
+                            </p>
+                          )}
+                          {target && (
+                            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--engine-text-subtle)]">
+                              Abrir
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="px-6 py-10 text-center">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--engine-border)] text-[var(--engine-text-subtle)]">
+                  <Bell size={18} />
+                </div>
+                <p className="mt-4 text-sm font-bold text-[var(--engine-text)]">
+                  {t("notifications.empty")}
+                </p>
+                <p className="mt-2 text-xs font-semibold leading-5 text-[var(--engine-text-muted)]">
+                  Quando algo importante acontecer, o alerta aparece aqui.
+                </p>
+              </div>
+            )}
           </div>
         )}
-      </Menu>
+      </div>
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        disableScrollLock
-        slotProps={{
-          paper: {
-            className:
-              "mt-1 rounded-xl border border-slate-200 bg-white text-slate-950 shadow-lg dark:border-slate-800 dark:bg-[#080808] dark:text-white",
-            sx: {
-              backgroundColor: isDark ? "#080808" : "#ffffff",
-              color: isDark ? "#ffffff" : "#0f172a",
-              border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`,
-            },
-          },
-        }}
+      <TopbarIconButton
+        onClick={handleToggleTheme}
+        title={currentTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
       >
-        {languageOptions.map((option) => (
-          <MenuItem
-            key={option.value}
-            selected={settings.preferences.language === option.value}
-            onClick={() => handleChangeLanguage(option.value)}
-          >
-            <span className="mr-3 text-xs font-black uppercase tracking-widest text-red-500">
-              {option.region}
-            </span>
-            {t(option.labelKey)}
-          </MenuItem>
-        ))}
-      </Menu>
+        {currentTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+      </TopbarIconButton>
     </div>
   );
 }
