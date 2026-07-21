@@ -46,7 +46,6 @@ export function MobileNav({
   const displayName = profileSettings.displayName || currentUser?.displayName;
   const avatar = profileSettings.avatar || currentUser?.photoURL;
   const unreadMessages = useUnreadMessages(currentUser?.uid);
-  const messagesActive = location.pathname.startsWith("/messages");
 
   const handleLogout = async () => {
     try {
@@ -62,6 +61,12 @@ export function MobileNav({
     { name: t("nav.dashboard"), path: "/dashboard", icon: LayoutDashboard },
     { name: t("nav.garage"), path: "/garagem", icon: Car },
     { name: t("nav.community"), path: "/community", icon: Users },
+    {
+      name: t("nav.messages"),
+      path: "/messages",
+      icon: MessageCircle,
+      badge: unreadMessages,
+    },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
   ];
 
@@ -78,27 +83,6 @@ export function MobileNav({
         </Link>
 
         <div className="flex shrink-0 items-center gap-0.5">
-          {/* Mensagens ficam no header (como no Instagram): a barra de baixo
-              já está cheia com as 5 áreas principais. */}
-          <Link
-            to="/messages"
-            title={t("nav.messages")}
-            aria-label={t("nav.messages")}
-            aria-current={messagesActive ? "page" : undefined}
-            className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
-              messagesActive
-                ? "bg-[var(--engine-accent)] text-white"
-                : "text-[var(--engine-text-muted)] active:text-[var(--engine-accent)]"
-            }`}
-          >
-            <MessageCircle size={21} />
-            {unreadMessages > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1 text-[9px] font-black text-white">
-                {unreadMessages > 9 ? "9+" : unreadMessages}
-              </span>
-            )}
-          </Link>
-
           {settings && onSettingsUpdate && (
             <Topbar
               settings={settings}
@@ -141,7 +125,9 @@ export function MobileNav({
         </div>
       </header>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
+      {/* 6 colunas: com rótulo de 10px "Comunidade" não cabe em 360px, por
+          isso o texto cai para 9px com tracking apertado aqui embaixo. */}
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-0.5 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
         {menuItems.map((item) => {
           const active = isActivePath(item.path);
           const Icon = item.icon;
@@ -150,18 +136,23 @@ export function MobileNav({
               key={item.path}
               to={item.path}
               aria-current={active ? "page" : undefined}
-              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-semibold transition-colors ${
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-0.5 py-1 text-[9px] font-semibold tracking-tight transition-colors ${
                 active
                   ? "text-[var(--engine-accent)]"
                   : "text-[var(--engine-text-subtle)]"
               }`}
             >
               <span
-                className={`flex h-7 w-full max-w-14 items-center justify-center rounded-lg transition-colors ${
+                className={`relative flex h-7 w-full max-w-12 items-center justify-center rounded-lg transition-colors ${
                   active ? "bg-[var(--engine-accent-soft)]" : ""
                 }`}
               >
-                <Icon size={20} strokeWidth={active ? 2.4 : 2} />
+                <Icon size={19} strokeWidth={active ? 2.4 : 2} />
+                {item.badge > 0 && (
+                  <span className="absolute right-1.5 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1 text-[8px] font-black leading-none text-white">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                )}
               </span>
               <span className="w-full truncate text-center leading-none">
                 {item.name}
