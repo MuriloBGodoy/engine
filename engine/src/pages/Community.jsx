@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { engineDB } from "../services/db";
 import { InfoTip } from "../components/InfoTip";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useToast } from "../components/ToastProvider";
 import { ShareToChatModal } from "../components/ShareToChatModal";
@@ -98,20 +99,17 @@ const getRankingVehicleLabel = (goal = {}) => {
 };
 
 /**
- * Linha do veículo: modelo em destaque, depois marca e ano.
- * Cadastro que só tem a marca preenchida (o modelo fica vazio) virava
- * "Mitsubishi · Mitsubishi · 2015" — aqui a repetição é descartada.
+ * Nome do veículo: "marca + modelo", sem repetir a marca quando o modelo
+ * cadastrado já a contém (ou quando o modelo está vazio, caso em que sobra
+ * só a marca).
  */
-const getVehicleLine = (goal = {}) => {
-  const model = getRankingVehicleLabel(goal);
+const getVehicleTitle = (goal = {}) => {
   const brand = normalizeVehicleText(goal.brand);
-  const year = normalizeVehicleText(goal.year);
-  const rest = [];
+  const model = getRankingVehicleLabel(goal);
 
-  if (brand && brand.toLowerCase() !== model.toLowerCase()) rest.push(brand);
-  if (year) rest.push(year);
-
-  return { model, rest };
+  if (!brand) return model;
+  if (!model || model.toLowerCase() === brand.toLowerCase()) return brand;
+  return `${brand} ${model}`;
 };
 
 const communityGoalId = (goal, userId = "") => {
@@ -366,6 +364,7 @@ function GoalCard({
   onOpenPost,
   onSendToChat,
   onEditCaption,
+  onCommentClick,
   currentUserId,
   variant = "feed",
   initialCommentsOpen = false,
@@ -383,7 +382,9 @@ function GoalCard({
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
   const isModal = variant === "modal";
-  const vehicle = getVehicleLine(goal);
+  // No modal de publicação (desktop) os comentários já estão ao lado: o balão
+  // leva o foco para o compositor em vez de abrir outra folha.
+  const showComments = onCommentClick || (() => setCommentsOpen(true));
 
   const submitComment = (event) => {
     event.preventDefault();
@@ -512,7 +513,7 @@ function GoalCard({
         />
         <ActionButton
           title={t("community.commentsAction")}
-          onClick={() => setCommentsOpen(true)}
+          onClick={showComments}
           icon={<MessageCircle size={20} />}
         />
         {onSendToChat && (
@@ -543,11 +544,9 @@ function GoalCard({
         </p>
 
         <p className="text-sm leading-6 text-[var(--engine-text)]">
-          <span className="font-bold italic">{vehicle.model}</span>
-          {vehicle.rest.length > 0 && (
-            <span className="text-[var(--engine-text-subtle)]">
-              {` · ${vehicle.rest.join(" · ")}`}
-            </span>
+          <span className="font-bold italic">{getVehicleTitle(goal)}</span>
+          {goal.year && (
+            <span className="text-[var(--engine-text-subtle)]">{` · ${goal.year}`}</span>
           )}
         </p>
 
@@ -572,11 +571,12 @@ function GoalCard({
           </p>
         )}
 
-        {/* Só a contagem: os comentários em si abrem no balão ou no post. */}
-        {comments.length > 0 && (
+        {/* Só a contagem: os comentários em si abrem no balão ou no post.
+            Quando eles já estão ao lado (modal no desktop), a linha some. */}
+        {comments.length > 0 && !onCommentClick && (
           <button
             type="button"
-            onClick={() => setCommentsOpen(true)}
+            onClick={showComments}
             className="pt-0.5 text-[13px] font-medium text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
           >
             {t("community.viewAllComments", { count: comments.length })}
@@ -613,7 +613,11 @@ function GoalCard({
   );
 }
 
-function CommentsModal({
+/**
+ * Lista de comentários + compositor. Vive dentro do modal de comentários
+ * (feed) e também na coluna lateral do modal de publicação (desktop).
+ */
+function CommentsPanel({
   goal,
   comments,
   draft,
@@ -621,8 +625,8 @@ function CommentsModal({
   editingDraft,
   commentMenuId,
   currentUserId,
+  composerRef,
   t,
-  onClose,
   onDraftChange,
   onSubmitComment,
   onOpenProfile,
@@ -634,79 +638,94 @@ function CommentsModal({
   onCommentMenuChange,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5">
-      <section className="flex h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text)] shadow-2xl   dark:text-white sm:h-[78vh] sm:rounded-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3  sm:gap-4 sm:px-5 sm:py-4">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
-              Comentários
+    <>
+      <div className="engine-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+        {comments.length ? (
+          <div className="space-y-4">
+            {comments.map((comment, index) => (
+              <CommentRow
+                key={`${goal.id}-comment-${comment.id || index}`}
+                goal={goal}
+                comment={comment}
+                currentUserId={currentUserId}
+                editingCommentId={editingCommentId}
+                editingDraft={editingDraft}
+                commentMenuId={commentMenuId}
+                t={t}
+                onOpenProfile={onOpenProfile}
+                onStartEditComment={onStartEditComment}
+                onEditingDraftChange={onEditingDraftChange}
+                onSubmitEditComment={onSubmitEditComment}
+                onCancelEdit={onCancelEdit}
+                onDeleteComment={onDeleteComment}
+                onCommentMenuChange={onCommentMenuChange}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+            <MessageCircle className="mb-3 text-[var(--engine-text-subtle)]" size={30} />
+            <p className="text-sm font-bold text-[var(--engine-text)]">
+              {t("community.noComments")}
             </p>
-            <h2 className="mt-1 line-clamp-2 text-base font-extrabold italic sm:truncate sm:text-lg">
-              {goal.title}
+          </div>
+        )}
+      </div>
+
+      <form
+        onSubmit={onSubmitComment}
+        className="flex shrink-0 gap-2 border-t border-[var(--engine-border)] p-3 sm:p-4"
+      >
+        <input
+          ref={composerRef}
+          value={draft}
+          onChange={(event) => onDraftChange(event.target.value)}
+          placeholder={t("community.commentPlaceholder")}
+          className="min-w-0 flex-1 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-3 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)] sm:px-4"
+        />
+        <button
+          type="submit"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-accent)] text-white transition hover:brightness-95"
+          title={t("community.send")}
+          aria-label={t("community.send")}
+        >
+          <Send size={18} />
+        </button>
+      </form>
+    </>
+  );
+}
+
+function CommentsModal({ goal, onClose, t, ...panelProps }) {
+  return (
+    <div className="engine-modal-overlay" onClick={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        className="engine-modal-panel engine-pop sm:max-w-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3.5 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-accent)]">
+              {t("community.commentsAction")}
+            </p>
+            <h2 className="mt-1 truncate text-base font-extrabold italic text-[var(--engine-text)]">
+              {getVehicleTitle(goal)}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white   sm:h-10 sm:w-10"
-            title="Fechar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            title={t("common.cancel")}
+            aria-label={t("common.cancel")}
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-          {comments.length ? (
-            <div className="space-y-4">
-              {comments.map((comment, index) => (
-                <CommentRow
-                  key={`${goal.id}-modal-comment-${comment.id || index}`}
-                  goal={goal}
-                  comment={comment}
-                  index={index}
-                  currentUserId={currentUserId}
-                  editingCommentId={editingCommentId}
-                  editingDraft={editingDraft}
-                  commentMenuId={commentMenuId}
-                  t={t}
-                  onOpenProfile={onOpenProfile}
-                  onStartEditComment={onStartEditComment}
-                  onEditingDraftChange={onEditingDraftChange}
-                  onSubmitEditComment={onSubmitEditComment}
-                  onCancelEdit={onCancelEdit}
-                  onDeleteComment={onDeleteComment}
-                  onCommentMenuChange={onCommentMenuChange}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex h-full min-h-64 flex-col items-center justify-center text-center">
-              <MessageCircle className="mb-3 text-[var(--engine-text-subtle)]" size={34} />
-              <p className="text-sm font-bold text-[var(--engine-text)] dark:text-white">
-                {t("community.noComments")}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <form
-          onSubmit={onSubmitComment}
-          className="flex gap-2 border-t border-[var(--engine-border)] p-3  sm:p-4"
-        >
-          <input
-            value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
-            placeholder={t("community.commentPlaceholder")}
-            className="min-w-0 flex-1 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-3 text-sm font-bold outline-none transition focus:border-[var(--engine-accent)]   dark:text-white sm:px-4"
-          />
-          <button
-            type="submit"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--engine-accent)] text-white transition hover:brightness-95"
-            title={t("community.send")}
-          >
-            <Send size={18} />
-          </button>
-        </form>
+        <CommentsPanel goal={goal} t={t} {...panelProps} />
       </section>
     </div>
   );
@@ -715,7 +734,6 @@ function CommentsModal({
 function CommentRow({
   goal,
   comment,
-  index,
   currentUserId,
   editingCommentId,
   editingDraft,
@@ -1325,13 +1343,52 @@ function CaptionModal({ goal, t, onClose, onSave }) {
  * notificações e o link de compartilhar abrem, em vez de só filtrar o feed.
  */
 function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
+  // No desktop os comentários ficam numa coluna ao lado do post (padrão do
+  // lightbox das redes). No celular não há espaço "ao lado", então o balão
+  // continua abrindo a folha de comentários.
+  const isWide = useMediaQuery("(min-width: 1024px)");
+  const [draft, setDraft] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState("");
+  const [editingDraft, setEditingDraft] = useState("");
+  const [commentMenuId, setCommentMenuId] = useState("");
+  const composerRef = useRef(null);
+
+  const comments = goal?.comments || [];
+
+  const submitComment = (event) => {
+    event.preventDefault();
+    const cleanDraft = draft.trim().slice(0, 180);
+    if (!cleanDraft || !goal) return;
+    cardProps.onComment(goal.id, cleanDraft);
+    setDraft("");
+  };
+
+  const startEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditingDraft(comment.text || "");
+  };
+
+  const submitEditComment = (event, comment) => {
+    event.preventDefault();
+    const cleanDraft = editingDraft.trim().slice(0, 180);
+    if (!cleanDraft) return;
+    cardProps.onEditComment(goal.id, comment.id, cleanDraft);
+    setEditingCommentId("");
+    setEditingDraft("");
+  };
+
+  const cancelEdit = () => {
+    setEditingCommentId("");
+    setEditingDraft("");
+  };
+
   return (
     <div className="engine-modal-overlay" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t("community.postTitle")}
-        className="engine-modal-panel engine-pop sm:max-w-2xl"
+        className={`engine-modal-panel engine-pop ${isWide ? "sm:max-w-5xl" : "sm:max-w-2xl"}`}
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3.5">
@@ -1340,7 +1397,7 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
               {t("community.postTitle")}
             </p>
             <h2 className="mt-1 truncate text-base font-extrabold italic text-[var(--engine-text)] dark:text-white">
-              {goal?.title || t("common.loading")}
+              {goal ? getVehicleTitle(goal) : t("common.loading")}
             </h2>
           </div>
           <button
@@ -1354,21 +1411,51 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
           </button>
         </header>
 
-        <div className="engine-modal-body engine-scroll engine-safe-bottom">
-          {goal ? (
-            <GoalCard
-              {...cardProps}
-              goal={goal}
-              t={t}
-              variant="modal"
-              initialCommentsOpen={openComments}
-            />
-          ) : (
-            <p className="px-4 py-16 text-center text-sm font-semibold text-[var(--engine-text-muted)]">
-              {loading ? t("common.loading") : t("community.postMissing")}
-            </p>
-          )}
-        </div>
+        {goal ? (
+          <div className="flex min-h-0 flex-1 lg:flex-row">
+            <div className="engine-scroll engine-safe-bottom min-h-0 min-w-0 flex-1 overflow-y-auto lg:border-r lg:border-[var(--engine-border)]">
+              <GoalCard
+                {...cardProps}
+                goal={goal}
+                t={t}
+                variant="modal"
+                initialCommentsOpen={openComments && !isWide}
+                onCommentClick={
+                  isWide ? () => composerRef.current?.focus() : undefined
+                }
+              />
+            </div>
+
+            {isWide && (
+              <div className="flex min-h-0 w-[360px] shrink-0 flex-col">
+                <CommentsPanel
+                  goal={goal}
+                  comments={comments}
+                  draft={draft}
+                  editingCommentId={editingCommentId}
+                  editingDraft={editingDraft}
+                  commentMenuId={commentMenuId}
+                  currentUserId={cardProps.currentUserId}
+                  composerRef={composerRef}
+                  t={t}
+                  onDraftChange={setDraft}
+                  onSubmitComment={submitComment}
+                  onOpenProfile={cardProps.onOpenProfile}
+                  onStartEditComment={startEditComment}
+                  onEditingDraftChange={setEditingDraft}
+                  onSubmitEditComment={submitEditComment}
+                  onCancelEdit={cancelEdit}
+                  onDeleteComment={cardProps.onDeleteComment}
+                  onCommentMenuChange={setCommentMenuId}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="px-4 py-16 text-center text-sm font-semibold text-[var(--engine-text-muted)]">
+            {loading ? t("common.loading") : t("community.postMissing")}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -2204,8 +2291,12 @@ function SidebarRanking({ ranking, t }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-[var(--engine-text)] dark:text-white">
-                {getRankingVehicleLabel(goal)}
-                <span className="font-bold text-[var(--engine-text-subtle)]"> / {goal.author}</span>
+                {getVehicleTitle(goal)}
+                {goal.year && (
+                  <span className="font-bold text-[var(--engine-text-subtle)]">
+                    {` · ${goal.year}`}
+                  </span>
+                )}
               </p>
               <p className="truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
                 {goal.username} · {goal.likes} likes · {getProgress(goal).toFixed(0)}%
@@ -2286,7 +2377,7 @@ function RankingPanel({ ranking, t }) {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-lg font-black italic text-[var(--engine-text)] dark:text-white">
-                  {goal.title}
+                  {getVehicleTitle(goal)}
                 </p>
                 <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                   {goal.author} / {goal.username}
