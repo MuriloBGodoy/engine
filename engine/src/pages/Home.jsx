@@ -26,16 +26,12 @@ export function Home() {
       />
 
       <section className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-        <span className="engine-rise mb-6 inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--engine-text-muted)] shadow-[var(--engine-shadow-sm)] sm:text-[11px]">
+        <span className="engine-rise mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--engine-text-muted)] shadow-[var(--engine-shadow-sm)] sm:text-[11px]">
           <span className="relative flex h-1.5 w-1.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--engine-accent)] opacity-60" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--engine-accent)]" />
           </span>
-          <span>{t("home.select")}</span>
-          <span className="text-[var(--engine-text-subtle)]">·</span>
-          <span>{t("home.track")}</span>
-          <span className="text-[var(--engine-text-subtle)]">·</span>
-          <span>{t("home.conquer")}</span>
+          <span className="truncate">{t("home.kicker")}</span>
         </span>
 
         <h1

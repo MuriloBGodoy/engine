@@ -183,6 +183,19 @@ export const inferLocation = (city) => {
   return matches && matches.length === 1 ? matches[0] : null;
 };
 
+// Verifica se a cidade pertence ao país informado. Só REPROVA quando a cidade
+// é conhecida no dataset e não existe no país selecionado (ex.: país = BR,
+// cidade = "Lisboa"). Cidade desconhecida (texto livre) ou país "all" passam —
+// não dá para exigir que toda cidade do mundo esteja no dataset.
+export const isCityInCountry = (countryCode, city) => {
+  const key = normalizeCityKey(city);
+  if (!key) return true;
+  if (!countryCode || countryCode === "all") return true;
+  const matches = cityIndex.get(key);
+  if (!matches || !matches.length) return true;
+  return matches.some((entry) => entry.country === countryCode);
+};
+
 export const getCountry = (code) =>
   countries.find((country) => country.code === code) || null;
 

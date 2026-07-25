@@ -39,6 +39,12 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update: if isOwner(userId) && request.resource.data.userId == request.auth.uid;
       allow delete: if isOwner(userId);
+
+      // Seguidores: cada pessoa só cria/remove o próprio doc de seguidor.
+      match /followers/{followerId} {
+        allow read: if signedIn();
+        allow create, delete: if signedIn() && request.auth.uid == followerId;
+      }
     }
 
     match /communityGoals/{goalId} {

@@ -32,9 +32,9 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { engineDB } from "../services/db";
-import { storage } from "../services/firebase";
+import { auth, storage } from "../services/firebase";
 import { languageOptions } from "../services/languages";
-import { countries, getStates } from "../services/locations";
+import { countries, getStates, getCities, isCityInCountry } from "../services/locations";
 import { PageHeader } from "../components/PageHeader";
 import { useConfirm } from "../components/ConfirmProvider";
 
@@ -210,6 +210,11 @@ export function Settings({ user, settings, onSettingsUpdate }) {
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
   }, [draft?.profile]);
 
+  const profileCities = useMemo(
+    () => getCities(draft?.profile?.country || "BR", draft?.profile?.state || ""),
+    [draft?.profile?.country, draft?.profile?.state],
+  );
+
   const updateGroup = (group, key, value) => {
     setDraft((current) => ({
       ...current,
@@ -237,6 +242,18 @@ export function Settings({ user, settings, onSettingsUpdate }) {
   };
 
   const saveSettings = async () => {
+    if (
+      draft.profile?.location?.trim() &&
+      !isCityInCountry(draft.profile.country, draft.profile.location)
+    ) {
+      setActiveSection("profile");
+      setStatus({
+        type: "error",
+        text: t("settings.status.cityCountryMismatch"),
+      });
+      return;
+    }
+
     setSaving(true);
     setStatus({ type: "", text: "" });
 
@@ -364,7 +381,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
 
   const handlePasswordReset = async () => {
     try {
-      await sendPasswordResetEmail(user.auth, user.email);
+      await sendPasswordResetEmail(auth, user.email);
       setStatus({ type: "success", text: t("settings.status.resetSent") });
     } catch {
       setStatus({ type: "error", text: t("settings.status.saveError") });
@@ -597,6 +614,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                         onChange={(e) => {
                           updateGroup("profile", "country", e.target.value);
                           updateGroup("profile", "state", "");
+                          updateGroup("profile", "location", "");
                         }}
                       >
                         {countries.map((item) => (
@@ -635,7 +653,15 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                           updateGroup("profile", "location", e.target.value)
                         }
                         placeholder={t("settings.placeholders.location")}
+                        list={profileCities.length ? "settings-city-suggestions" : undefined}
                       />
+                      {profileCities.length > 0 && (
+                        <datalist id="settings-city-suggestions">
+                          {profileCities.map((city) => (
+                            <option key={city} value={city} />
+                          ))}
+                        </datalist>
+                      )}
                     </Field>
                     <div className="md:col-span-2">
                       <Field label={t("settings.fields.bio")}>

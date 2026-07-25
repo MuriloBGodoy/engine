@@ -52,6 +52,7 @@ import {
   getCities,
   getCountryName,
   getStateName,
+  isCityInCountry,
 } from"../services/locations";
 import { useConfirm } from"../components/ConfirmProvider";
 import { useToast } from"../components/ToastProvider";
@@ -532,7 +533,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 p-3.5 sm:p-4">
+      <div className="flex flex-1 flex-col gap-2.5 p-3.5 sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="line-clamp-2 text-base font-extrabold italic leading-5 tracking-tight text-[var(--engine-text)] sm:text-lg sm:leading-6 dark:text-white">
@@ -570,11 +571,11 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           )}
         </div>
 
-        <p className="line-clamp-3 min-h-[4.5rem] text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+        <p className="line-clamp-2 text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
           {listing.description}
         </p>
 
-        <div className="grid gap-2 text-xs font-bold text-[var(--engine-text-muted)]">
+        <div className="grid gap-1.5 text-xs font-bold text-[var(--engine-text-muted)]">
           <p className="flex min-w-0 items-center gap-2">
             <ModeIcon className="shrink-0 text-[var(--engine-accent)]" size={16} />
             <span className="truncate">{t(modeLabelKeys[listing.serviceMode] || modeLabelKeys.hybrid)}</span>
@@ -597,8 +598,8 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           )}
         </div>
 
-        <div className="mt-auto space-y-3">
-          <div className="flex items-center justify-between gap-3 border-t border-[var(--engine-border)] pt-3">
+        <div className="mt-auto space-y-2.5">
+          <div className="flex items-center justify-between gap-3 border-t border-[var(--engine-border)] pt-2.5">
             <p className="min-w-0 truncate text-base font-black italic text-[var(--engine-accent)]">
               {listing.price || t("services.priceFallback")}
             </p>
@@ -630,7 +631,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               rel="noreferrer"
               aria-disabled={!phone}
               aria-label={t("services.whatsapp")}
-              className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
+              className={`flex h-11 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-10 ${
                 phone
                   ?"bg-emerald-600 text-white hover:bg-emerald-700"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
@@ -644,7 +645,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               onClick={stopAction}
               aria-disabled={!listing.email}
               aria-label={t("services.sendEmail")}
-              className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
+              className={`flex h-11 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-10 ${
                 listing.email
                   ?"bg-[var(--engine-accent)] text-white hover:bg-[var(--engine-accent)] hover:brightness-95"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
@@ -660,7 +661,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               rel="noreferrer"
               aria-disabled={!showMap}
               aria-label={t("services.viewRoute")}
-              className={`flex h-12 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-11 ${
+              className={`flex h-11 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-10 ${
                 showMap
                   ?"border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
@@ -2177,6 +2178,10 @@ export function Services({ user, settings }) {
     }
     if (["mobile","hybrid"].includes(form.serviceMode) && !form.serviceArea.trim()) {
       flash(t("services.flash.areaRequired"));
+      return;
+    }
+    if (form.city.trim() && !isCityInCountry(form.country, form.city)) {
+      flash(t("services.flash.cityCountryMismatch"));
       return;
     }
 

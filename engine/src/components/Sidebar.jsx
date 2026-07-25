@@ -107,7 +107,7 @@ export function Sidebar({
               to={item.path}
               title={collapsed ? item.name : undefined}
               className={`group relative flex h-11 items-center rounded-xl text-[14px] font-medium transition-colors ${
-                collapsed ? "justify-center" : "gap-3 px-3"
+                collapsed ? "mx-auto w-11 justify-center" : "gap-3 px-3"
               } ${
                 active
                   ? "bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
@@ -124,18 +124,19 @@ export function Sidebar({
                   <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[var(--engine-accent)] ring-2 ring-[var(--engine-surface)]" />
                 )}
               </span>
-              <span
-                className={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap transition-all duration-300 ${
-                  collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-                }`}
-              >
-                <span className="truncate">{item.name}</span>
-                {item.badge > 0 && (
-                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1.5 text-[10px] font-black text-white">
-                    {item.badge > 9 ? "9+" : item.badge}
-                  </span>
-                )}
-              </span>
+              {/* Recolhida: só o ícone (centralizado no quadrado). O rótulo,
+                  mesmo invisível, empurrava o ícone e fazia o destaque
+                  parecer vazar para a direita. */}
+              {!collapsed && (
+                <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap">
+                  <span className="truncate">{item.name}</span>
+                  {item.badge > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1.5 text-[10px] font-black text-white">
+                      {item.badge > 9 ? "9+" : item.badge}
+                    </span>
+                  )}
+                </span>
+              )}
             </Link>
           );
         })}

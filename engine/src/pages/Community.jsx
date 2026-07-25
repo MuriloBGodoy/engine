@@ -53,6 +53,37 @@ const emptyInteraction = {
 const getProgress = (goal) =>
   Math.min(goal.targetValue ? (goal.savedValue / goal.targetValue) * 100 : 0, 100);
 
+const isGoalCompleted = (goal) => getProgress(goal) >= 100;
+
+const RELATIVE_UNITS = [
+  ["year", 31536000],
+  ["month", 2592000],
+  ["week", 604800],
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+// Tempo relativo ("há 2 horas") no idioma atual, sem depender de i18n manual.
+const formatRelativeTime = (value, language = "pt-BR") => {
+  if (!value) return "";
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return "";
+  const diffSeconds = Math.round((time - Date.now()) / 1000);
+  const absSeconds = Math.abs(diffSeconds);
+  try {
+    const rtf = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
+    for (const [unit, secondsInUnit] of RELATIVE_UNITS) {
+      if (absSeconds >= secondsInUnit) {
+        return rtf.format(Math.round(diffSeconds / secondsInUnit), unit);
+      }
+    }
+    return rtf.format(0, "second");
+  } catch {
+    return "";
+  }
+};
+
 const getInitials = (name = "U") =>
   name
     .split(" ")
@@ -653,6 +684,13 @@ function GoalCard({
           <InfoTip text={t("community.privacyLine")} align="right" />
         </div>
 
+        {isGoalCompleted(goal) && (
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--engine-accent-soft)] px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
+            <Trophy size={11} />
+            {t("community.completed")}
+          </span>
+        )}
+
         {goal.note && (
           <p className="line-clamp-2 text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
             {goal.note}
@@ -835,7 +873,13 @@ function CommentRow({
   onDeleteComment,
   onCommentMenuChange,
 }) {
+  const { i18n } = useTranslation();
   const commentText = typeof comment === "string" ? comment : comment.text;
+  const commentTime =
+    typeof comment === "string"
+      ? ""
+      : formatRelativeTime(comment.createdAt, i18n.language);
+  const wasEdited = typeof comment !== "string" && Boolean(comment.editedAt);
   const commentAuthor =
     typeof comment === "string" ? t("community.member") : comment.author;
   const commentUsername = typeof comment === "string" ? "" : comment.username;
@@ -953,9 +997,11 @@ function CommentRow({
             <p className="font-medium text-[var(--engine-text-muted)] ">
               {commentText}
             </p>
-            {typeof comment !== "string" && comment.editedAt && (
+            {(commentTime || wasEdited) && (
               <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
-                editado
+                {commentTime}
+                {commentTime && wasEdited ? " · " : ""}
+                {wasEdited ? t("community.edited") : ""}
               </p>
             )}
           </>
@@ -1232,18 +1278,32 @@ function ShareModal({
 function UserProfileModal({
   profile,
   loading,
+  isFollowing = false,
   t,
   currentUserId,
   onClose,
   onOpenGoal,
   onMessage,
+  onFollow,
 }) {
   const canMessage =
     Boolean(onMessage) &&
     Boolean(profile?.userId) &&
     profile.userId !== currentUserId;
+  const canFollow =
+    Boolean(onFollow) &&
+    Boolean(profile?.userId) &&
+    profile.userId !== currentUserId;
   const goals = profile?.goals || [];
   const stats = getProfileStats(profile);
+  // Contagem reativa: o snapshot do backend (isFollowedByMe) é o ponto de
+  // partida e o toggle local ajusta na hora, sem esperar um refetch.
+  const followersDisplay = Math.max(
+    0,
+    (profile?.followersCount || 0) +
+      (isFollowing ? 1 : 0) -
+      (profile?.isFollowedByMe ? 1 : 0),
+  );
 
   return (
     <div className="engine-modal-overlay">
@@ -1279,6 +1339,23 @@ function UserProfileModal({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {canFollow && (
+              <button
+                type="button"
+                onClick={() => onFollow(profile)}
+                title={isFollowing ? t("community.following") : t("community.follow")}
+                className={`inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[10px] font-black uppercase tracking-widest transition ${
+                  isFollowing
+                    ? "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                    : "bg-[var(--engine-accent)] text-white hover:brightness-95"
+                }`}
+              >
+                {isFollowing ? <UserCheck size={15} /> : <UserPlus size={15} />}
+                <span className="hidden sm:inline">
+                  {isFollowing ? t("community.following") : t("community.follow")}
+                </span>
+              </button>
+            )}
             {canMessage && (
               <button
                 type="button"
@@ -1308,7 +1385,8 @@ function UserProfileModal({
             </p>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Metric icon={Users} label={t("community.profileStats.followers")} value={followersDisplay} />
             <Metric icon={Car} label={t("community.profileStats.goals")} value={stats.goalsCount} />
             <Metric icon={Heart} label={t("community.profileStats.likes")} value={stats.likesCount} />
             <Metric icon={Award} label={t("community.profileStats.avg")} value={`${Number(stats.averageProgress || 0).toFixed(0)}%`} />
@@ -1554,6 +1632,10 @@ export function Community({ cars = [], settings, user }) {
   const confirm = useConfirm();
   const toast = useToast();
   const navigate = useNavigate();
+  // No celular o card do feed já mostra o post inteiro; abrir um modal por
+  // cima é redundante. A publicação em tela cheia fica reservada ao
+  // redirecionamento (perfil, notificação, link) — que vale nos dois casos.
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("feed");
   const [query, setQuery] = useState("");
@@ -1814,8 +1896,10 @@ export function Community({ cars = [], settings, user }) {
     flash(t("community.ratingSaved"));
   };
 
-  const handleFollow = (goal) => {
-    const followId = goal.ownerId || goal.username;
+  const handleFollow = (target) => {
+    // Aceita tanto uma meta do feed (ownerId) quanto um perfil (userId).
+    const ownerId = target.ownerId || target.userId || "";
+    const followId = ownerId || target.username;
     const wasFollowing = communityState.following.includes(followId);
     persistState((current) => {
       const isFollowing = current.following.includes(followId);
@@ -1827,9 +1911,15 @@ export function Community({ cars = [], settings, user }) {
       };
     });
 
-    if (!wasFollowing && goal.ownerId && goal.ownerId !== user?.uid) {
+    if (ownerId && ownerId !== user?.uid) {
       engineDB
-        .notifyFollow(goal.ownerId)
+        .setFollow(ownerId, !wasFollowing)
+        .catch((error) => console.error(error));
+    }
+
+    if (!wasFollowing && ownerId && ownerId !== user?.uid) {
+      engineDB
+        .notifyFollow(ownerId)
         .catch((error) => console.error(error));
     }
   };
@@ -2136,7 +2226,7 @@ export function Community({ cars = [], settings, user }) {
                       onOpenProfile={handleOpenProfile}
                       onEditComment={handleEditComment}
                       onDeleteComment={handleDeleteComment}
-                      onOpenPost={openPost}
+                      onOpenPost={isDesktop ? openPost : undefined}
                       onSendToChat={setPostToShare}
                       onEditCaption={setCaptionGoal}
                       currentUserId={user?.uid}
@@ -2271,11 +2361,15 @@ export function Community({ cars = [], settings, user }) {
         <UserProfileModal
           profile={profileModal.profile}
           loading={profileModal.loading}
+          isFollowing={communityState.following.includes(
+            profileModal.profile?.userId,
+          )}
           t={t}
           currentUserId={user?.uid}
           onClose={closeProfileModal}
           onOpenGoal={handleOpenProfileGoal}
           onMessage={handleMessageProfile}
+          onFollow={handleFollow}
         />
       )}
 

@@ -323,6 +323,18 @@ const publicProfilesCollection = () => collection(firestore, PUBLIC_PROFILES_COL
 const publicProfileDoc = (userId) =>
   doc(firestore, PUBLIC_PROFILES_COLLECTION, String(userId));
 
+const followersCollection = (userId) =>
+  collection(firestore, PUBLIC_PROFILES_COLLECTION, String(userId), "followers");
+
+const followerDoc = (targetUserId, followerId) =>
+  doc(
+    firestore,
+    PUBLIC_PROFILES_COLLECTION,
+    String(targetUserId),
+    "followers",
+    String(followerId),
+  );
+
 const usernameDocId = (username) => normalizeUsername(username).replace(/^@/, "");
 
 const getProfileSnapshot = (settings = {}, userId = currentUserId) => {
@@ -1319,10 +1331,15 @@ export const engineDB = {
       return apiRequest(`/community/users/${userId}`);
     }
 
-    const [profileSnapshot, goalsSnapshot] = await Promise.all([
-      getDoc(publicProfileDoc(userId)),
-      getDocs(query(collection(firestore, COMMUNITY_COLLECTION), where("ownerId", "==", userId))),
-    ]);
+    const [profileSnapshot, goalsSnapshot, followersSnapshot, myFollowSnapshot] =
+      await Promise.all([
+        getDoc(publicProfileDoc(userId)),
+        getDocs(query(collection(firestore, COMMUNITY_COLLECTION), where("ownerId", "==", userId))),
+        getDocs(followersCollection(userId)).catch(() => ({ size: 0 })),
+        currentUserId && currentUserId !== userId
+          ? getDoc(followerDoc(userId, currentUserId)).catch(() => null)
+          : Promise.resolve(null),
+      ]);
 
     const goals = goalsSnapshot.docs.map((item) =>
       normalizeCommunityGoal({ id: item.id, ...item.data() }),
@@ -1353,7 +1370,39 @@ export const engineDB = {
       goalsCount: goals.length,
       likesCount: goals.reduce((sum, goal) => sum + Object.keys(goal.likesBy || {}).length, 0),
       averageProgress: goals.length ? totalProgress / goals.length : 0,
+      followersCount: followersSnapshot?.size || 0,
+      isFollowedByMe: Boolean(myFollowSnapshot?.exists?.()),
     };
+  },
+
+  // Segue / deixa de seguir uma pessoa: grava (ou remove) o doc do seguidor
+  // em publicProfiles/{alvo}/followers/{eu}. A notificação de novo seguidor
+  // continua saindo de quem chama (Community.handleFollow).
+  async setFollow(targetUserId, isFollowing, followerId = currentUserId) {
+    if (!targetUserId || !followerId || targetUserId === followerId) return;
+
+    if (apiEnabled()) {
+      await apiRequest(`/community/users/${targetUserId}/follow`, {
+        method: isFollowing ? "POST" : "DELETE",
+      });
+      return;
+    }
+
+    const ref = followerDoc(targetUserId, followerId);
+    if (isFollowing) {
+      const actorSettings = await this.getSettings();
+      const actor = getProfileSnapshot(actorSettings, followerId);
+      await setDoc(ref, {
+        followerId,
+        author: actor.author,
+        username: actor.username,
+        avatar: actor.avatar,
+        avatarInitials: actor.avatarInitials,
+        createdAt: serverTimestamp(),
+      });
+    } else {
+      await deleteDoc(ref);
+    }
   },
 
   async notifyUser(userId, notification) {

@@ -2362,6 +2362,63 @@ applyLocalePatch("es-ES", "es-ES", {
   services: mergeDeep({ ...sharedServiceFallback }, servicesEs),
 });
 
+// Chaves novas (change requests): kicker da home, tempo/meta na comunidade,
+// seguidores e validação de cidade por país.
+applyLocalePatch("pt-BR", "pt-BR", {
+  home: { kicker: "Sua garagem virou rede" },
+  community: {
+    completed: "Meta conquistada",
+    edited: "editado",
+    profileStats: { followers: "seguidores" },
+  },
+  settings: {
+    status: {
+      cityCountryMismatch: "A cidade informada não pertence ao país selecionado.",
+    },
+  },
+  services: {
+    flash: {
+      cityCountryMismatch: "A cidade informada não pertence ao país selecionado.",
+    },
+  },
+});
+applyLocalePatch("en-US", "en-US", {
+  home: { kicker: "Your garage, now a network" },
+  community: {
+    completed: "Goal achieved",
+    edited: "edited",
+    profileStats: { followers: "followers" },
+  },
+  settings: {
+    status: {
+      cityCountryMismatch: "The city does not belong to the selected country.",
+    },
+  },
+  services: {
+    flash: {
+      cityCountryMismatch: "The city does not belong to the selected country.",
+    },
+  },
+});
+applyLocalePatch("es-ES", "es-ES", {
+  home: { kicker: "Tu garaje, ahora una red" },
+  community: {
+    completed: "Meta conseguida",
+    edited: "editado",
+    profileStats: { followers: "seguidores" },
+  },
+  settings: {
+    status: {
+      cityCountryMismatch: "La ciudad no pertenece al país seleccionado.",
+    },
+  },
+  services: {
+    flash: {
+      cityCountryMismatch: "La ciudad no pertenece al país seleccionado.",
+    },
+  },
+});
+
 resources["pt-PT"] = resources["pt-BR"];
 resources["en-GB"] = resources["en-US"];
 resources["es-MX"] = resources["es-ES"];
