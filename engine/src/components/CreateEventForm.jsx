@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Upload, Loader2, AlertTriangle } from "lucide-react";
+import { X, Upload, Loader2 } from "lucide-react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "../services/firebase";
 import { useToast } from "./ToastProvider";
 import { engineEvents } from "../services/events";
+import { countries, getStates, getCities } from "../services/locations";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] outline-none transition-colors focus:border-[var(--engine-accent)]";
@@ -19,11 +20,6 @@ const EVENT_TYPES = [
   { value: "concours", label: "Concurso" },
 ];
 
-const STATES = [
-  "SP", "RJ", "MG", "BA", "RS", "PE", "CE", "PA", "SC", "GO",
-  "PB", "MA", "ES", "PI", "RN", "AL", "MT", "MS", "DF", "AC",
-  "AM", "AP", "RO", "RR", "TO",
-];
 
 export function CreateEventForm({ onSuccess, onCancel }) {
   const { t } = useTranslation();
@@ -38,8 +34,10 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     type: "casual",
     eventDate: "",
     eventTime: "14:00",
-    location: "",
-    state: "SP",
+    country: "BR",
+    state: "",
+    city: "",
+    address: "",
     imageFile: null,
     isPaid: false,
     ticketPrice: "",
@@ -49,6 +47,9 @@ export function CreateEventForm({ onSuccess, onCancel }) {
       facebookGroup: "",
     },
   });
+
+  const states = form.country ? getStates(form.country) : [];
+  const cities = form.state ? getCities(form.country, form.state) : [];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -116,8 +117,8 @@ export function CreateEventForm({ onSuccess, onCancel }) {
       return;
     }
 
-    if (!form.location.trim()) {
-      showToast("Local do evento é obrigatório", "error");
+    if (!form.state || !form.city) {
+      showToast("Selecione estado e cidade", "error");
       return;
     }
 
@@ -140,14 +141,18 @@ export function CreateEventForm({ onSuccess, onCancel }) {
 
       const eventDateTime = `${form.eventDate}T${form.eventTime}:00Z`;
 
+      const location = form.address
+        ? `${form.address}, ${form.city}`
+        : form.city;
+
       const eventData = {
         title: form.title,
         description: form.description,
         type: form.type,
         eventDate: new Date(eventDateTime).toISOString(),
-        location: form.location,
+        location: location,
         state: form.state,
-        country: "BR",
+        country: form.country,
         image: imageUrl,
         isPaid: form.isPaid,
         ticketPrice: form.isPaid ? Number(form.ticketPrice) : 0,
@@ -211,9 +216,8 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             />
           </div>
 
-          {/* Grid 2 colunas */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Tipo */}
+          {/* Tipo + Data + Hora */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className={labelClass}>Tipo</label>
               <select
@@ -230,7 +234,6 @@ export function CreateEventForm({ onSuccess, onCancel }) {
               </select>
             </div>
 
-            {/* Data */}
             <div className="space-y-2">
               <label className={labelClass}>Data</label>
               <input
@@ -243,7 +246,6 @@ export function CreateEventForm({ onSuccess, onCancel }) {
               />
             </div>
 
-            {/* Hora */}
             <div className="space-y-2">
               <label className={labelClass}>Hora</label>
               <input
@@ -254,36 +256,75 @@ export function CreateEventForm({ onSuccess, onCancel }) {
                 className={inputClass}
               />
             </div>
+          </div>
 
-            {/* Estado */}
+          {/* Localização: País → Estado → Cidade */}
+          <div className="space-y-2">
+            <label className={labelClass}>País</label>
+            <select
+              name="country"
+              value={form.country}
+              onChange={handleChange}
+              className={inputClass}
+            >
+              {countries.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className={labelClass}>Estado</label>
               <select
                 name="state"
                 value={form.state}
-                onChange={handleChange}
+                onChange={(e) => {
+                  handleChange(e);
+                  setForm((prev) => ({ ...prev, city: "" }));
+                }}
                 className={inputClass}
               >
-                {STATES.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
+                <option value="">Selecione...</option>
+                {states.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className={labelClass}>Cidade</label>
+              <select
+                name="city"
+                value={form.city}
+                onChange={handleChange}
+                className={inputClass}
+                disabled={!form.state}
+              >
+                <option value="">Selecione...</option>
+                {cities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Local */}
+          {/* Endereço complementar */}
           <div className="space-y-2">
-            <label className={labelClass}>Local do Evento</label>
+            <label className={labelClass}>Endereço (Opcional)</label>
             <input
               type="text"
-              name="location"
-              value={form.location}
+              name="address"
+              value={form.address}
               onChange={handleChange}
-              placeholder="ex: Shopping Interlagos, São Paulo"
+              placeholder="ex: Rua das Flores, 123"
               className={inputClass}
-              required
             />
           </div>
 

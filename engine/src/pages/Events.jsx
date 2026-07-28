@@ -5,6 +5,7 @@ import { engineEvents } from "../services/events";
 import { EventCard } from "../components/EventCard";
 import { CreateEventForm } from "../components/CreateEventForm";
 import { useToast } from "../components/ToastProvider";
+import { getStates } from "../services/locations";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] outline-none transition-colors focus:border-[var(--engine-accent)]";
@@ -20,12 +21,6 @@ const EVENT_TYPES = [
   { value: "concours", label: "Concurso" },
 ];
 
-const STATES = [
-  "Todos",
-  "SP", "RJ", "MG", "BA", "RS", "PE", "CE", "PA", "SC", "GO",
-  "PB", "MA", "ES", "PI", "RN", "AL", "MT", "MS", "DF", "AC",
-  "AM", "AP", "RO", "RR", "TO",
-];
 
 export function Events() {
   const { t } = useTranslation();
@@ -130,9 +125,10 @@ export function Events() {
               }
               className={inputClass}
             >
-              {STATES.map((state) => (
-                <option key={state} value={state}>
-                  {state}
+              <option value="Todos">Todos</option>
+              {getStates("BR").map((state) => (
+                <option key={state.code} value={state.code}>
+                  {state.name}
                 </option>
               ))}
             </select>
