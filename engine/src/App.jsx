@@ -28,6 +28,8 @@ import { ServiceApprovals, Services } from "./pages/Services";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Events } from "./pages/Events";
+import { EventDetails } from "./pages/EventDetails";
 
 function App() {
   const { i18n, t } = useTranslation();
@@ -243,6 +245,14 @@ function App() {
                 <ServiceApprovals user={user} />
               </RequireAuth>
             }
+          />
+          <Route
+            path="/events"
+            element={<Events />}
+          />
+          <Route
+            path="/events/:eventId"
+            element={<EventDetails />}
           />
           <Route
             path="/settings"

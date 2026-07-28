@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Car,
   BriefcaseBusiness,
+  Calendar,
   Home,
   LayoutDashboard,
   LogIn,
@@ -69,6 +70,7 @@ export function TopNav({
       badge: unreadMessages,
     },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
+    { name: "Eventos", path: "/events", icon: Calendar },
     { name: t("nav.settings"), path: "/settings", icon: Settings },
   ];
 

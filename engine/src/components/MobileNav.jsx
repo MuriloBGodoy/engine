@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Car,
   BriefcaseBusiness,
+  Calendar,
   Home,
   LayoutDashboard,
   LogIn,
@@ -72,6 +73,7 @@ export function MobileNav({
       badge: unreadMessages,
     },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
+    { name: "Eventos", path: "/events", icon: Calendar },
   ];
 
   const isActivePath = (path) =>
