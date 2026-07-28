@@ -45,7 +45,20 @@ export function SocialAuthButtons() {
       if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
         return;
       }
-      setError(t("auth.social.error"));
+      // Loga o código real para diagnóstico (o texto na tela é amigável).
+      console.error("Social sign-in falhou:", err?.code, err?.message);
+      if (err?.code === "auth/unauthorized-domain") {
+        // Domínio (ex.: *.netlify.app) não está em Authentication →
+        // Settings → Authorized domains no Firebase Console.
+        setError(t("auth.social.unauthorizedDomain"));
+      } else if (err?.code === "auth/operation-not-allowed") {
+        // Provedor não habilitado em Authentication → Sign-in method.
+        setError(t("auth.social.notEnabled"));
+      } else if (err?.code === "auth/popup-blocked") {
+        setError(t("auth.social.popupBlocked"));
+      } else {
+        setError(t("auth.social.error"));
+      }
     } finally {
       setPending("");
     }
