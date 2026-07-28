@@ -169,6 +169,13 @@ export function Events() {
           ))}
         </div>
       )}
+
+      {showCreateForm && (
+        <CreateEventForm
+          onSuccess={handleCreateSuccess}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      )}
     </div>
   );
 }
