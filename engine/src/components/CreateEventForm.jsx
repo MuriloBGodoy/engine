@@ -1,12 +1,23 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, ImagePlus, Plus, Wrench } from "lucide-react";
+import { X, ImagePlus, Plus, Wrench, ExternalLink } from "lucide-react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "../services/firebase";
 import { auth } from "../services/firebase";
 import { useToast } from "./ToastProvider";
 import { engineEvents } from "../services/events";
 import { countries, getStates, getCities } from "../services/locations";
+
+const mapQuery = (event) =>
+  [event.address, event.city].filter(Boolean).join(",");
+
+const hasMapAddress = (event) => Boolean(mapQuery(event));
+
+const getMapUrl = (event) =>
+  `https://www.google.com/maps?q=${encodeURIComponent(mapQuery(event))}&output=embed`;
+
+const getDirectionsUrl = (event) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery(event))}`;
 
 const MAX_PHOTOS = 4;
 
@@ -55,6 +66,28 @@ function getInitials(name = "U") {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+function MapPreview({ event, compact = false }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]">
+      <iframe
+        title={`Mapa de ${event.city}`}
+        src={getMapUrl(event)}
+        loading="lazy"
+        className={`${compact ? "h-44" : "h-64"} w-full border-0`}
+      />
+      <a
+        href={getDirectionsUrl(event)}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center justify-center gap-2 border-t border-[var(--engine-border)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-accent)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+      >
+        <ExternalLink size={15} />
+        Abrir no Google Maps
+      </a>
+    </div>
+  );
 }
 
 const EVENT_TYPES = [
@@ -401,6 +434,16 @@ export function CreateEventForm({ onSuccess, onCancel }) {
               placeholder="ex: Rua das Flores, 123"
             />
           </Field>
+
+          {/* Preview do Mapa */}
+          {hasMapAddress(form) && (
+            <div className="md:col-span-2">
+              <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
+                Visualização do Mapa
+              </p>
+              <MapPreview event={form} />
+            </div>
+          )}
 
           {/* Máx Participantes */}
           <Field label="Máx Participantes">
