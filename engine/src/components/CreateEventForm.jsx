@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Loader2, AlertTriangle } from "lucide-react";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { storage } from "../services/firebase";
 import { useToast } from "./ToastProvider";
 import { engineEvents } from "../services/events";
+
+const inputClass =
+  "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] outline-none transition-colors focus:border-[var(--engine-accent)]";
+
+const labelClass =
+  "text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-muted)]";
 
 const EVENT_TYPES = [
   { value: "casual", label: "Casual" },
@@ -22,6 +30,8 @@ export function CreateEventForm({ onSuccess, onCancel }) {
   const { showToast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -30,7 +40,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     eventTime: "14:00",
     location: "",
     state: "SP",
-    image: "",
+    imageFile: null,
     isPaid: false,
     ticketPrice: "",
     maxParticipants: "",
@@ -60,6 +70,39 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Por favor, selecione uma imagem válida", "error");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Imagem muito grande (máx 5MB)", "error");
+      return;
+    }
+
+    setImageLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result || "");
+      };
+      reader.readAsDataURL(file);
+
+      setForm((prev) => ({
+        ...prev,
+        imageFile: file,
+      }));
+    } catch (error) {
+      showToast("Erro ao processar imagem", "error");
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -86,6 +129,15 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     setLoading(true);
 
     try {
+      let imageUrl = "";
+
+      if (form.imageFile) {
+        const fileName = `events/${Date.now()}-${form.imageFile.name}`;
+        const storageRef = ref(storage, fileName);
+        const snapshot = await uploadBytes(storageRef, form.imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      }
+
       const eventDateTime = `${form.eventDate}T${form.eventTime}:00Z`;
 
       const eventData = {
@@ -96,7 +148,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         location: form.location,
         state: form.state,
         country: "BR",
-        image: form.image,
+        image: imageUrl,
         isPaid: form.isPaid,
         ticketPrice: form.isPaid ? Number(form.ticketPrice) : 0,
         maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : 0,
@@ -107,7 +159,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
       };
 
       await engineEvents.createEvent(eventData);
-      showToast("Evento criado com sucesso! 🎉", "success");
+      showToast("Evento criado com sucesso", "success");
       onSuccess?.();
     } catch (error) {
       showToast(error.message || "Erro ao criar evento", "error");
@@ -117,60 +169,58 @@ export function CreateEventForm({ onSuccess, onCancel }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-[var(--engine-bg)] rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Criar Evento</h2>
+        <div className="sticky top-0 bg-[var(--engine-surface)] border-b border-[var(--engine-border)] p-6 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-[var(--engine-text)]">Criar Evento</h2>
           <button
             onClick={onCancel}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition"
+            className="p-2 hover:bg-[var(--engine-surface-2)] rounded-lg transition"
           >
-            <X size={24} />
+            <X size={24} className="text-[var(--engine-text)]" />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Título */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Título do Evento *
-            </label>
+          <div className="space-y-2">
+            <label className={labelClass}>Título do Evento</label>
             <input
               type="text"
               name="title"
               value={form.title}
               onChange={handleChange}
               placeholder="ex: 3ª Edição Cars & Coffee SP"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+              className={inputClass}
               required
             />
           </div>
 
           {/* Descrição */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">Descrição</label>
+          <div className="space-y-2">
+            <label className={labelClass}>Descrição</label>
             <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
               placeholder="Descreva seu evento..."
               rows="4"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+              className={inputClass}
             />
           </div>
 
           {/* Grid 2 colunas */}
           <div className="grid grid-cols-2 gap-4">
             {/* Tipo */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">Tipo</label>
+            <div className="space-y-2">
+              <label className={labelClass}>Tipo</label>
               <select
                 name="type"
                 value={form.type}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                className={inputClass}
               >
                 {EVENT_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -181,40 +231,38 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             </div>
 
             {/* Data */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Data *
-              </label>
+            <div className="space-y-2">
+              <label className={labelClass}>Data</label>
               <input
                 type="date"
                 name="eventDate"
                 value={form.eventDate}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                className={inputClass}
                 required
               />
             </div>
 
             {/* Hora */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">Hora</label>
+            <div className="space-y-2">
+              <label className={labelClass}>Hora</label>
               <input
                 type="time"
                 name="eventTime"
                 value={form.eventTime}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                className={inputClass}
               />
             </div>
 
             {/* Estado */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">Estado</label>
+            <div className="space-y-2">
+              <label className={labelClass}>Estado</label>
               <select
                 name="state"
                 value={form.state}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                className={inputClass}
               >
                 {STATES.map((state) => (
                   <option key={state} value={state}>
@@ -226,65 +274,65 @@ export function CreateEventForm({ onSuccess, onCancel }) {
           </div>
 
           {/* Local */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Local do Evento *
-            </label>
+          <div className="space-y-2">
+            <label className={labelClass}>Local do Evento</label>
             <input
               type="text"
               name="location"
               value={form.location}
               onChange={handleChange}
               placeholder="ex: Shopping Interlagos, São Paulo"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+              className={inputClass}
               required
             />
           </div>
 
-          {/* Imagem */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              URL da Imagem
-            </label>
-            <input
-              type="url"
-              name="image"
-              value={form.image}
-              onChange={handleChange}
-              placeholder="https://example.com/image.jpg"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
-            />
-            {form.image && (
-              <img
-                src={form.image}
-                alt="Preview"
-                className="w-full h-32 object-cover rounded mt-2"
+          {/* Imagem Upload */}
+          <div className="space-y-2">
+            <label className={labelClass}>Foto do Evento</label>
+            <label className="block">
+              <div className="border-2 border-dashed border-[var(--engine-border)] rounded-xl p-6 text-center cursor-pointer hover:border-[var(--engine-accent)] hover:bg-[var(--engine-surface-2)] transition">
+                {imageLoading ? (
+                  <Loader2 size={32} className="mx-auto text-[var(--engine-accent)] animate-spin" />
+                ) : imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+                ) : (
+                  <div className="space-y-2">
+                    <Upload size={32} className="mx-auto text-[var(--engine-text-muted)]" />
+                    <p className="text-sm font-medium text-[var(--engine-text)]">
+                      Clique ou arraste uma imagem
+                    </p>
+                    <p className="text-xs text-[var(--engine-text-muted)]">PNG, JPG até 5MB</p>
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={imageLoading}
               />
-            )}
+            </label>
           </div>
 
           {/* Ingresso */}
-          <div className="border border-slate-300 dark:border-slate-600 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="border border-[var(--engine-border)] rounded-xl p-4 space-y-4">
+            <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                id="isPaid"
                 name="isPaid"
                 checked={form.isPaid}
                 onChange={handleChange}
                 className="w-4 h-4 cursor-pointer"
               />
-              <label htmlFor="isPaid" className="text-sm font-semibold cursor-pointer">
-                Evento com ingresso pago
-              </label>
-            </div>
+              <span className="font-semibold text-[var(--engine-text)]">Evento com ingresso pago</span>
+            </label>
 
             {form.isPaid && (
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Preço (R$) *
-                  </label>
+                <div className="space-y-2">
+                  <label className={labelClass}>Preço (R$)</label>
                   <input
                     type="number"
                     name="ticketPrice"
@@ -293,13 +341,11 @@ export function CreateEventForm({ onSuccess, onCancel }) {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                    className={inputClass}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Máx de Participantes
-                  </label>
+                <div className="space-y-2">
+                  <label className={labelClass}>Máx Participantes</label>
                   <input
                     type="number"
                     name="maxParticipants"
@@ -307,7 +353,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
                     onChange={handleChange}
                     placeholder="Ilimitado"
                     min="0"
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -315,33 +361,29 @@ export function CreateEventForm({ onSuccess, onCancel }) {
           </div>
 
           {/* Links de comunidade */}
-          <div className="border border-slate-300 dark:border-slate-600 rounded-lg p-4">
-            <h3 className="font-semibold mb-4">Links de Comunidade</h3>
+          <div className="border border-[var(--engine-border)] rounded-xl p-4 space-y-4">
+            <h3 className="font-semibold text-[var(--engine-text)]">Links de Comunidade</h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Link do Grupo WhatsApp
-                </label>
+              <div className="space-y-2">
+                <label className={labelClass}>Link do Grupo WhatsApp</label>
                 <input
                   type="url"
                   name="communityLinks.whatsappGroup"
                   value={form.communityLinks.whatsappGroup}
                   onChange={handleChange}
                   placeholder="https://chat.whatsapp.com/..."
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                  className={inputClass}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Link do Grupo Facebook
-                </label>
+              <div className="space-y-2">
+                <label className={labelClass}>Link do Grupo Facebook</label>
                 <input
                   type="url"
                   name="communityLinks.facebookGroup"
                   value={form.communityLinks.facebookGroup}
                   onChange={handleChange}
                   placeholder="https://facebook.com/groups/..."
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-black dark:text-white"
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -352,14 +394,14 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+              className="flex-1 px-4 py-3 border border-[var(--engine-border)] rounded-xl font-semibold text-[var(--engine-text)] hover:bg-[var(--engine-surface-2)] transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-engine-accent text-white rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+              disabled={loading || imageLoading}
+              className="flex-1 px-4 py-3 bg-[var(--engine-accent)] text-white rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
             >
               {loading ? "Criando..." : "Criar Evento"}
             </button>
