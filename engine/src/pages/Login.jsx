@@ -5,6 +5,7 @@ import { Loader2, Lock, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { auth } from "../services/firebase";
 import { AuthShell } from "../components/AuthShell";
+import { SocialAuthButtons } from "../components/SocialAuthButtons";
 
 export function Login() {
   const { t } = useTranslation();
@@ -62,6 +63,16 @@ export function Login() {
       title={t("auth.loginTitle")}
       subtitle={t("auth.loginSubtitle")}
     >
+      <SocialAuthButtons />
+
+      <div className="my-4 flex items-center gap-3">
+        <span className="h-px flex-1 bg-[var(--engine-border)]" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+          {t("auth.social.or")}
+        </span>
+        <span className="h-px flex-1 bg-[var(--engine-border)]" />
+      </div>
+
       <form onSubmit={handleLogin} className="auth-form">
         <label className="auth-field">
           <span>{t("common.email")}</span>
@@ -109,6 +120,15 @@ export function Login() {
         {t("auth.noAccount")}{" "}
         <Link to="/register">{t("auth.createAccount")}</Link>
       </p>
+
+      {/* O Engine é aberto: quem só quer explorar entra sem criar conta. */}
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="auth-text-button mx-auto mt-1"
+      >
+        {t("guest.continueWithout")}
+      </button>
     </AuthShell>
   );
 }

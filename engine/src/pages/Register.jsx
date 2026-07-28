@@ -6,7 +6,12 @@ import { useTranslation } from "react-i18next";
 import { auth } from "../services/firebase";
 import { engineDB } from "../services/db";
 import { AuthShell } from "../components/AuthShell";
+import { SocialAuthButtons } from "../components/SocialAuthButtons";
+import { PhoneField } from "../components/PhoneField";
+import { PasswordStrength } from "../components/PasswordStrength";
+import { passwordLevel } from "../services/passwordStrength";
 import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
+import { isPhoneValueValid } from "../services/phone";
 
 export function Register() {
   const { t } = useTranslation();
@@ -17,6 +22,7 @@ export function Register() {
   const [state, setState] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -25,8 +31,23 @@ export function Register() {
 
   const handleRegister = async (event) => {
     event.preventDefault();
-    setLoading(true);
     setError("");
+
+    // Validações antes de criar a conta.
+    if (!isPhoneValueValid(phone)) {
+      setError(t("auth.invalidPhone"));
+      return;
+    }
+    if (passwordLevel(password) < 2) {
+      setError(t("auth.passwordTooWeak"));
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(t("auth.passwordMismatch"));
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const normalizedUsername = engineDB.normalizeUsername(username);
@@ -79,10 +100,21 @@ export function Register() {
 
   return (
     <AuthShell
+      wide
       kicker={t("auth.registerKicker")}
       title={t("auth.registerTitle")}
       subtitle={t("auth.registerSubtitle")}
     >
+      <SocialAuthButtons />
+
+      <div className="my-4 flex items-center gap-3">
+        <span className="h-px flex-1 bg-[var(--engine-border)]" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+          {t("auth.social.or")}
+        </span>
+        <span className="h-px flex-1 bg-[var(--engine-border)]" />
+      </div>
+
       <form onSubmit={handleRegister} className="auth-form auth-register-form">
         <label className="auth-field auth-span-two">
           <span>{t("auth.fullName")}</span>
@@ -110,13 +142,10 @@ export function Register() {
         </label>
         <label className="auth-field">
           <span>{t("auth.phone")}</span>
-          <input
-            type="tel"
-            placeholder="(00) 00000-0000"
+          <PhoneField
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            autoComplete="tel"
-            required
+            onChange={setPhone}
+            placeholder="(00) 00000-0000"
           />
         </label>
         <label className="auth-field">
@@ -167,7 +196,7 @@ export function Register() {
             required
           />
         </label>
-        <label className="auth-field auth-span-two">
+        <label className="auth-field">
           <span>{t("common.password")}</span>
           <input
             type="password"
@@ -177,6 +206,22 @@ export function Register() {
             autoComplete="new-password"
             required
           />
+          <PasswordStrength password={password} />
+        </label>
+
+        <label className="auth-field">
+          <span>{t("auth.confirmPassword")}</span>
+          <input
+            type="password"
+            placeholder={t("auth.confirmPasswordPlaceholder")}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            autoComplete="new-password"
+            required
+          />
+          {confirmPassword && password !== confirmPassword && (
+            <span className="auth-field-hint">{t("auth.passwordMismatch")}</span>
+          )}
         </label>
 
         {error && <p className="auth-feedback auth-feedback-error auth-span-two">{error}</p>}

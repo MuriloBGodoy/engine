@@ -27,11 +27,15 @@ export function LogoMark({ size = 32, className = "" }) {
 
 export function Logo({ collapsed = false, markSize = 32, className = "" }) {
   return (
-    <div className={`flex items-center gap-2.5 overflow-hidden ${className}`}>
+    <div
+      className={`flex items-center overflow-hidden ${
+        collapsed ? "gap-0" : "gap-2.5"
+      } ${className}`}
+    >
       <LogoMark size={markSize} />
       <span
-        className={`whitespace-nowrap pr-1.5 font-display text-[19px] font-extrabold italic uppercase leading-none tracking-tight text-[var(--engine-text)] transition-all duration-300 ${
-          collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+        className={`whitespace-nowrap font-display text-[19px] font-extrabold italic uppercase leading-none tracking-tight text-[var(--engine-text)] transition-all duration-300 ${
+          collapsed ? "w-0 pr-0 opacity-0" : "w-auto pr-1.5 opacity-100"
         }`}
       >
         Engine

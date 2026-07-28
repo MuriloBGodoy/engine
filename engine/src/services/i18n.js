@@ -2366,10 +2366,73 @@ applyLocalePatch("es-ES", "es-ES", {
 // seguidores e validação de cidade por país.
 applyLocalePatch("pt-BR", "pt-BR", {
   home: { kicker: "Sua garagem virou rede" },
+  nav: { login: "Entrar" },
+  ads: {
+    label: "Anúncio",
+    removeCta: "Remover anúncios",
+    house: {
+      title: "Engine Premium",
+      desc: "Navegue sem anúncios e desbloqueie os Serviços.",
+      cta: "Conhecer o Premium",
+    },
+  },
+  guest: {
+    continueWithout: "Continuar sem conta",
+    requireTitle: "Crie sua conta para continuar",
+    requireDesc:
+      "Esta área é para membros do Engine. Entre ou crie uma conta gratuita para usá-la — visitar o resto da plataforma continua livre.",
+    loginButton: "Entrar / Criar conta",
+    backHome: "Voltar ao início",
+    hint: {
+      title: "Bora participar?",
+      desc: "Entre para publicar, seguir pilotos e trocar mensagens. Explorar continua livre.",
+      cta: "Criar conta grátis",
+      close: "Fechar dica",
+    },
+  },
+  region: {
+    title: "Sua região",
+    hint: "Priorizamos o conteúdo da sua região. Não muda o idioma do app.",
+    all: "Todas as regiões",
+    allStates: "Todo o país",
+    country: "País",
+    state: "Estado / Região",
+    clear: "Limpar região",
+    widened: "Pouca coisa por aqui — mostrando de outras regiões.",
+  },
+  auth: {
+    social: {
+      or: "ou",
+      google: "Entrar com Google",
+      facebook: "Entrar com Facebook",
+      apple: "Entrar com Apple",
+      error: "Não foi possível entrar com essa conta. Tente novamente.",
+    },
+    confirmPassword: "Confirmar senha",
+    confirmPasswordPlaceholder: "Digite a senha novamente",
+    passwordMismatch: "As senhas não conferem.",
+    passwordTooWeak: "Sua senha está fraca. Deixe-a mais forte para criar a conta.",
+    invalidPhone: "Informe um telefone válido.",
+    strength: { weak: "Fraca", medium: "Média", strong: "Forte" },
+  },
+  footer: {
+    tagline: "Sua garagem virou rede. Acompanhe metas, custos e a comunidade automotiva em um só lugar.",
+    rights: "Todos os direitos reservados.",
+    madeWith: "Feito para quem vive sobre rodas.",
+    help: { title: "Ajuda", center: "Central de ajuda", contact: "Fale conosco" },
+    company: { title: "Engine", about: "Sobre", careers: "Trabalhe com a gente" },
+    legal: { title: "Legal", terms: "Termos de uso", privacy: "Política de privacidade" },
+    app: { title: "Baixe nosso app", androidTop: "Disponível no", iosTop: "Baixar na" },
+  },
   community: {
     completed: "Meta conquistada",
     edited: "editado",
     profileStats: { followers: "seguidores" },
+    findPeople: "Encontrar pessoas",
+    peopleTitle: "Pessoas no Engine",
+    peopleSearchPlaceholder: "Buscar por nome ou @usuário",
+    peopleEmpty: "Nenhuma pessoa encontrada",
+    peopleEmptyHint: "Tente outro nome ou @usuário.",
   },
   settings: {
     status: {
@@ -2384,10 +2447,73 @@ applyLocalePatch("pt-BR", "pt-BR", {
 });
 applyLocalePatch("en-US", "en-US", {
   home: { kicker: "Your garage, now a network" },
+  nav: { login: "Sign in" },
+  ads: {
+    label: "Ad",
+    removeCta: "Remove ads",
+    house: {
+      title: "Engine Premium",
+      desc: "Browse ad-free and unlock Services.",
+      cta: "Explore Premium",
+    },
+  },
+  guest: {
+    continueWithout: "Continue without an account",
+    requireTitle: "Create your account to continue",
+    requireDesc:
+      "This area is for Engine members. Sign in or create a free account to use it — browsing the rest of the platform stays open.",
+    loginButton: "Sign in / Create account",
+    backHome: "Back to home",
+    hint: {
+      title: "Want to join in?",
+      desc: "Sign in to post, follow drivers and send messages. Browsing stays free.",
+      cta: "Create a free account",
+      close: "Dismiss tip",
+    },
+  },
+  region: {
+    title: "Your region",
+    hint: "We prioritize content from your region. It won't change the app language.",
+    all: "All regions",
+    allStates: "Whole country",
+    country: "Country",
+    state: "State / Region",
+    clear: "Clear region",
+    widened: "Not much here yet — showing other regions.",
+  },
+  auth: {
+    social: {
+      or: "or",
+      google: "Continue with Google",
+      facebook: "Continue with Facebook",
+      apple: "Continue with Apple",
+      error: "Couldn't sign in with that account. Please try again.",
+    },
+    confirmPassword: "Confirm password",
+    confirmPasswordPlaceholder: "Type your password again",
+    passwordMismatch: "Passwords don't match.",
+    passwordTooWeak: "Your password is weak. Make it stronger to create the account.",
+    invalidPhone: "Enter a valid phone number.",
+    strength: { weak: "Weak", medium: "Medium", strong: "Strong" },
+  },
+  footer: {
+    tagline: "Your garage, now a network. Track goals, costs and the car community in one place.",
+    rights: "All rights reserved.",
+    madeWith: "Built for people who live on wheels.",
+    help: { title: "Help", center: "Help center", contact: "Contact us" },
+    company: { title: "Engine", about: "About", careers: "Careers" },
+    legal: { title: "Legal", terms: "Terms of use", privacy: "Privacy policy" },
+    app: { title: "Get our app", androidTop: "Get it on", iosTop: "Download on the" },
+  },
   community: {
     completed: "Goal achieved",
     edited: "edited",
     profileStats: { followers: "followers" },
+    findPeople: "Find people",
+    peopleTitle: "People on Engine",
+    peopleSearchPlaceholder: "Search by name or @username",
+    peopleEmpty: "No people found",
+    peopleEmptyHint: "Try another name or @username.",
   },
   settings: {
     status: {
@@ -2402,10 +2528,73 @@ applyLocalePatch("en-US", "en-US", {
 });
 applyLocalePatch("es-ES", "es-ES", {
   home: { kicker: "Tu garaje, ahora una red" },
+  nav: { login: "Entrar" },
+  ads: {
+    label: "Anuncio",
+    removeCta: "Quitar anuncios",
+    house: {
+      title: "Engine Premium",
+      desc: "Navega sin anuncios y desbloquea los Servicios.",
+      cta: "Conocer Premium",
+    },
+  },
+  guest: {
+    continueWithout: "Continuar sin cuenta",
+    requireTitle: "Crea tu cuenta para continuar",
+    requireDesc:
+      "Esta área es para miembros de Engine. Entra o crea una cuenta gratuita para usarla — visitar el resto de la plataforma sigue siendo libre.",
+    loginButton: "Entrar / Crear cuenta",
+    backHome: "Volver al inicio",
+    hint: {
+      title: "¿Te unes?",
+      desc: "Entra para publicar, seguir pilotos y enviar mensajes. Explorar sigue siendo libre.",
+      cta: "Crear cuenta gratis",
+      close: "Cerrar aviso",
+    },
+  },
+  region: {
+    title: "Tu región",
+    hint: "Priorizamos el contenido de tu región. No cambia el idioma de la app.",
+    all: "Todas las regiones",
+    allStates: "Todo el país",
+    country: "País",
+    state: "Estado / Región",
+    clear: "Quitar región",
+    widened: "Poco por aquí — mostrando otras regiones.",
+  },
+  auth: {
+    social: {
+      or: "o",
+      google: "Entrar con Google",
+      facebook: "Entrar con Facebook",
+      apple: "Entrar con Apple",
+      error: "No se pudo entrar con esa cuenta. Inténtalo de nuevo.",
+    },
+    confirmPassword: "Confirmar contraseña",
+    confirmPasswordPlaceholder: "Escribe la contraseña otra vez",
+    passwordMismatch: "Las contraseñas no coinciden.",
+    passwordTooWeak: "Tu contraseña es débil. Hazla más fuerte para crear la cuenta.",
+    invalidPhone: "Introduce un teléfono válido.",
+    strength: { weak: "Débil", medium: "Media", strong: "Fuerte" },
+  },
+  footer: {
+    tagline: "Tu garaje, ahora una red. Sigue metas, costos y la comunidad del motor en un solo lugar.",
+    rights: "Todos los derechos reservados.",
+    madeWith: "Hecho para quien vive sobre ruedas.",
+    help: { title: "Ayuda", center: "Centro de ayuda", contact: "Contáctanos" },
+    company: { title: "Engine", about: "Sobre", careers: "Trabaja con nosotros" },
+    legal: { title: "Legal", terms: "Términos de uso", privacy: "Política de privacidad" },
+    app: { title: "Descarga la app", androidTop: "Disponible en", iosTop: "Descargar en" },
+  },
   community: {
     completed: "Meta conseguida",
     edited: "editado",
     profileStats: { followers: "seguidores" },
+    findPeople: "Encontrar personas",
+    peopleTitle: "Personas en Engine",
+    peopleSearchPlaceholder: "Buscar por nombre o @usuario",
+    peopleEmpty: "No se encontraron personas",
+    peopleEmptyHint: "Prueba otro nombre o @usuario.",
   },
   settings: {
     status: {

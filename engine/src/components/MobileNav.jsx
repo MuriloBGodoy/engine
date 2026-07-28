@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   Home,
   LayoutDashboard,
+  LogIn,
   LogOut,
   MessageCircle,
   Users,
@@ -14,6 +15,8 @@ import { useTranslation } from "react-i18next";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { Logo } from "./Logo";
 import { Topbar } from "./TopBar";
+import { GuestLoginHint } from "./GuestLoginHint";
+import { RegionPicker } from "./RegionPicker";
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -43,6 +46,7 @@ export function MobileNav({
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = user || auth.currentUser;
+  const isGuest = !currentUser;
   const displayName = profileSettings.displayName || currentUser?.displayName;
   const avatar = profileSettings.avatar || currentUser?.photoURL;
   const unreadMessages = useUnreadMessages(currentUser?.uid);
@@ -83,45 +87,62 @@ export function MobileNav({
         </Link>
 
         <div className="flex shrink-0 items-center gap-0.5">
-          {settings && onSettingsUpdate && (
+          <RegionPicker compact className="mr-0.5" />
+          {settings && onSettingsUpdate && !isGuest && (
             <Topbar
               settings={settings}
               onSettingsUpdate={onSettingsUpdate}
               user={currentUser}
             />
           )}
-          {/* O avatar é a porta de entrada de Ajustes no mobile (mesmo padrão
-              da sidebar no desktop) — ganha anel de destaque quando ativo. */}
-          <Link
-            to="/settings"
-            title={t("nav.settings")}
-            aria-label={t("nav.settings")}
-            aria-current={settingsActive ? "page" : undefined}
-            className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95 ${
-              settingsActive
-                ? "ring-2 ring-[var(--engine-accent)] ring-offset-2 ring-offset-[var(--engine-bg)]"
-                : ""
-            }`}
-          >
-            {avatar ? (
-              <img
-                src={avatar}
-                alt={displayName || "Perfil"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              getInitials(displayName)
-            )}
-          </Link>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:text-[var(--engine-accent)]"
-            title={t("nav.logout")}
-            aria-label={t("nav.logout")}
-          >
-            <LogOut size={19} />
-          </button>
+          {isGuest ? (
+            <div className="relative ml-1">
+              <Link
+                to="/login"
+                title={t("nav.login")}
+                className="flex h-9 items-center gap-1.5 rounded-full bg-[var(--engine-accent)] px-3.5 text-[13px] font-semibold text-white transition active:scale-95"
+              >
+                <LogIn size={16} />
+                {t("nav.login")}
+              </Link>
+              <GuestLoginHint placement="bottom-right" />
+            </div>
+          ) : (
+            <>
+              {/* O avatar é a porta de entrada de Ajustes no mobile (mesmo
+                  padrão da sidebar no desktop) — anel de destaque quando ativo. */}
+              <Link
+                to="/settings"
+                title={t("nav.settings")}
+                aria-label={t("nav.settings")}
+                aria-current={settingsActive ? "page" : undefined}
+                className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95 ${
+                  settingsActive
+                    ? "ring-2 ring-[var(--engine-accent)] ring-offset-2 ring-offset-[var(--engine-bg)]"
+                    : ""
+                }`}
+              >
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt={displayName || "Perfil"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  getInitials(displayName)
+                )}
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:text-[var(--engine-accent)]"
+                title={t("nav.logout")}
+                aria-label={t("nav.logout")}
+              >
+                <LogOut size={19} />
+              </button>
+            </>
+          )}
         </div>
       </header>
 

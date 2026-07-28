@@ -2,3 +2,9 @@
   base = "engine"
   command = "npm run build"
   publish = "dist"
+
+# Geolocalização por IP na borda (chute inicial de região p/ visitante).
+# A pasta padrão das edge functions é <base>/netlify/edge-functions.
+[[edge_functions]]
+  path = "/api/geo"
+  function = "geo"

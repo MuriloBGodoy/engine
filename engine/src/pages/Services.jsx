@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from"react";
+import { Fragment, useEffect, useMemo, useState } from"react";
 import { useNavigate } from"react-router-dom";
 import { useTranslation } from"react-i18next";
 import {
@@ -56,6 +56,8 @@ import {
 } from"../services/locations";
 import { useConfirm } from"../components/ConfirmProvider";
 import { useToast } from"../components/ToastProvider";
+import { AdSlot } from"../components/AdSlot";
+import { useRegion } from"../hooks/RegionProvider";
 
 // Ícone oficial do WhatsApp (react-icons). Mantém a mesma assinatura
 // (size/className) usada em todo o arquivo, inclusive como `icon={WhatsAppIcon}`.
@@ -1900,8 +1902,12 @@ export function Services({ user, settings }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [mode, setMode] = useState("all");
-  const [countryFilter, setCountryFilter] = useState("all");
-  const [stateFilter, setStateFilter] = useState("all");
+  // A região ativa (header) semeia o filtro de localização dos Serviços: ao
+  // abrir, já vem pré-filtrado pela região do usuário. Depois ele pode mexer
+  // livremente nos selects — a região só define o ponto de partida.
+  const { region } = useRegion();
+  const [countryFilter, setCountryFilter] = useState(() => region.country);
+  const [stateFilter, setStateFilter] = useState(() => region.state);
   const [cityFilter, setCityFilter] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [form, setForm] = useState(() => makeInitialForm(settings, user));
@@ -2569,15 +2575,21 @@ export function Services({ user, settings }) {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filteredListings.length ? (
-          filteredListings.map((listing) => (
-            <ServiceCard
-              key={listing.id}
-              listing={listing}
-              isMine={listing.ownerId === user?.uid}
-              onEdit={openEditor}
-              onDelete={deleteListing}
-              onOpen={setDetailListing}
-            />
+          filteredListings.map((listing, index) => (
+            <Fragment key={listing.id}>
+              <ServiceCard
+                listing={listing}
+                isMine={listing.ownerId === user?.uid}
+                onEdit={openEditor}
+                onDelete={deleteListing}
+                onOpen={setDetailListing}
+              />
+              {/* Card patrocinado no meio da grade (padrão Webmotors):
+                  ocupa uma célula como um serviço, rotulado como anúncio. */}
+              {index === 5 && (
+                <AdSlot slot="services-grid" format="native" user={user} />
+              )}
+            </Fragment>
           ))
         ) : (
           <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface)] p-8 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">

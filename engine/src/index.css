@@ -189,163 +189,155 @@ h5 {
 
 .auth-shell {
   display: grid;
-  grid-template-columns: minmax(280px, 0.92fr) minmax(380px, 1.08fr);
-  width: min(1080px, 100%);
-  max-height: calc(100dvh - clamp(32px, 6vh, 68px));
-  min-height: 620px;
+  grid-template-columns: minmax(230px, 0.78fr) minmax(340px, 1.22fr);
+  width: min(880px, 100%);
+  max-height: calc(100dvh - clamp(24px, 5vh, 52px));
+  min-height: 480px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  border-radius: 22px;
   background: #151515;
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.46),
-    0 0 0 1px rgba(220, 38, 38, 0.18);
+    0 24px 70px rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(225, 29, 42, 0.16);
 }
 
 .auth-shell-compact {
-  min-height: 560px;
+  min-height: 420px;
+}
+
+/* Variante larga: usada no cadastro, que tem mais campos. Em vez de esticar
+   para baixo, o formulário ganha largura e distribui os campos em 2 colunas. */
+.auth-shell-wide {
+  width: min(1040px, 100%);
+  grid-template-columns: minmax(230px, 0.68fr) minmax(440px, 1.32fr);
+}
+
+/* Cadastro é alto: alinha ao topo para a rolagem interna não cortar o começo. */
+.auth-shell-wide .auth-panel {
+  justify-content: flex-start;
 }
 
 .auth-hero {
   position: relative;
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   justify-content: space-between;
-  gap: 28px;
+  gap: 22px;
   overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    linear-gradient(160deg, rgba(220, 38, 38, 0.72), rgba(24, 24, 27, 0.96) 48%),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1100&q=80");
-  background-position: center;
+    linear-gradient(
+      168deg,
+      rgba(225, 29, 42, 0.32) 0%,
+      rgba(10, 10, 12, 0.28) 40%,
+      rgba(8, 8, 10, 0.94) 100%
+    ),
+    url("https://images.unsplash.com/photo-1670144320302-a2acaf2a7194?auto=format&fit=crop&w=900&q=80");
+  background-position: center 28%;
   background-size: cover;
-  padding: clamp(24px, 3vw, 40px);
+  padding: clamp(22px, 2.6vw, 34px);
 }
 
 .auth-hero::before {
   content: "";
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.78)),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.54));
+    radial-gradient(75% 45% at 18% 4%, rgba(225, 29, 42, 0.3), transparent 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.52));
 }
 
-.auth-badge,
-.auth-brand-block,
-.auth-highlights {
+.auth-hero-top,
+.auth-hero-copy {
   position: relative;
   z-index: 1;
 }
 
-.auth-badge {
+.auth-hero-top {
   display: inline-flex;
-  width: fit-content;
   align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff7ed;
-  padding: 8px 13px;
-  font-size: 0.72rem;
+  gap: 10px;
+}
+
+.auth-hero-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
   font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
+  color: #fff;
 }
 
-.auth-brand-block {
+.auth-hero-copy {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
-.auth-brand-block h1 {
+.auth-hero-copy h1 {
   margin: 0;
-  color: white;
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.2vw, 3.3rem);
   font-style: italic;
   font-weight: 1000;
-  line-height: 0.88;
+  line-height: 0.9;
   text-transform: uppercase;
 }
 
-.auth-brand-block p {
+.auth-hero-copy h1 span {
+  color: var(--engine-accent);
+}
+
+.auth-hero-copy p {
   margin: 0;
-  max-width: 31rem;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.65;
-}
-
-.auth-highlights {
-  display: grid;
-  gap: 12px;
-}
-
-.auth-highlight {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  background: rgba(15, 15, 15, 0.54);
-  padding: 15px;
-  backdrop-filter: blur(12px);
-}
-
-.auth-highlight svg {
-  color: #facc15;
-}
-
-.auth-highlight div {
-  display: grid;
-  gap: 4px;
-}
-
-.auth-highlight strong {
-  color: white;
-  font-size: 0.95rem;
-}
-
-.auth-highlight span {
-  color: rgba(255, 255, 255, 0.72);
+  max-width: 25rem;
+  color: rgba(255, 255, 255, 0.82);
   font-size: 0.9rem;
-  line-height: 1.45;
+  font-weight: 600;
+  line-height: 1.55;
 }
 
 .auth-panel {
   display: flex;
   min-width: 0;
+  min-height: 0;
+  max-height: calc(100dvh - clamp(24px, 5vh, 52px));
   flex-direction: column;
   justify-content: center;
-  gap: 24px;
+  gap: 18px;
   overflow-y: auto;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 32%),
     #101010;
-  padding: clamp(24px, 4vw, 44px);
+  padding: clamp(22px, 3vw, 38px);
 }
 
 .auth-panel-header {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .auth-panel-header span {
-  color: #ef4444;
-  font-size: 0.78rem;
+  color: var(--engine-accent);
+  font-size: 0.74rem;
   font-weight: 1000;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .auth-panel-header h2 {
   margin: 0;
   color: white;
-  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
   font-style: italic;
   font-weight: 1000;
-  line-height: 1;
+  line-height: 1.02;
   text-transform: uppercase;
 }
 
@@ -353,7 +345,8 @@ h5 {
   margin: 0;
   max-width: 43ch;
   color: #a1a1aa;
-  line-height: 1.55;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .auth-form {
@@ -493,6 +486,69 @@ h5 {
   color: #bbf7d0;
 }
 
+/* Telefone: seletor de país (+55) estreito + input do número. Serve tanto na
+   tela de auth (herda .auth-field input/select) quanto nos Ajustes (recebe
+   classes via props). */
+.phone-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.phone-row > select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding-right: 34px;
+}
+
+.phone-row > input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.auth-field-hint {
+  color: #fca5a5;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* Medidor de força da senha — a garagem cresce: 🚗 fraca → 🚙 média → 🏎️ forte. */
+.pw-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.pw-strength-track {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+}
+
+.pw-strength-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.25s ease;
+}
+
+.pw-strength-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.pw-strength-label {
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .auth-switch-copy {
   display: flex;
   flex-wrap: wrap;
@@ -530,13 +586,15 @@ h5 {
   }
 
   .auth-hero {
-    min-height: 310px;
+    min-height: 176px;
+    gap: 16px;
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .auth-panel {
     justify-content: flex-start;
+    max-height: none;
   }
 }
 
@@ -924,4 +982,166 @@ h5 {
   45% { transform: translateX(6px) rotate(-2deg); }
   70% { transform: translateX(-4px); }
   100% { transform: translateX(0); }
+}
+
+/* ── Seletor de região (pílula estilo Webmotors/OLX) ───────────────────── */
+.region-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.region-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  max-width: 190px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--engine-border);
+  background: var(--engine-surface);
+  color: var(--engine-text-muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.region-pill:hover {
+  background: var(--engine-surface-2);
+  color: var(--engine-text);
+}
+
+.region-pill-active {
+  border-color: color-mix(in srgb, var(--engine-accent) 45%, var(--engine-border));
+  color: var(--engine-text);
+}
+
+.region-pill-pin {
+  flex-shrink: 0;
+  color: var(--engine-accent);
+}
+
+.region-pill-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.region-pill-caret {
+  flex-shrink: 0;
+  opacity: 0.65;
+  transition: transform 0.18s ease;
+}
+
+.region-pill-caret-open {
+  transform: rotate(180deg);
+}
+
+.region-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--engine-accent);
+}
+
+.region-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  width: 264px;
+  max-width: calc(100vw - 24px);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--engine-border);
+  background: var(--engine-surface);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.region-pop-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--engine-text);
+}
+
+.region-pop-hint {
+  margin-top: -8px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--engine-text-subtle);
+}
+
+.region-pop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--engine-text-subtle);
+}
+
+.region-pop-field select {
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--engine-border);
+  background: var(--engine-surface-2);
+  color: var(--engine-text);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  outline: none;
+}
+
+.region-pop-field select:focus {
+  border-color: var(--engine-accent);
+}
+
+.region-pop-clear {
+  align-self: flex-start;
+  padding: 4px 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--engine-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.region-pop-clear:hover {
+  text-decoration: underline;
+}
+
+/* Aviso "mostrando de outras regiões" (proteção anti-tela-vazia) */
+.region-widened {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--engine-border);
+  background: var(--engine-surface);
+  color: var(--engine-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.region-widened button {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-weight: 800;
+  color: var(--engine-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
 }

@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   Home,
   LayoutDashboard,
+  LogIn,
   LogOut,
   MessageCircle,
   Settings,
@@ -14,6 +15,7 @@ import { auth } from "../services/firebase";
 import { useTranslation } from "react-i18next";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { Logo } from "./Logo";
+import { GuestLoginHint } from "./GuestLoginHint";
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -30,11 +32,13 @@ export function Sidebar({
   onToggleCollapsed,
   profileSettings = {},
   privacySettings = {},
+  user: userProp,
 }) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const user = auth.currentUser;
+  const user = userProp || auth.currentUser;
+  const isGuest = !user;
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
   const showEmail = privacySettings.showEmailInSidebar !== false;
@@ -83,21 +87,22 @@ export function Sidebar({
 
   return (
     <aside
-      className={`hidden h-screen shrink-0 flex-col border-r border-[var(--engine-border)] bg-[var(--engine-surface)] transition-[width] duration-300 ease-out lg:flex ${
+      className={`hidden h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-[var(--engine-border)] bg-[var(--engine-surface)] transition-[width] duration-300 ease-out lg:flex ${
         collapsed ? "w-[76px]" : "w-[260px]"
       }`}
     >
       {/* Marca */}
       <div
-        className={`flex h-[68px] items-center border-b border-[var(--engine-border)] ${
+        className={`flex h-[68px] shrink-0 items-center border-b border-[var(--engine-border)] ${
           collapsed ? "justify-center px-3" : "px-5"
         }`}
       >
         <Logo collapsed={collapsed} markSize={32} />
       </div>
 
-      {/* Navegação */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      {/* Navegação — min-h-0 permite que ela role em vez de empurrar o perfil
+          para fora da tela quando a altura aperta (era o corte na base). */}
+      <nav className="engine-scroll min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {menuItems.map((item) => {
           const active = isActivePath(item.path);
           const Icon = item.icon;
@@ -143,7 +148,7 @@ export function Sidebar({
       </nav>
 
       {/* Recolher / expandir — carrinho que acelera no hover */}
-      <div className="px-3 pb-2">
+      <div className="shrink-0 px-3 pb-2">
         <button
           type="button"
           onClick={onToggleCollapsed}
@@ -174,45 +179,65 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Perfil / logout */}
-      <div className="border-t border-[var(--engine-border)] p-3">
-        <div
-          className={`flex items-center rounded-xl p-2 ${
-            collapsed ? "justify-center" : "gap-3"
-          }`}
-        >
-          <Link
-            to="/settings"
-            title={t("settings.sections.profile")}
-            className="shrink-0 rounded-full transition-transform active:scale-95"
-          >
-            {profileAvatar}
-          </Link>
+      {/* Perfil / logout — para visitante vira o acesso ao login.
+          pb generoso garante folga da borda inferior mesmo quando a UI do
+          navegador/SO come alguns pixels na base da viewport. */}
+      <div className="shrink-0 border-t border-[var(--engine-border)] px-3 pt-3 pb-[max(env(safe-area-inset-bottom),1.5rem)]">
+        {isGuest ? (
+          <div className="relative">
+            <Link
+              to="/login"
+              title={t("nav.login")}
+              aria-label={t("nav.login")}
+              className={`flex h-11 items-center rounded-xl bg-[var(--engine-accent)] font-semibold text-white transition hover:brightness-95 ${
+                collapsed ? "mx-auto w-11 justify-center" : "gap-2 px-3 text-[13px]"
+              }`}
+            >
+              <LogIn size={18} className="shrink-0" />
+              {!collapsed && <span className="truncate">{t("nav.login")}</span>}
+            </Link>
+            {/* Dica contextual só faz sentido com a sidebar expandida. */}
+            {!collapsed && <GuestLoginHint placement="top" />}
+          </div>
+        ) : (
           <div
-            className={`min-w-0 flex-1 overflow-hidden transition-all duration-300 ${
-              collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+            className={`flex items-center rounded-xl p-2 ${
+              collapsed ? "justify-center" : "gap-3"
             }`}
           >
-            <p className="truncate text-[13px] font-semibold text-[var(--engine-text)]">
-              {displayName || t("settings.sections.profile")}
-            </p>
-            {showEmail && user?.email && (
-              <p className="truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
-                {user.email}
+            <Link
+              to="/settings"
+              title={t("settings.sections.profile")}
+              className="shrink-0 rounded-full transition-transform active:scale-95"
+            >
+              {profileAvatar}
+            </Link>
+            <div
+              className={`min-w-0 flex-1 overflow-hidden transition-all duration-300 ${
+                collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+              }`}
+            >
+              <p className="truncate text-[13px] font-semibold text-[var(--engine-text)]">
+                {displayName || t("settings.sections.profile")}
               </p>
+              {showEmail && user?.email && (
+                <p className="truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
+                  {user.email}
+                </p>
+              )}
+            </div>
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-accent-soft)] hover:text-[var(--engine-accent)]"
+                title={t("nav.logout")}
+              >
+                <LogOut size={17} />
+              </button>
             )}
           </div>
-          {!collapsed && (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-accent-soft)] hover:text-[var(--engine-accent)]"
-              title={t("nav.logout")}
-            >
-              <LogOut size={17} />
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </aside>
   );

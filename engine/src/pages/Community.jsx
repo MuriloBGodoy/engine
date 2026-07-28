@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -36,6 +36,9 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useToast } from "../components/ToastProvider";
 import { ShareToChatModal } from "../components/ShareToChatModal";
+import { AdSlot } from "../components/AdSlot";
+import { useRegion } from "../hooks/RegionProvider";
+import { applyRegionFilter } from "../services/region";
 import { profileCardFromSettings, startConversation } from "../services/chat";
 
 const fallbackImage =
@@ -190,6 +193,8 @@ const withProfile = (person = {}, profiles = {}) => {
     avatar: profile.avatar ?? person.avatar,
     avatarInitials: profile.avatarInitials ?? person.avatarInitials,
     city: profile.city ?? person.city,
+    country: profile.country ?? person.country,
+    state: profile.state ?? person.state,
   };
 };
 
@@ -1435,6 +1440,134 @@ function UserProfileModal({
   );
 }
 
+/**
+ * Busca de pessoas (aba de usuários). Diretório de todos os perfis públicos
+ * do Engine: buscar por nome/@, seguir/deixar de seguir na hora e tocar para
+ * abrir o perfil (onde dá pra mandar DM).
+ */
+function PeopleSearchModal({
+  people,
+  query,
+  onQueryChange,
+  following,
+  t,
+  onFollow,
+  onOpenProfile,
+  onClose,
+}) {
+  const term = query.trim().toLowerCase();
+  const results = term
+    ? people.filter((person) =>
+        `${person.author || ""} ${withoutAt(person.username) || ""} ${person.city || ""}`
+          .toLowerCase()
+          .includes(term),
+      )
+    : people;
+
+  return (
+    <div className="engine-modal-overlay" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="engine-modal-panel engine-pop sm:max-w-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3.5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-accent)]">
+              {t("community.findPeople")}
+            </p>
+            <h2 className="mt-1 truncate text-base font-extrabold italic text-[var(--engine-text)]">
+              {t("community.peopleTitle")}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.cancel")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+          >
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className="shrink-0 border-b border-[var(--engine-border)] p-3 sm:p-4">
+          <label className="flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 focus-within:border-[var(--engine-accent)]">
+            <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
+            <input
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder={t("community.peopleSearchPlaceholder")}
+              autoFocus
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
+            />
+          </label>
+        </div>
+
+        <div className="engine-modal-body engine-scroll engine-safe-bottom p-2 sm:p-3">
+          {results.length ? (
+            <div className="space-y-0.5">
+              {results.map((person) => {
+                const isFollowing = following.includes(person.userId);
+                return (
+                  <div
+                    key={person.userId}
+                    className="flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-[var(--engine-surface-2)]"
+                  >
+                    <AvatarButton
+                      person={person}
+                      size="sm"
+                      onClick={() => onOpenProfile(person.userId, person)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(person.userId, person)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <p className="truncate text-sm font-bold text-[var(--engine-text)]">
+                        {person.author || "Usuário Engine"}
+                      </p>
+                      <p className="truncate text-xs font-medium text-[var(--engine-text-subtle)]">
+                        @{withoutAt(person.username) || "engine"}
+                        {person.city ? ` · ${person.city}` : ""}
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onFollow(person)}
+                      title={isFollowing ? t("community.following") : t("community.follow")}
+                      className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[10px] font-black uppercase tracking-widest transition ${
+                        isFollowing
+                          ? "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                          : "bg-[var(--engine-accent)] text-white hover:brightness-95"
+                      }`}
+                    >
+                      {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                      <span className="hidden min-[380px]:inline">
+                        {isFollowing ? t("community.following") : t("community.follow")}
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex min-h-48 flex-col items-center justify-center px-6 text-center">
+              <Users className="mb-3 text-[var(--engine-text-subtle)]" size={30} />
+              <p className="text-sm font-bold text-[var(--engine-text)]">
+                {t("community.peopleEmpty")}
+              </p>
+              <p className="mt-1 max-w-xs text-xs font-medium text-[var(--engine-text-muted)]">
+                {t("community.peopleEmptyHint")}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Editor da legenda de uma publicação já no ar. */
 function CaptionModal({ goal, t, onClose, onSave }) {
   const [caption, setCaption] = useState(goal?.note || "");
@@ -1632,6 +1765,7 @@ export function Community({ cars = [], settings, user }) {
   const confirm = useConfirm();
   const toast = useToast();
   const navigate = useNavigate();
+  const { region, setRegion } = useRegion();
   // No celular o card do feed já mostra o post inteiro; abrir um modal por
   // cima é redundante. A publicação em tela cheia fica reservada ao
   // redirecionamento (perfil, notificação, link) — que vale nos dois casos.
@@ -1639,6 +1773,7 @@ export function Community({ cars = [], settings, user }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("feed");
   const [query, setQuery] = useState("");
+  const [peopleQuery, setPeopleQuery] = useState("");
   const [remoteGoal, setRemoteGoal] = useState(null);
   const [postToShare, setPostToShare] = useState(null);
   const [captionGoal, setCaptionGoal] = useState(null);
@@ -1651,6 +1786,7 @@ export function Community({ cars = [], settings, user }) {
   const [loadingMoreGoals, setLoadingMoreGoals] = useState(false);
   const [publicProfiles, setPublicProfiles] = useState({});
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [peopleModalOpen, setPeopleModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState({
     open: false,
     loading: false,
@@ -1669,6 +1805,21 @@ export function Community({ cars = [], settings, user }) {
     }),
     [publicProfiles, settings, user],
   );
+
+  // Diretório de pessoas para a aba "Pessoas": todos os perfis públicos
+  // (o mapa vem duplicado por doc id + userId, então deduplicamos), sem eu
+  // mesmo, em ordem alfabética.
+  const peopleDirectory = useMemo(() => {
+    const map = new Map();
+    Object.values(publicProfiles).forEach((profile) => {
+      const id = profile.userId || profile.id;
+      if (!id || id === user?.uid || map.has(id)) return;
+      map.set(id, { ...profile, userId: id });
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      String(a.author || "").localeCompare(String(b.author || "")),
+    );
+  }, [publicProfiles, user?.uid]);
 
   // Legenda já publicada de cada carro — o modal de publicar usa para
   // pré-preencher a edição.
@@ -1808,10 +1959,18 @@ export function Community({ cars = [], settings, user }) {
 
   const flash = (message) => toast(message);
 
-  const filteredGoals = goals.filter((goal) =>
+  const searchedGoals = goals.filter((goal) =>
     `${goal.author} ${goal.title} ${goal.username}`
       .toLowerCase()
       .includes(query.toLowerCase()),
+  );
+
+  // Filtro por região ativa, com proteção anti-tela-vazia: se filtrar zeraria
+  // o feed, mostra tudo e sinaliza (regionWidened) para avisar o usuário.
+  const { items: filteredGoals, widened: regionWidened } = applyRegionFilter(
+    searchedGoals,
+    region,
+    (goal) => ({ country: goal.country, state: goal.state, city: goal.city }),
   );
 
   const ranking = [...goals]
@@ -2178,15 +2337,29 @@ export function Community({ cars = [], settings, user }) {
               })}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShareModalOpen(true)}
-              title={t("community.shareNewGoal")}
-              aria-label={t("community.shareNewGoal")}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--engine-accent)] text-white transition hover:brightness-95"
-            >
-              <Plus size={20} />
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Publicar meta: no desktop mora no trilho lateral; aqui fica
+                  só no mobile (onde o trilho some) para não duplicar. */}
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(true)}
+                title={t("community.shareNewGoal")}
+                aria-label={t("community.shareNewGoal")}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
+              >
+                <Plus size={20} />
+              </button>
+              {/* Encontrar pessoas (seguir, ver perfil, mandar DM). */}
+              <button
+                type="button"
+                onClick={() => setPeopleModalOpen(true)}
+                title={t("community.findPeople")}
+                aria-label={t("community.findPeople")}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--engine-accent)] text-white transition hover:brightness-95"
+              >
+                <Users size={19} />
+              </button>
+            </div>
           </div>
 
           {activeTab === "feed" && (
@@ -2201,36 +2374,57 @@ export function Community({ cars = [], settings, user }) {
                 />
               </label>
 
+              {regionWidened && (
+                <div className="region-widened">
+                  <MapPin size={15} className="shrink-0 text-[var(--engine-accent)]" />
+                  <span>{t("region.widened")}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRegion({ country: "all", state: "all" })}
+                  >
+                    {t("region.clear")}
+                  </button>
+                </div>
+              )}
+
               {filteredGoals.length ? (
                 /* No celular os posts encostam nas bordas e são separados por
                    uma linha; a partir de sm voltam a ser cartões soltos. */
                 <div className="-mx-4 border-y border-[var(--engine-border)] sm:mx-0 sm:space-y-5 sm:border-0">
-                  {filteredGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      t={t}
-                      interactions={{
-                        ...emptyInteraction,
-                        liked: Boolean(goal.likesBy?.[user?.uid]),
-                        rating: goal.ratingsBy?.[user?.uid] || goal.rating,
-                      }}
-                      following={communityState.following}
-                      shared={isGoalShared(goal, communityState.sharedGoalIds, user?.uid)}
-                      onLike={handleLike}
-                      onComment={handleComment}
-                      onRate={handleRate}
-                      onShare={handleCopyShareLink}
-                      onUnshare={handleUnshareGoal}
-                      onFollow={handleFollow}
-                      onOpenProfile={handleOpenProfile}
-                      onEditComment={handleEditComment}
-                      onDeleteComment={handleDeleteComment}
-                      onOpenPost={isDesktop ? openPost : undefined}
-                      onSendToChat={setPostToShare}
-                      onEditCaption={setCaptionGoal}
-                      currentUserId={user?.uid}
-                    />
+                  {filteredGoals.map((goal, index) => (
+                    <Fragment key={goal.id}>
+                      <GoalCard
+                        goal={goal}
+                        t={t}
+                        interactions={{
+                          ...emptyInteraction,
+                          liked: Boolean(goal.likesBy?.[user?.uid]),
+                          rating: goal.ratingsBy?.[user?.uid] || goal.rating,
+                        }}
+                        following={communityState.following}
+                        shared={isGoalShared(goal, communityState.sharedGoalIds, user?.uid)}
+                        onLike={handleLike}
+                        onComment={handleComment}
+                        onRate={handleRate}
+                        onShare={handleCopyShareLink}
+                        onUnshare={handleUnshareGoal}
+                        onFollow={handleFollow}
+                        onOpenProfile={handleOpenProfile}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
+                        onOpenPost={isDesktop ? openPost : undefined}
+                        onSendToChat={setPostToShare}
+                        onEditCaption={setCaptionGoal}
+                        currentUserId={user?.uid}
+                      />
+                      {/* Card patrocinado nativo — entra no meio do feed
+                          (padrão Webmotors), rotulado e discreto. */}
+                      {index === 3 && (
+                        <div className="px-4 py-4 sm:px-0 sm:py-0">
+                          <AdSlot slot="community-feed" format="native" user={user} />
+                        </div>
+                      )}
+                    </Fragment>
                   ))}
                 </div>
               ) : (
@@ -2340,6 +2534,9 @@ export function Community({ cars = [], settings, user }) {
               onFollow={handleFollow}
             />
           )}
+
+          {/* Retângulo de lateral (300x250), como o rail dos marketplaces. */}
+          <AdSlot slot="community-rail" format="rectangle" user={user} />
         </aside>
       </div>
 
@@ -2354,6 +2551,19 @@ export function Community({ cars = [], settings, user }) {
           onShare={handlePublishGoal}
           onUnshare={handleUnshareGoal}
           onClearAll={handleClearMyPublications}
+        />
+      )}
+
+      {peopleModalOpen && (
+        <PeopleSearchModal
+          people={peopleDirectory}
+          query={peopleQuery}
+          onQueryChange={setPeopleQuery}
+          following={communityState.following}
+          t={t}
+          onFollow={handleFollow}
+          onOpenProfile={handleOpenProfile}
+          onClose={() => setPeopleModalOpen(false)}
         />
       )}
 

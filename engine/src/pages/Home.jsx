@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ArrowUpRight, Car, LayoutDashboard, Users } from "lucide-react";
 import { Button } from "../components/Button";
+import { AdSlot } from "../components/AdSlot";
 
 export function Home() {
   const { t } = useTranslation();
@@ -26,14 +27,6 @@ export function Home() {
       />
 
       <section className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-        <span className="engine-rise mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--engine-text-muted)] shadow-[var(--engine-shadow-sm)] sm:text-[11px]">
-          <span className="relative flex h-1.5 w-1.5 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--engine-accent)] opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--engine-accent)]" />
-          </span>
-          <span className="truncate">{t("home.kicker")}</span>
-        </span>
-
         <h1
           className="engine-rise mb-5 font-display font-black uppercase italic leading-[0.9] tracking-tight text-[var(--engine-text)]"
           style={{ fontSize: "clamp(2.75rem, 11vw, 6rem)", animationDelay: "0.06s" }}
@@ -95,6 +88,9 @@ export function Home() {
           </Link>
         ))}
       </section>
+
+      {/* Âncora discreta no rodapé — só aparece para quem não é premium. */}
+      <AdSlot slot="home-footer" format="horizontal" className="mx-auto mt-12 max-w-4xl" />
     </div>
   );
 }

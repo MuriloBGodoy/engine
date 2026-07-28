@@ -36,7 +36,9 @@ import { auth, storage } from "../services/firebase";
 import { languageOptions } from "../services/languages";
 import { countries, getStates, getCities, isCityInCountry } from "../services/locations";
 import { PageHeader } from "../components/PageHeader";
+import { PhoneField } from "../components/PhoneField";
 import { useConfirm } from "../components/ConfirmProvider";
+import { useRegion } from "../hooks/RegionProvider";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] outline-none transition-colors focus:border-[var(--engine-accent)]";
@@ -162,6 +164,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
   const { i18n, t } = useTranslation();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const { region, setRegion } = useRegion();
   const fileRef = useRef(null);
   const [activeSection, setActiveSection] = useState("profile");
   const [draft, setDraft] = useState(settings);
@@ -598,12 +601,11 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                       />
                     </Field>
                     <Field label={t("settings.fields.phone")}>
-                      <input
-                        className={inputClass}
+                      <PhoneField
                         value={draft?.profile?.phone || ""}
-                        onChange={(e) =>
-                          updateGroup("profile", "phone", e.target.value)
-                        }
+                        onChange={(value) => updateGroup("profile", "phone", value)}
+                        inputClassName={inputClass}
+                        selectClassName={inputClass}
                         placeholder={t("settings.placeholders.phone")}
                       />
                     </Field>
@@ -698,6 +700,40 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                       ))}
                     </select>
                   </Field>
+                  <Field label={t("region.country")}>
+                    <select
+                      className={inputClass}
+                      value={region.country}
+                      onChange={(e) =>
+                        setRegion({ country: e.target.value, state: "all" })
+                      }
+                    >
+                      <option value="all">{t("region.all")}</option>
+                      {countries.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.flag} {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  {region.country !== "all" && getStates(region.country).length > 0 && (
+                    <Field label={t("region.state")}>
+                      <select
+                        className={inputClass}
+                        value={region.state}
+                        onChange={(e) =>
+                          setRegion({ country: region.country, state: e.target.value })
+                        }
+                      >
+                        <option value="all">{t("region.allStates")}</option>
+                        {getStates(region.country).map((item) => (
+                          <option key={item.code} value={item.code}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
                   <Field label={t("settings.fields.currency")}>
                     <select
                       className={inputClass}

@@ -13,9 +13,15 @@ import { storage } from "./firebase";
  */
 const UPLOAD_TIMEOUT_MS = 20000;
 const MAX_FILE_BYTES = 6 * 1024 * 1024;
-// Enquanto o Storage não estiver ligado no projeto, a foto cai comprimida
-// dentro do documento — e o Firestore corta em 1 MiB por documento. Com até
-// 4 fotos por carro, cada uma precisa ficar na casa das dezenas de KB.
+// Foto que VAI para o Storage: redimensionada e reencodada para JPEG. O
+// arquivo cru do celular (3–6 MB) esgotaria os 5 GB grátis em ~1.000 fotos;
+// a 1600px/0.82 uma foto nítida fica em ~150–300 KB e cabem dezenas de
+// milhares. Também deixa o carregamento no mobile muito mais leve.
+const UPLOAD_MAX_SIZE = 1600;
+const UPLOAD_QUALITY = 0.82;
+// Fallback (Storage fora do ar): a foto cai comprimida DENTRO do documento
+// e o Firestore corta em 1 MiB por doc. Com até 4 fotos por carro, cada uma
+// precisa ficar na casa das dezenas de KB — daí ser bem menor/mais agressivo.
 const FALLBACK_MAX_SIZE = 900;
 const FALLBACK_QUALITY = 0.6;
 
@@ -30,7 +36,10 @@ const withUploadTimeout = (promise) =>
     }),
   ]);
 
-export const compressImageFile = (file) =>
+// Desenha o arquivo num canvas redimensionado e entrega o resultado no
+// formato pedido: "blob" (para upload no Storage) ou "dataURL" (fallback no
+// documento). Centraliza a leitura/redimensionamento das duas rotas.
+const renderCompressed = (file, { maxSize, quality, output }) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
@@ -38,10 +47,7 @@ export const compressImageFile = (file) =>
       const image = new Image();
       image.onerror = () => reject(new Error("Imagem inválida."));
       image.onload = () => {
-        const scale = Math.min(
-          1,
-          FALLBACK_MAX_SIZE / Math.max(image.width, image.height),
-        );
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
         const canvas = document.createElement("canvas");
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
@@ -53,11 +59,32 @@ export const compressImageFile = (file) =>
         }
 
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", FALLBACK_QUALITY));
+
+        if (output === "blob") {
+          canvas.toBlob(
+            (blob) =>
+              blob
+                ? resolve(blob)
+                : reject(new Error("Não foi possível comprimir a imagem.")),
+            "image/jpeg",
+            quality,
+          );
+          return;
+        }
+
+        resolve(canvas.toDataURL("image/jpeg", quality));
       };
       image.src = reader.result;
     };
     reader.readAsDataURL(file);
+  });
+
+// Fallback pequeno para caber no documento do Firestore (data URL base64).
+export const compressImageFile = (file) =>
+  renderCompressed(file, {
+    maxSize: FALLBACK_MAX_SIZE,
+    quality: FALLBACK_QUALITY,
+    output: "dataURL",
   });
 
 export const isImageFile = (file) => Boolean(file?.type?.startsWith("image/"));
@@ -68,14 +95,32 @@ export const uploadUserPhoto = async (file, { userId, folder }) => {
   if (isFileTooBig(file)) throw new Error("Imagem maior que 6 MB.");
 
   if (userId) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-    const path = `users/${userId}/${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+    const safeName = file.name
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `users/${userId}/${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}.jpg`;
 
     try {
+      // Comprime ANTES de subir — o arquivo cru do celular não vai para o
+      // Storage. Se a compressão falhar (formato exótico), sobe o original.
+      let payload = file;
+      let contentType = file.type;
+      try {
+        payload = await renderCompressed(file, {
+          maxSize: UPLOAD_MAX_SIZE,
+          quality: UPLOAD_QUALITY,
+          output: "blob",
+        });
+        contentType = "image/jpeg";
+      } catch (compressError) {
+        console.warn(
+          "[photos] Falha ao comprimir, subindo original.",
+          compressError,
+        );
+      }
+
       const fileRef = ref(storage, path);
-      await withUploadTimeout(
-        uploadBytes(fileRef, file, { contentType: file.type }),
-      );
+      await withUploadTimeout(uploadBytes(fileRef, payload, { contentType }));
       return await withUploadTimeout(getDownloadURL(fileRef));
     } catch (error) {
       console.warn("[photos] Storage indisponível, comprimindo local.", error);

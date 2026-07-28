@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   Home,
   LayoutDashboard,
+  LogIn,
   LogOut,
   MessageCircle,
   Settings,
@@ -15,6 +16,8 @@ import { useTranslation } from "react-i18next";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { Logo } from "./Logo";
 import { Topbar } from "./TopBar";
+import { GuestLoginHint } from "./GuestLoginHint";
+import { RegionPicker } from "./RegionPicker";
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -40,6 +43,7 @@ export function TopNav({
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const isGuest = !user;
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
   const unreadMessages = useUnreadMessages(user?.uid);
@@ -105,35 +109,52 @@ export function TopNav({
         </nav>
 
         <div className="ml-auto flex items-center gap-1">
-          <Topbar
-            settings={settings}
-            onSettingsUpdate={onSettingsUpdate}
-            user={user}
-          />
-          <span className="mx-1.5 h-6 w-px bg-[var(--engine-border)]" />
-          <Link
-            to="/settings"
-            title={t("settings.sections.profile")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95"
-          >
-            {avatar ? (
-              <img
-                src={avatar}
-                alt={displayName || "Perfil"}
-                className="h-full w-full object-cover"
+          <RegionPicker className="mr-1" />
+          {isGuest ? (
+            <div className="relative">
+              <Link
+                to="/login"
+                title={t("nav.login")}
+                className="flex h-9 items-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 text-[13px] font-semibold text-white transition hover:brightness-95"
+              >
+                <LogIn size={17} />
+                {t("nav.login")}
+              </Link>
+              <GuestLoginHint placement="bottom-right" />
+            </div>
+          ) : (
+            <>
+              <Topbar
+                settings={settings}
+                onSettingsUpdate={onSettingsUpdate}
+                user={user}
               />
-            ) : (
-              getInitials(displayName)
-            )}
-          </Link>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-accent-soft)] hover:text-[var(--engine-accent)]"
-            title={t("nav.logout")}
-          >
-            <LogOut size={18} />
-          </button>
+              <span className="mx-1.5 h-6 w-px bg-[var(--engine-border)]" />
+              <Link
+                to="/settings"
+                title={t("settings.sections.profile")}
+                className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95"
+              >
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt={displayName || "Perfil"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  getInitials(displayName)
+                )}
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-accent-soft)] hover:text-[var(--engine-accent)]"
+                title={t("nav.logout")}
+              >
+                <LogOut size={18} />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

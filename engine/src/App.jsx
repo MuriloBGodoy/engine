@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { useTranslation } from "react-i18next";
 import { auth } from "./services/firebase";
@@ -13,6 +13,9 @@ import { MobileNav } from "./components/MobileNav";
 import { Topbar } from "./components/TopBar"; // Importando em .jsx
 import { ModalNewCar } from "./components/ModalNewCar";
 import { OwnershipModal } from "./components/OwnershipModal";
+import { RequireAuth } from "./components/RequireAuth";
+import { Footer } from "./components/Footer";
+import { RegionPicker } from "./components/RegionPicker";
 import { useConfirm } from "./components/ConfirmProvider";
 import { Home } from "./pages/Home";
 import { Garagem } from "./pages/Garagem";
@@ -150,163 +153,228 @@ function App() {
     return <div className="min-h-screen bg-[var(--engine-bg)]" />;
   }
 
-  if (!user) {
-    return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="*" element={<Navigate to="/login" />} />
-        </Routes>
-      </BrowserRouter>
-    );
-  }
-
   return (
     <BrowserRouter>
-      <div
-        className={`flex min-h-[100dvh] flex-col bg-[var(--engine-bg)] font-sans text-[var(--engine-text)] transition-colors ${
-          isTopNav ? "" : "lg:h-screen lg:flex-row lg:overflow-hidden"
-        }`}
-      >
-        {/* No mobile a rolagem é a do documento (barra de endereço recolhe,
-            pull-to-refresh funciona); o painel com rolagem interna só entra
-            no desktop, onde a sidebar precisa ficar fixa. */}
-        <MobileNav
-          profileSettings={settings.profile}
-          settings={settings}
-          onSettingsUpdate={setSettings}
-          user={user}
-        />
+      <Routes>
+        {/* Páginas de autenticação: tela cheia, sem o shell do app. */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-        {isTopNav ? (
-          <TopNav
-            settings={settings}
-            onSettingsUpdate={setSettings}
-            user={user}
-            profileSettings={settings.profile}
-          />
-        ) : (
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
-            profileSettings={settings.profile}
-            privacySettings={settings.privacy}
-          />
-        )}
-
-        <main
-          className={`engine-scroll flex min-h-0 min-w-0 flex-1 flex-col px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-10 lg:py-8 lg:pb-8 ${
-            isTopNav ? "" : "lg:h-screen lg:overflow-y-auto"
-          }`}
+        {/* O Engine abre sem login. Início, comunidade e serviços são
+            livres para visitantes; as rotas pessoais ficam protegidas por
+            RequireAuth, que mostra um convite em vez de barrar na porta. */}
+        <Route
+          element={
+            <AppLayout
+              user={user}
+              settings={settings}
+              onSettingsUpdate={setSettings}
+              isTopNav={isTopNav}
+              dbLoading={dbLoading}
+              sidebarCollapsed={sidebarCollapsed}
+              onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
+              isModalOpen={isModalOpen}
+              carToEdit={carToEdit}
+              onCloseModal={handleCloseModal}
+              onSaveCar={saveCarAction}
+              ownershipCar={ownershipCar}
+              onCloseOwnership={() => setOwnershipCar(null)}
+              onSaveOwnership={saveOwnershipAction}
+            />
+          }
         >
-          {/* No layout sidebar, a Topbar global fica no topo do conteúdo (só
-              no desktop — no mobile as mesmas ações vivem no header fixo).
-              No layout top-nav, ela já está embutida no TopNav. */}
-          {!dbLoading && !isTopNav && (
-            <div className="engine-container hidden lg:block">
-              <div className="flex w-full items-center justify-end gap-1.5 border-b border-[var(--engine-border)] pb-4">
-                <Topbar
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/garagem"
+            element={
+              <RequireAuth user={user}>
+                <Garagem
+                  cars={cars}
+                  onOpenModal={handleOpenModal}
+                  onOpenDelete={openDeleteConfirmation}
+                  onOpenOwnership={setOwnershipCar}
+                  defaultSort={settings.preferences.defaultGarageSort}
+                  hideValues={settings.privacy.lockSensitiveValues}
+                />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth user={user}>
+                <DashboardPage
+                  cars={cars}
+                  settings={settings}
+                  onOpenOwnership={setOwnershipCar}
+                />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/community"
+            element={<Community cars={cars} settings={settings} user={user} />}
+          />
+          <Route
+            path="/messages"
+            element={
+              <RequireAuth user={user}>
+                <Messages user={user} settings={settings} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/messages/:conversationId"
+            element={
+              <RequireAuth user={user}>
+                <Messages user={user} settings={settings} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/services"
+            element={<Services settings={settings} user={user} />}
+          />
+          <Route
+            path="/services/approvals"
+            element={
+              <RequireAuth user={user}>
+                <ServiceApprovals user={user} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth user={user}>
+                <Settings
+                  user={user}
                   settings={settings}
                   onSettingsUpdate={setSettings}
-                  user={user}
                 />
-              </div>
-            </div>
-          )}
-
-          {dbLoading ? (
-            <div className="flex h-full items-center justify-center text-[var(--engine-text-subtle)] italic">
-              {t("common.loading")}
-            </div>
-          ) : (
-            <div
-              className={`engine-container flex flex-1 flex-col ${isTopNav ? "" : "lg:mt-6"}`}
-            >
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route
-                  path="/garagem"
-                  element={
-                    <Garagem
-                      cars={cars}
-                      onOpenModal={handleOpenModal}
-                      onOpenDelete={openDeleteConfirmation}
-                      onOpenOwnership={setOwnershipCar}
-                      defaultSort={settings.preferences.defaultGarageSort}
-                      hideValues={settings.privacy.lockSensitiveValues}
-                    />
-                  }
-                />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <DashboardPage
-                      cars={cars}
-                      settings={settings}
-                      onOpenOwnership={setOwnershipCar}
-                    />
-                  }
-                />
-                <Route
-                  path="/community"
-                  element={
-                    <Community cars={cars} settings={settings} user={user} />
-                  }
-                />
-                <Route
-                  path="/messages"
-                  element={<Messages user={user} settings={settings} />}
-                />
-                <Route
-                  path="/messages/:conversationId"
-                  element={<Messages user={user} settings={settings} />}
-                />
-                <Route
-                  path="/services"
-                  element={<Services settings={settings} user={user} />}
-                />
-                <Route
-                  path="/services/approvals"
-                  element={<ServiceApprovals user={user} />}
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <Settings
-                      user={user}
-                      settings={settings}
-                      onSettingsUpdate={setSettings}
-                    />
-                  }
-                />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </div>
-          )}
-        </main>
-
-        {/* A key remonta o formulário a cada carro: sem isso o modal fica
-            montado e carrega marca/modelo/ano/preço do carro anterior. */}
-        <ModalNewCar
-          key={carToEdit?.id ?? "new"}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onSave={saveCarAction}
-          carToEdit={carToEdit}
-        />
-
-        <OwnershipModal
-          isOpen={Boolean(ownershipCar)}
-          car={ownershipCar}
-          settings={settings}
-          onClose={() => setOwnershipCar(null)}
-          onSave={saveOwnershipAction}
-        />
-      </div>
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
+  );
+}
+
+/**
+ * Shell do app (navegação + área de conteúdo) compartilhado por todas as
+ * rotas não-autenticação. Renderiza o <Outlet /> da rota casada. Fica
+ * acessível a visitantes sem login — as rotas pessoais se protegem sozinhas
+ * via RequireAuth.
+ */
+function AppLayout({
+  user,
+  settings,
+  onSettingsUpdate,
+  isTopNav,
+  dbLoading,
+  sidebarCollapsed,
+  onToggleSidebar,
+  isModalOpen,
+  carToEdit,
+  onCloseModal,
+  onSaveCar,
+  ownershipCar,
+  onCloseOwnership,
+  onSaveOwnership,
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      className={`flex min-h-[100dvh] flex-col bg-[var(--engine-bg)] font-sans text-[var(--engine-text)] transition-colors ${
+        isTopNav ? "" : "lg:h-[100dvh] lg:flex-row lg:overflow-hidden"
+      }`}
+    >
+      {/* No mobile a rolagem é a do documento (barra de endereço recolhe,
+          pull-to-refresh funciona); o painel com rolagem interna só entra
+          no desktop, onde a sidebar precisa ficar fixa. */}
+      <MobileNav
+        profileSettings={settings.profile}
+        settings={settings}
+        onSettingsUpdate={onSettingsUpdate}
+        user={user}
+      />
+
+      {isTopNav ? (
+        <TopNav
+          settings={settings}
+          onSettingsUpdate={onSettingsUpdate}
+          user={user}
+          profileSettings={settings.profile}
+        />
+      ) : (
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={onToggleSidebar}
+          profileSettings={settings.profile}
+          privacySettings={settings.privacy}
+          user={user}
+        />
+      )}
+
+      <main
+        className={`engine-scroll flex min-h-0 min-w-0 flex-1 flex-col px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-10 lg:py-8 lg:pb-8 ${
+          isTopNav ? "" : "lg:h-[100dvh] lg:overflow-y-auto"
+        }`}
+      >
+        {/* No layout sidebar, a Topbar global fica no topo do conteúdo (só
+            no desktop — no mobile as mesmas ações vivem no header fixo).
+            No layout top-nav, ela já está embutida no TopNav. */}
+        {!dbLoading && !isTopNav && (
+          <div className="engine-container hidden lg:block">
+            <div className="flex w-full items-center justify-end gap-1.5 border-b border-[var(--engine-border)] pb-4">
+              <RegionPicker className="mr-1" />
+              <Topbar
+                settings={settings}
+                onSettingsUpdate={onSettingsUpdate}
+                user={user}
+              />
+            </div>
+          </div>
+        )}
+
+        {dbLoading ? (
+          <div className="flex h-full items-center justify-center text-[var(--engine-text-subtle)] italic">
+            {t("common.loading")}
+          </div>
+        ) : (
+          <div
+            className={`engine-container flex flex-1 flex-col ${isTopNav ? "" : "lg:mt-6"}`}
+          >
+            <Outlet />
+          </div>
+        )}
+
+        {/* Rodapé global — acompanha o conteúdo no fim da rolagem. */}
+        {!dbLoading && <Footer />}
+      </main>
+
+      {/* A key remonta o formulário a cada carro: sem isso o modal fica
+          montado e carrega marca/modelo/ano/preço do carro anterior. */}
+      <ModalNewCar
+        key={carToEdit?.id ?? "new"}
+        isOpen={isModalOpen}
+        onClose={onCloseModal}
+        onSave={onSaveCar}
+        carToEdit={carToEdit}
+      />
+
+      <OwnershipModal
+        isOpen={Boolean(ownershipCar)}
+        car={ownershipCar}
+        settings={settings}
+        onClose={onCloseOwnership}
+        onSave={onSaveOwnership}
+      />
+    </div>
   );
 }
 

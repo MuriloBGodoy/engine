@@ -1,32 +1,28 @@
-import { ShieldCheck, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { LogoMark } from "./Logo";
 
-export function AuthShell({ children, kicker, title, subtitle, compact = false }) {
+export function AuthShell({ children, kicker, title, subtitle, compact = false, wide = false }) {
   const { t } = useTranslation();
+
+  const shellClass = ["auth-shell", compact && "auth-shell-compact", wide && "auth-shell-wide"]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="auth-screen">
-      <div className={compact ? "auth-shell auth-shell-compact" : "auth-shell"}>
+      <div className={shellClass}>
+        {/* Lado esquerdo: marca do Engine sobre uma GT-R — o vermelho das
+            lanternas conversa com o accent da aplicação. */}
         <section className="auth-hero">
-          <div className="auth-brand-block">
-            <h1>Engine</h1>
-            <p>{t("auth.heroText")}</p>
+          <div className="auth-hero-top">
+            <LogoMark size={34} />
+            <span className="auth-hero-wordmark">Engine</span>
           </div>
-          <div className="auth-highlights">
-            <div className="auth-highlight">
-              <ShieldCheck size={18} />
-              <div>
-                <strong>{t("auth.heroControlTitle")}</strong>
-                <span>{t("auth.heroControlText")}</span>
-              </div>
-            </div>
-            <div className="auth-highlight">
-              <Zap size={18} />
-              <div>
-                <strong>{t("auth.heroSpeedTitle")}</strong>
-                <span>{t("auth.heroSpeedText")}</span>
-              </div>
-            </div>
+          <div className="auth-hero-copy">
+            <h1>
+              Engine <span>Garage</span>
+            </h1>
+            <p>{t("auth.heroText")}</p>
           </div>
         </section>
 
