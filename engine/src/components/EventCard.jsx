@@ -4,7 +4,7 @@ import {
   Users,
   Calendar,
   DollarSign,
-  Facebook,
+  Share2,
   MessageCircle,
 } from "lucide-react";
 
@@ -112,7 +112,7 @@ export function EventCard({ event }) {
                 className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition"
                 title="Grupo do Facebook"
               >
-                <Facebook size={14} />
+                <Share2 size={14} />
                 Facebook
               </a>
             )}

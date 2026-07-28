@@ -6,7 +6,7 @@ import {
   Calendar,
   Users,
   DollarSign,
-  Facebook,
+  Share2,
   MessageCircle,
   Trash2,
   Edit3,
@@ -269,7 +269,7 @@ export function EventDetails() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-6 py-3 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition"
                     >
-                      <Facebook size={20} />
+                      <Share2 size={20} />
                       Entrar no Facebook
                     </a>
                   )}
