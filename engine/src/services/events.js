@@ -19,8 +19,10 @@ const EVENTS_COLLECTION = "events";
 const normalizeEvent = (event) => ({
   title: String(event.title || "").trim().slice(0, 120),
   description: String(event.description || "").trim().slice(0, 1000),
-  type: String(event.type || "casual").trim(), // casual, cars-and-coffee, cruise, concours
+  type: String(event.type || "casual").trim(),
   eventDate: String(event.eventDate || ""),
+  startTime: String(event.startTime || "").trim(), // HH:mm
+  endTime: String(event.endTime || "").trim(), // HH:mm (opcional)
   location: String(event.location || "").trim().slice(0, 120),
   state: String(event.state || "").trim().slice(0, 8),
   country: String(event.country || "BR").trim().slice(0, 4),

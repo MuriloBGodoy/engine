@@ -25,6 +25,12 @@ export function EventCard({ event }) {
     "cars-and-coffee": "Cars & Coffee",
     cruise: "Cruise",
     concours: "Concurso",
+    drift: "Drift",
+    "track-day": "Track Day",
+    "auto-meet": "Auto Meet",
+    autocross: "Autocross",
+    "drag-racing": "Drag Racing",
+    rallye: "Rallye",
   }[event.type] || event.type;
 
   const spotsLeft = event.maxParticipants
@@ -63,7 +69,11 @@ export function EventCard({ event }) {
         <div className="space-y-2 text-sm mb-4">
           <div className="flex items-center gap-2 text-[var(--engine-text-muted)]">
             <Calendar size={16} className="text-[var(--engine-accent)]" />
-            <span>{formattedDate}</span>
+            <span>
+              {eventDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+              {event.startTime && ` • ${event.startTime}`}
+              {event.endTime && ` - ${event.endTime}`}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-[var(--engine-text-muted)]">

@@ -142,13 +142,14 @@ export function EventDetails() {
   }
 
   const eventDate = new Date(event.eventDate);
-  const formattedDate = eventDate.toLocaleDateString("pt-BR", {
+  const dateStr = eventDate.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
     weekday: "long",
   });
+  const timeStr = event.startTime ? ` às ${event.startTime}` : "";
+  const endTimeStr = event.endTime ? ` até ${event.endTime}` : "";
+  const formattedDate = `${dateStr}${timeStr}${endTimeStr}`;
 
   const spotsLeft = event.maxParticipants
     ? Math.max(0, event.maxParticipants - (event.participantCount || 0))
@@ -161,6 +162,12 @@ export function EventDetails() {
     "cars-and-coffee": "Cars & Coffee",
     cruise: "Cruise",
     concours: "Concurso",
+    drift: "Drift",
+    "track-day": "Track Day",
+    "auto-meet": "Auto Meet",
+    autocross: "Autocross",
+    "drag-racing": "Drag Racing",
+    rallye: "Rallye",
   }[event.type] || event.type;
 
   return (

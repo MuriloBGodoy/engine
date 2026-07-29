@@ -95,6 +95,12 @@ const EVENT_TYPES = [
   { value: "cars-and-coffee", label: "Cars & Coffee" },
   { value: "cruise", label: "Cruise" },
   { value: "concours", label: "Concurso" },
+  { value: "drift", label: "Drift" },
+  { value: "track-day", label: "Track Day" },
+  { value: "auto-meet", label: "Auto Meet" },
+  { value: "autocross", label: "Autocross" },
+  { value: "drag-racing", label: "Drag Racing" },
+  { value: "rallye", label: "Rallye" },
 ];
 
 export function CreateEventForm({ onSuccess, onCancel }) {
@@ -108,7 +114,8 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     description: "",
     type: "casual",
     eventDate: "",
-    eventTime: "14:00",
+    startTime: "14:00",
+    endTime: "",
     country: "BR",
     state: "",
     city: "",
@@ -203,7 +210,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     setSaving(true);
 
     try {
-      const eventDateTime = `${form.eventDate}T${form.eventTime}:00Z`;
+      const eventDateTime = `${form.eventDate}T${form.startTime}:00Z`;
 
       const location = form.address
         ? `${form.address}, ${form.city}`
@@ -214,6 +221,8 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         description: form.description,
         type: form.type,
         eventDate: new Date(eventDateTime).toISOString(),
+        startTime: form.startTime,
+        endTime: form.endTime,
         location: location,
         state: form.state,
         country: form.country,
@@ -356,11 +365,20 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             />
           </Field>
 
-          <Field label="Hora">
+          <Field label="Hora de Início">
             <TextInput
               type="time"
-              value={form.eventTime}
-              onChange={(e) => handleChange("eventTime", e.target.value)}
+              value={form.startTime}
+              onChange={(e) => handleChange("startTime", e.target.value)}
+            />
+          </Field>
+
+          <Field label="Hora de Término (Opcional)">
+            <TextInput
+              type="time"
+              value={form.endTime}
+              onChange={(e) => handleChange("endTime", e.target.value)}
+              placeholder="Deixe em branco se não souber"
             />
           </Field>
 

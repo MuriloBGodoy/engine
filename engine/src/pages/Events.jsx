@@ -19,6 +19,12 @@ const EVENT_TYPES = [
   { value: "cars-and-coffee", label: "Cars & Coffee" },
   { value: "cruise", label: "Cruise" },
   { value: "concours", label: "Concurso" },
+  { value: "drift", label: "Drift" },
+  { value: "track-day", label: "Track Day" },
+  { value: "auto-meet", label: "Auto Meet" },
+  { value: "autocross", label: "Autocross" },
+  { value: "drag-racing", label: "Drag Racing" },
+  { value: "rallye", label: "Rallye" },
 ];
 
 
