@@ -1063,6 +1063,14 @@ h5 {
   gap: 12px;
 }
 
+@media (max-width: 480px) {
+  .region-pop {
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
 .region-pop-title {
   font-family: var(--font-display);
   font-weight: 800;

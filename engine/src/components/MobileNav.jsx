@@ -148,9 +148,8 @@ export function MobileNav({
         </div>
       </header>
 
-      {/* 6 colunas: com rótulo de 10px "Comunidade" não cabe em 360px, por
-          isso o texto cai para 9px com tracking apertado aqui embaixo. */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-0.5 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
+      {/* 7 colunas para mobile (incluindo Eventos) */}
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-7 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-0.5 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
         {menuItems.map((item) => {
           const active = isActivePath(item.path);
           const Icon = item.icon;
@@ -159,7 +158,7 @@ export function MobileNav({
               key={item.path}
               to={item.path}
               aria-current={active ? "page" : undefined}
-              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-0.5 py-1 text-[9px] font-semibold tracking-tight transition-colors ${
+              className={`flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-0.5 text-[7px] font-semibold tracking-tight transition-colors ${
                 active
                   ? "text-[var(--engine-accent)]"
                   : "text-[var(--engine-text-subtle)]"
