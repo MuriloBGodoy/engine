@@ -34,6 +34,7 @@ export function Sidebar({
   profileSettings = {},
   privacySettings = {},
   user: userProp,
+  className = "",
 }) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -89,9 +90,9 @@ export function Sidebar({
 
   return (
     <aside
-      className={`hidden h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-[var(--engine-border)] bg-[var(--engine-surface)] transition-[width] duration-300 ease-out lg:flex ${
+      className={`h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-[var(--engine-border)] bg-[var(--engine-surface)] transition-[width] duration-300 ease-out ${
         collapsed ? "w-[76px]" : "w-[260px]"
-      }`}
+      } ${className}`}
     >
       {/* Marca */}
       <div

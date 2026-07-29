@@ -327,6 +327,7 @@ function AppLayout({
           profileSettings={settings.profile}
           privacySettings={settings.privacy}
           user={user}
+          className="hidden lg:flex"
         />
       )}
 
