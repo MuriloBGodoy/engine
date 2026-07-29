@@ -2488,37 +2488,10 @@ export function Community({ cars = [], settings, user }) {
           </div>
 
           <div className="engine-card p-4">
-            <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-text-subtle)]">
-              {t("community.publishTitle")}
-            </p>
-            <div className="space-y-2.5">
-              {personalGoals.slice(0, 4).map((goal) => (
-                <div key={goal.id} className="flex items-center gap-2.5">
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                      isGoalShared(goal, communityState.sharedGoalIds, user?.uid)
-                        ? "bg-emerald-500"
-                        : "bg-[var(--engine-border-strong)]"
-                    }`}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--engine-text)]">
-                    {goal.title}
-                  </span>
-                  <span className="shrink-0 text-[11px] font-bold text-[var(--engine-text-subtle)]">
-                    {getProgress(goal).toFixed(0)}%
-                  </span>
-                </div>
-              ))}
-              {!personalGoals.length && (
-                <p className="text-[13px] font-medium leading-5 text-[var(--engine-text-muted)]">
-                  {t("community.noPersonalGoals")}
-                </p>
-              )}
-            </div>
             <button
               type="button"
               onClick={() => setShareModalOpen(true)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
             >
               <Plus size={15} />
               {t("community.shareNewGoal")}
