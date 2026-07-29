@@ -142,14 +142,20 @@ export function EventDetails() {
   }
 
   const eventDate = new Date(event.eventDate);
-  const dateStr = eventDate.toLocaleDateString("pt-BR", {
+  const startDateStr = eventDate.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "long",
     weekday: "long",
   });
+  const endDate = event.endDate ? new Date(event.endDate) : null;
+  const endDateStr = endDate
+    ? endDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long", weekday: "long" })
+    : null;
+  const dateRangeStr =
+    endDateStr && endDateStr !== startDateStr ? `${startDateStr} até ${endDateStr}` : startDateStr;
   const timeStr = event.startTime ? ` às ${event.startTime}` : "";
   const endTimeStr = event.endTime ? ` até ${event.endTime}` : "";
-  const formattedDate = `${dateStr}${timeStr}${endTimeStr}`;
+  const formattedDate = `${dateRangeStr}${timeStr}${endTimeStr}`;
 
   const spotsLeft = event.maxParticipants
     ? Math.max(0, event.maxParticipants - (event.participantCount || 0))

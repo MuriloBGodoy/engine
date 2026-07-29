@@ -13,12 +13,16 @@ export function EventCard({ event }) {
   const navigate = useNavigate();
 
   const eventDate = new Date(event.eventDate);
-  const formattedDate = eventDate.toLocaleDateString("pt-BR", {
+  const startDateStr = eventDate.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
   });
+  const endDate = event.endDate ? new Date(event.endDate) : null;
+  const endDateStr = endDate
+    ? endDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })
+    : null;
+  const dateDisplay =
+    endDateStr && endDateStr !== startDateStr ? `${startDateStr} - ${endDateStr}` : startDateStr;
 
   const eventTypeLabel = {
     casual: "Casual",
@@ -70,7 +74,7 @@ export function EventCard({ event }) {
           <div className="flex items-center gap-2 text-[var(--engine-text-muted)]">
             <Calendar size={16} className="text-[var(--engine-accent)]" />
             <span>
-              {eventDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+              {dateDisplay}
               {event.startTime && ` • ${event.startTime}`}
               {event.endTime && ` - ${event.endTime}`}
             </span>

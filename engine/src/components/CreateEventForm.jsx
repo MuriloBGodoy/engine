@@ -114,6 +114,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     description: "",
     type: "casual",
     eventDate: "",
+    endDate: "",
     startTime: "14:00",
     endTime: "",
     country: "BR",
@@ -221,6 +222,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         description: form.description,
         type: form.type,
         eventDate: new Date(eventDateTime).toISOString(),
+        endDate: form.endDate || "",
         startTime: form.startTime,
         endTime: form.endTime,
         location: location,
@@ -357,11 +359,20 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             </Select>
           </Field>
 
-          <Field label="Data">
+          <Field label="Data de Início">
             <TextInput
               type="date"
               value={form.eventDate}
               onChange={(e) => handleChange("eventDate", e.target.value)}
+            />
+          </Field>
+
+          <Field label="Data de Término (Opcional)">
+            <TextInput
+              type="date"
+              value={form.endDate}
+              onChange={(e) => handleChange("endDate", e.target.value)}
+              placeholder="Se for dia diferente"
             />
           </Field>
 

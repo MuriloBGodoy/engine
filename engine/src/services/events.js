@@ -21,6 +21,7 @@ const normalizeEvent = (event) => ({
   description: String(event.description || "").trim().slice(0, 1000),
   type: String(event.type || "casual").trim(),
   eventDate: String(event.eventDate || ""),
+  endDate: String(event.endDate || "").trim(), // opcional
   startTime: String(event.startTime || "").trim(), // HH:mm
   endTime: String(event.endTime || "").trim(), // HH:mm (opcional)
   location: String(event.location || "").trim().slice(0, 120),
