@@ -1119,12 +1119,16 @@ function ShareModal({
   onUnshare,
   onClearAll,
 }) {
-  const [composingId, setComposingId] = useState("");
+  const [selectedGoalId, setSelectedGoalId] = useState(goals[0]?.id || "");
   const [caption, setCaption] = useState("");
 
-  const startComposing = (goal, currentNote) => {
-    setComposingId((current) => (current === goal.id ? "" : goal.id));
-    setCaption(currentNote || "");
+  const selectedGoal = goals.find((g) => g.id === selectedGoalId);
+  const shared = selectedGoal ? isGoalShared(selectedGoal, sharedGoalIds, userId) : false;
+  const publishedNote = selectedGoal ? notesByCarId[String(selectedGoal.carId || selectedGoal.id)] || "" : "";
+
+  const handleSelectGoal = (goal) => {
+    setSelectedGoalId(goal.id);
+    setCaption(notesByCarId[String(goal.carId || goal.id)] || "");
   };
 
   return (
@@ -1149,120 +1153,107 @@ function ShareModal({
           </button>
         </div>
 
-        <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-3 p-4 sm:p-6">
-          {goals.map((goal) => {
-            const shared = isGoalShared(goal, sharedGoalIds, userId);
-            const publishedNote = notesByCarId[String(goal.carId || goal.id)] || "";
-            const composing = composingId === goal.id;
-
-            return (
-              <div
-                key={goal.id}
-                className="rounded-xl border border-[var(--engine-border)] p-3 transition hover:border-[var(--engine-accent)]"
-              >
-                <div className="flex w-full items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => startComposing(goal, publishedNote)}
-                    className="flex min-w-0 flex-1 items-center gap-4 text-left"
-                  >
-                    <img
-                      src={goal.image}
-                      alt={goal.title}
-                      className="h-16 w-20 rounded-lg object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-black italic text-[var(--engine-text)] dark:text-white">
-                        {goal.title}
-                      </p>
-                      <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
-                        {getProgress(goal).toFixed(1)}%
-                        {shared ? ` / ${t("community.shared")}` : ""}
-                      </p>
-                      {shared && publishedNote && !composing && (
-                        <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-muted)]">
-                          {publishedNote}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                        shared
-                          ? "bg-[var(--engine-accent)] text-white"
-                          : "bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
-                      }`}
-                      title={shared ? t("community.editCaption") : t("community.publishGoal")}
-                    >
-                      {shared ? <Check size={17} /> : <Share2 size={17} />}
-                    </span>
-                  </button>
-                  {shared && (
-                    <button
-                      type="button"
-                      onClick={() => onUnshare(goal)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white "
-                      title={t("community.unshare")}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Legenda da publicação: escrita aqui, na hora de publicar
-                    (ou editada depois), em vez de herdar a bio do perfil. */}
-                {composing && (
-                  <div className="mt-3 border-t border-[var(--engine-border)] pt-3">
-                    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-text-subtle)]">
-                      {t("community.captionLabel")}
-                    </label>
-                    <textarea
-                      value={caption}
-                      rows={3}
-                      maxLength={280}
-                      autoFocus
-                      onChange={(event) => setCaption(event.target.value)}
-                      placeholder={t("community.captionPlaceholder")}
-                      className="engine-scroll w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
-                    />
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onShare(goal, caption);
-                          setComposingId("");
-                        }}
-                        className="rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
-                      >
-                        {shared ? t("common.save") : t("community.publishGoal")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setComposingId("")}
-                        className="rounded-full px-3 py-2 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:text-[var(--engine-text)]"
-                      >
-                        {t("common.cancel")}
-                      </button>
-                      <span className="ml-auto text-[11px] font-semibold text-[var(--engine-text-subtle)]">
-                        {caption.length}/280
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {!goals.length && (
+        <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-4 p-4 sm:p-6">
+          {!goals.length ? (
             <div className="rounded-xl border border-dashed border-[var(--engine-border)] p-8 text-center ">
               <Car className="mx-auto mb-3 text-[var(--engine-accent)]" size={34} />
               <p className="font-medium text-[var(--engine-text-muted)]">
                 {t("community.noPersonalGoals")}
               </p>
             </div>
+          ) : (
+            <>
+              {/* Dropdown de metas */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-text-subtle)]">
+                  Selecione a meta
+                </label>
+                <div className="space-y-2">
+                  {goals.map((goal) => {
+                    const goalShared = isGoalShared(goal, sharedGoalIds, userId);
+                    return (
+                      <button
+                        key={goal.id}
+                        type="button"
+                        onClick={() => handleSelectGoal(goal)}
+                        className={`w-full rounded-xl border p-3 text-left transition ${
+                          selectedGoalId === goal.id
+                            ? "border-[var(--engine-accent)] bg-[var(--engine-accent)]/10"
+                            : "border-[var(--engine-border)] hover:border-[var(--engine-accent)]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-black italic text-[var(--engine-text)] dark:text-white">
+                              {goal.title}
+                            </p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                              {getProgress(goal).toFixed(1)}%
+                              {goalShared ? ` / ${t("community.shared")}` : ""}
+                            </p>
+                          </div>
+                          <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                              goalShared
+                                ? "bg-[var(--engine-accent)] text-white"
+                                : "bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
+                            }`}
+                          >
+                            {goalShared ? <Check size={16} /> : <Share2 size={16} />}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Editor de caption da meta selecionada */}
+              {selectedGoal && (
+                <div className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4">
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-text-subtle)]">
+                    {t("community.captionLabel")}
+                  </label>
+                  <textarea
+                    value={caption}
+                    rows={3}
+                    maxLength={280}
+                    onChange={(event) => setCaption(event.target.value)}
+                    placeholder={t("community.captionPlaceholder")}
+                    className="engine-scroll w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-3 py-2.5 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
+                  />
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onShare(selectedGoal, caption);
+                        setCaption("");
+                      }}
+                      className="rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+                    >
+                      {shared ? t("common.save") : t("community.publishGoal")}
+                    </button>
+                    {shared && (
+                      <button
+                        type="button"
+                        onClick={() => onUnshare(selectedGoal)}
+                        className="ml-auto flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
+                      >
+                        <Trash2 size={14} />
+                        {t("community.unshare")}
+                      </button>
+                    )}
+                    <span className="text-[11px] font-semibold text-[var(--engine-text-subtle)]">
+                      {caption.length}/280
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Ação destrutiva mora aqui dentro: no feed ela era um botão
-            permanente, do tamanho do de publicar. */}
+        {/* Ação destrutiva */}
         {onClearAll && goals.length > 0 && (
           <div className="engine-safe-bottom shrink-0 border-t border-[var(--engine-border)] px-4 py-3 sm:px-6">
             <button
