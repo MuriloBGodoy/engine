@@ -1063,11 +1063,12 @@ h5 {
   gap: 12px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 380px) {
   .region-pop {
-    left: 12px;
-    right: 12px;
-    width: auto;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 32px);
   }
 }
 
