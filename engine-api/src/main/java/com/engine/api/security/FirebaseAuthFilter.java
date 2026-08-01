@@ -34,6 +34,11 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
     String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
     if (authorization == null || !authorization.startsWith("Bearer ")) {
       response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token ausente.");

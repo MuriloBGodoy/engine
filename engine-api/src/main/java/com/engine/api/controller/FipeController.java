@@ -70,4 +70,14 @@ public class FipeController {
       String yearId) {
     return fipeService.getPrice(brandId, modelId, yearId);
   }
+
+  @GetMapping("/consumption/{modelName}")
+  @Operation(summary = "Consumo real", description = "Retorna consumo em km/l (real) para um modelo de carro.")
+  Object getConsumption(
+      @Parameter(description = "Nome do modelo", example = "gol")
+      @PathVariable
+      @NotBlank
+      String modelName) {
+    return fipeService.getConsumption(modelName);
+  }
 }

@@ -5,6 +5,7 @@ import {
   Award,
   AtSign,
   Bookmark,
+  Building,
   Car,
   Check,
   ChevronLeft,
@@ -30,6 +31,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { ClubsTab } from "../components/community/ClubsTab";
 import { engineDB } from "../services/db";
 import { InfoTip } from "../components/InfoTip";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -1771,7 +1773,8 @@ export function Community({ cars = [], settings, user }) {
   // redirecionamento (perfil, notificação, link) — que vale nos dois casos.
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState("feed");
+  const topLevelTab = searchParams.get("tab") || "goals";
+  const [activeSubTab, setActiveSubTab] = useState("feed");
   const [query, setQuery] = useState("");
   const [peopleQuery, setPeopleQuery] = useState("");
   const [remoteGoal, setRemoteGoal] = useState(null);
@@ -2299,10 +2302,24 @@ export function Community({ cars = [], settings, user }) {
     }));
   };
 
-  const tabs = [
+  const setTopLevelTab = (tabId) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", tabId);
+    params.delete("club"); // Close any open club modal
+    setSearchParams(params);
+    setActiveSubTab("feed"); // Reset sub-tab to default
+  };
+
+  const subTabs = [
     { id: "feed", label: t("community.tabs.feed"), icon: Users },
     { id: "videos", label: t("community.tabs.videos"), icon: Clapperboard },
     { id: "ranking", label: t("community.tabs.ranking"), icon: Trophy },
+  ];
+
+  const mainTabs = [
+    { id: "goals", label: "Metas", icon: Car },
+    { id: "users", label: "Pessoas", icon: Users },
+    { id: "clubes", label: "Clubes", icon: Building },
   ];
 
   return (
@@ -2314,16 +2331,17 @@ export function Community({ cars = [], settings, user }) {
           botão de publicar aqui em cima. */}
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full min-w-0 max-w-[620px]">
+          {/* Main Tabs (Goals, Users, Clubes) */}
           <div className="mb-4 flex items-center gap-2">
             <div className="flex min-w-0 flex-1 rounded-full bg-[var(--engine-surface-2)] p-1">
-              {tabs.map((tab) => {
+              {mainTabs.map((tab) => {
                 const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
+                const isActive = topLevelTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => setTopLevelTab(tab.id)}
                     className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
                       isActive
                         ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
@@ -2337,180 +2355,281 @@ export function Community({ cars = [], settings, user }) {
               })}
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              {/* Publicar meta: no desktop mora no trilho lateral; aqui fica
-                  só no mobile (onde o trilho some) para não duplicar. */}
-              <button
-                type="button"
-                onClick={() => setShareModalOpen(true)}
-                title={t("community.shareNewGoal")}
-                aria-label={t("community.shareNewGoal")}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
-              >
-                <Plus size={20} />
-              </button>
-              {/* Encontrar pessoas (seguir, ver perfil, mandar DM). */}
-              <button
-                type="button"
-                onClick={() => setPeopleModalOpen(true)}
-                title={t("community.findPeople")}
-                aria-label={t("community.findPeople")}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--engine-accent)] text-white transition hover:brightness-95"
-              >
-                <Users size={19} />
-              </button>
-            </div>
+            {topLevelTab === "goals" && (
+              <div className="flex shrink-0 items-center gap-2">
+                {/* Publicar meta: no desktop mora no trilho lateral; aqui fica
+                    só no mobile (onde o trilho some) para não duplicar. */}
+                <button
+                  type="button"
+                  onClick={() => setShareModalOpen(true)}
+                  title={t("community.shareNewGoal")}
+                  aria-label={t("community.shareNewGoal")}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+            )}
           </div>
 
-          {activeTab === "feed" && (
+          {/* Goals Tab */}
+          {topLevelTab === "goals" && (
             <>
-              <label className="mb-4 flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
+              {/* Sub-tabs for Goals */}
+              <div className="mb-4 flex items-center gap-2 rounded-full bg-[var(--engine-surface-2)] p-1 w-fit">
+                {subTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeSubTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveSubTab(tab.id)}
+                      className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
+                        isActive
+                          ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
+                          : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                      }`}
+                    >
+                      <Icon size={14} className="shrink-0" />
+                      <span className="truncate">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activeSubTab === "feed" && (
+                <>
+                  <label className="mb-4 flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
+                    <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder={t("community.search")}
+                      className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
+                    />
+                  </label>
+
+                  {regionWidened && (
+                    <div className="region-widened">
+                      <MapPin size={15} className="shrink-0 text-[var(--engine-accent)]" />
+                      <span>{t("region.widened")}</span>
+                      <button
+                        type="button"
+                        onClick={() => setRegion({ country: "all", state: "all" })}
+                      >
+                        {t("region.clear")}
+                      </button>
+                    </div>
+                  )}
+
+                  {filteredGoals.length ? (
+                    /* No celular os posts encostam nas bordas e são separados por
+                       uma linha; a partir de sm voltam a ser cartões soltos. */
+                    <div className="-mx-4 border-y border-[var(--engine-border)] sm:mx-0 sm:space-y-5 sm:border-0">
+                      {filteredGoals.map((goal, index) => (
+                        <Fragment key={goal.id}>
+                          <GoalCard
+                            goal={goal}
+                            t={t}
+                            interactions={{
+                              ...emptyInteraction,
+                              liked: Boolean(goal.likesBy?.[user?.uid]),
+                              rating: goal.ratingsBy?.[user?.uid] || goal.rating,
+                            }}
+                            following={communityState.following}
+                            shared={isGoalShared(goal, communityState.sharedGoalIds, user?.uid)}
+                            onLike={handleLike}
+                            onComment={handleComment}
+                            onRate={handleRate}
+                            onShare={handleCopyShareLink}
+                            onUnshare={handleUnshareGoal}
+                            onFollow={handleFollow}
+                            onOpenProfile={handleOpenProfile}
+                            onEditComment={handleEditComment}
+                            onDeleteComment={handleDeleteComment}
+                            onOpenPost={isDesktop ? openPost : undefined}
+                            onSendToChat={setPostToShare}
+                            onEditCaption={setCaptionGoal}
+                            currentUserId={user?.uid}
+                          />
+                          {/* Card patrocinado nativo — entra no meio do feed
+                              (padrão Webmotors), rotulado e discreto. */}
+                          {index === 3 && (
+                            <div className="px-4 py-4 sm:px-0 sm:py-0">
+                              <AdSlot slot="community-feed" format="native" user={user} />
+                            </div>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyFeed t={t} />
+                  )}
+
+                  {hasMoreGoals && !query && (
+                    <button
+                      type="button"
+                      onClick={handleLoadMoreGoals}
+                      disabled={loadingMoreGoals}
+                      className="mt-5 w-full rounded-full border border-[var(--engine-border)] py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] disabled:opacity-50"
+                    >
+                      {loadingMoreGoals ? t("common.loading") : t("community.loadMore")}
+                    </button>
+                  )}
+                </>
+              )}
+
+              {activeSubTab === "videos" && (
+                <div className="space-y-5">
+                  {videoPosts.map((video) => (
+                    <VideoCard
+                      key={video.id}
+                      video={video}
+                      t={t}
+                      saved={communityState.savedVideos.includes(video.id)}
+                      liked={communityState.interactions[video.id]?.liked}
+                      onSave={handleSaveVideo}
+                      onLike={handleVideoLike}
+                    />
+                  ))}
+                  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--engine-border)] p-10 text-center">
+                    <Clapperboard className="mb-4 text-[var(--engine-accent)]" size={34} />
+                    <h2 className="text-base font-extrabold tracking-tight text-[var(--engine-text)]">
+                      {t("community.videos.slotTitle")}
+                    </h2>
+                    <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+                      {t("community.videos.slotCopy")}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeSubTab === "ranking" && <RankingPanel ranking={ranking} t={t} />}
+            </>
+          )}
+
+          {/* Users Tab */}
+          {topLevelTab === "users" && (
+            <div className="space-y-4">
+              <label className="flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
                 <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
                 <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t("community.search")}
+                  value={peopleQuery}
+                  onChange={(event) => setPeopleQuery(event.target.value)}
+                  placeholder={t("community.peopleSearchPlaceholder")}
                   className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
                 />
               </label>
 
-              {regionWidened && (
-                <div className="region-widened">
-                  <MapPin size={15} className="shrink-0 text-[var(--engine-accent)]" />
-                  <span>{t("region.widened")}</span>
-                  <button
-                    type="button"
-                    onClick={() => setRegion({ country: "all", state: "all" })}
-                  >
-                    {t("region.clear")}
-                  </button>
-                </div>
-              )}
-
-              {filteredGoals.length ? (
-                /* No celular os posts encostam nas bordas e são separados por
-                   uma linha; a partir de sm voltam a ser cartões soltos. */
-                <div className="-mx-4 border-y border-[var(--engine-border)] sm:mx-0 sm:space-y-5 sm:border-0">
-                  {filteredGoals.map((goal, index) => (
-                    <Fragment key={goal.id}>
-                      <GoalCard
-                        goal={goal}
-                        t={t}
-                        interactions={{
-                          ...emptyInteraction,
-                          liked: Boolean(goal.likesBy?.[user?.uid]),
-                          rating: goal.ratingsBy?.[user?.uid] || goal.rating,
-                        }}
-                        following={communityState.following}
-                        shared={isGoalShared(goal, communityState.sharedGoalIds, user?.uid)}
-                        onLike={handleLike}
-                        onComment={handleComment}
-                        onRate={handleRate}
-                        onShare={handleCopyShareLink}
-                        onUnshare={handleUnshareGoal}
-                        onFollow={handleFollow}
-                        onOpenProfile={handleOpenProfile}
-                        onEditComment={handleEditComment}
-                        onDeleteComment={handleDeleteComment}
-                        onOpenPost={isDesktop ? openPost : undefined}
-                        onSendToChat={setPostToShare}
-                        onEditCaption={setCaptionGoal}
-                        currentUserId={user?.uid}
-                      />
-                      {/* Card patrocinado nativo — entra no meio do feed
-                          (padrão Webmotors), rotulado e discreto. */}
-                      {index === 3 && (
-                        <div className="px-4 py-4 sm:px-0 sm:py-0">
-                          <AdSlot slot="community-feed" format="native" user={user} />
-                        </div>
-                      )}
-                    </Fragment>
-                  ))}
-                </div>
-              ) : (
-                <EmptyFeed t={t} />
-              )}
-
-              {hasMoreGoals && !query && (
-                <button
-                  type="button"
-                  onClick={handleLoadMoreGoals}
-                  disabled={loadingMoreGoals}
-                  className="mt-5 w-full rounded-full border border-[var(--engine-border)] py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] disabled:opacity-50"
-                >
-                  {loadingMoreGoals ? t("common.loading") : t("community.loadMore")}
-                </button>
-              )}
-            </>
-          )}
-
-          {activeTab === "videos" && (
-            <div className="space-y-5">
-              {videoPosts.map((video) => (
-                <VideoCard
-                  key={video.id}
-                  video={video}
-                  t={t}
-                  saved={communityState.savedVideos.includes(video.id)}
-                  liked={communityState.interactions[video.id]?.liked}
-                  onSave={handleSaveVideo}
-                  onLike={handleVideoLike}
-                />
-              ))}
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--engine-border)] p-10 text-center">
-                <Clapperboard className="mb-4 text-[var(--engine-accent)]" size={34} />
-                <h2 className="text-base font-extrabold tracking-tight text-[var(--engine-text)]">
-                  {t("community.videos.slotTitle")}
-                </h2>
-                <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
-                  {t("community.videos.slotCopy")}
-                </p>
+              <div className="grid grid-cols-1 gap-3">
+                {peopleDirectory.length ? (
+                  peopleDirectory.map((person) => {
+                    const isFollowing = communityState.following.includes(person.userId);
+                    return (
+                      <div
+                        key={person.userId}
+                        className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 hover:bg-[var(--engine-surface-2)] transition"
+                      >
+                        <AvatarButton
+                          person={person}
+                          size="sm"
+                          onClick={() => handleOpenProfile(person.userId, person)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleOpenProfile(person.userId, person)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <p className="truncate text-sm font-bold text-[var(--engine-text)]">
+                            {person.author || "Usuário Engine"}
+                          </p>
+                          <p className="truncate text-xs font-medium text-[var(--engine-text-subtle)]">
+                            @{withoutAt(person.username) || "engine"}
+                            {person.city ? ` · ${person.city}` : ""}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFollow(person)}
+                          title={isFollowing ? t("community.following") : t("community.follow")}
+                          className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[10px] font-black uppercase tracking-widest transition ${
+                            isFollowing
+                              ? "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                              : "bg-[var(--engine-accent)] text-white hover:brightness-95"
+                          }`}
+                        >
+                          {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                          <span className="hidden min-[380px]:inline">
+                            {isFollowing ? t("community.following") : t("community.follow")}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex min-h-48 flex-col items-center justify-center px-6 text-center">
+                    <Users className="mb-3 text-[var(--engine-text-subtle)]" size={30} />
+                    <p className="text-sm font-bold text-[var(--engine-text)]">
+                      {t("community.peopleEmpty")}
+                    </p>
+                    <p className="mt-1 max-w-xs text-xs font-medium text-[var(--engine-text-muted)]">
+                      {t("community.peopleEmptyHint")}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === "ranking" && <RankingPanel ranking={ranking} t={t} />}
+          {/* Clubes Tab */}
+          {topLevelTab === "clubes" && (
+            <ClubsTab searchParams={searchParams} setSearchParams={setSearchParams} />
+          )}
         </div>
 
-        <aside className="hidden space-y-5 xl:block">
-          <div className="engine-card divide-y divide-[var(--engine-border)] px-4">
-            <RailStat icon={Users} label={t("community.stats.goals")} value={goals.length} />
-            <RailStat
-              icon={Heart}
-              label={t("community.stats.interactions")}
-              value={stats.likes}
-            />
-            <RailStat
-              icon={Award}
-              label={t("community.stats.avg")}
-              value={`${averageProgress.toFixed(0)}%`}
-            />
-          </div>
+        {/* Sidebar (only shown for Goals tab) */}
+        {topLevelTab === "goals" && (
+          <aside className="hidden space-y-5 xl:block">
+            <div className="engine-card divide-y divide-[var(--engine-border)] px-4">
+              <RailStat icon={Users} label={t("community.stats.goals")} value={goals.length} />
+              <RailStat
+                icon={Heart}
+                label={t("community.stats.interactions")}
+                value={stats.likes}
+              />
+              <RailStat
+                icon={Award}
+                label={t("community.stats.avg")}
+                value={`${averageProgress.toFixed(0)}%`}
+              />
+            </div>
 
-          <div className="engine-card p-4">
-            <button
-              type="button"
-              onClick={() => setShareModalOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
-            >
-              <Plus size={15} />
-              {t("community.shareNewGoal")}
-            </button>
-          </div>
+            <div className="engine-card p-4">
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+              >
+                <Plus size={15} />
+                {t("community.shareNewGoal")}
+              </button>
+            </div>
 
-          <SidebarRanking ranking={ranking} t={t} />
+            <SidebarRanking ranking={ranking} t={t} />
 
-          {friendSuggestions.length > 0 && (
-            <Suggestions
-              t={t}
-              following={communityState.following}
-              onFollow={handleFollow}
-            />
-          )}
+            {friendSuggestions.length > 0 && (
+              <Suggestions
+                t={t}
+                following={communityState.following}
+                onFollow={handleFollow}
+              />
+            )}
 
-          {/* Retângulo de lateral (300x250), como o rail dos marketplaces. */}
-          <AdSlot slot="community-rail" format="rectangle" user={user} />
-        </aside>
+            {/* Retângulo de lateral (300x250), como o rail dos marketplaces. */}
+            <AdSlot slot="community-rail" format="rectangle" user={user} />
+          </aside>
+        )}
       </div>
 
       {shareModalOpen && (

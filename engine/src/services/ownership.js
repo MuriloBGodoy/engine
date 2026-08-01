@@ -139,6 +139,7 @@ export const defaultOwnershipInputs = () => ({
   kmPerMonth: 1000,
   fuelType: "gasoline",
   consumption: 0, // 0 = usar padrão do combustível
+  userConsumption: 0, // 0 = não informado, usar automático ou default
   driverAgeBand: "18-25",
   hasGarage: true,
   coverage: "full",
@@ -160,6 +161,7 @@ export const normalizeOwnershipInputs = (raw = {}) => {
     kmPerMonth: clamp(num(raw.kmPerMonth, base.kmPerMonth), 100, 20000),
     fuelType: FUEL_TYPES.includes(raw.fuelType) ? raw.fuelType : base.fuelType,
     consumption: clamp(num(raw.consumption, 0), 0, 50),
+    userConsumption: clamp(num(raw.userConsumption, 0), 0, 50), // Consumo informado pelo user
     driverAgeBand: AGE_BANDS.includes(raw.driverAgeBand)
       ? raw.driverAgeBand
       : base.driverAgeBand,
@@ -227,23 +229,38 @@ const monthlyFuel = (inputs, country, state) => {
   const prices = countryProfile(country).fuelPrice;
   const basePrice = prices[inputs.fuelType] || prices.gasoline;
   const stateFactor = country === "BR" ? FUEL_FACTOR_BR[state] || 1 : 1;
-  const consumption =
-    inputs.consumption > 0
-      ? inputs.consumption
-      : DEFAULT_CONSUMPTION[inputs.fuelType];
+
+  // Hierarquia: user informado > consumption > default
+  let consumption = DEFAULT_CONSUMPTION[inputs.fuelType];
+  if (inputs.consumption > 0) {
+    consumption = inputs.consumption;
+  }
+  if (inputs.userConsumption > 0) {
+    consumption = inputs.userConsumption; // User sempre sobrescreve
+  }
+
   return (inputs.kmPerMonth / consumption) * basePrice * stateFactor;
 };
 
 const annualMaintenance = (value, carAge, inputs, country) => {
   // Cobre revisões, óleo, pneus, freios e uma margem para corretivas.
-  const agePct = carAge <= 3 ? 0.02 : carAge <= 8 ? 0.03 : 0.045;
+  // Alinhado com AAA 2025: carros novos (0-3 anos) custam menos, aumenta gradualmente.
+  const agePct = carAge <= 3 ? 0.015 : carAge <= 8 ? 0.025 : 0.04;
   const kmFactor = clamp(0.7 + 0.3 * (inputs.kmPerMonth / 1000), 0.7, 2.2);
-  const base = Math.max(value * agePct, 1400);
+  const base = Math.max(value * agePct, 1200);
   return base * kmFactor * countryProfile(country).maintenanceFactor;
 };
 
-const annualDepreciationRate = (carAge) =>
-  carAge <= 1 ? 0.12 : carAge <= 3 ? 0.1 : carAge <= 8 ? 0.07 : 0.05;
+// Curva realista: 1º ano máximo (contrato + transferência), desacelera depois.
+// Baseado em Edmunds TCO e dados reais de mercado (2024-2026).
+const annualDepreciationRate = (carAge) => {
+  if (carAge <= 1) return 0.16; // 1º ano: contrato + uso inicial (máximo)
+  if (carAge <= 2) return 0.12; // 2º ano: desaceleração
+  if (carAge <= 3) return 0.10;
+  if (carAge <= 5) return 0.08;
+  if (carAge <= 8) return 0.06;
+  return 0.04; // 8+ anos: estabiliza
+};
 
 // Parcela pela tabela Price.
 const priceInstallment = (principal, monthlyRate, months) => {

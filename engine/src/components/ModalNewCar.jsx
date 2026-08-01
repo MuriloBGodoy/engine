@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { auth } from "../services/firebase";
 import { MAX_CAR_PHOTOS } from "../services/db";
 import { isFileTooBig, isImageFile, uploadUserPhoto } from "../services/photos";
+import { ImageCropper } from "./ImageCropper";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
@@ -30,6 +31,8 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [fileForCropping, setFileForCropping] = useState(null);
 
   const formatDisplayValue = (val) => {
     return new Intl.NumberFormat(i18n.language, {
@@ -79,26 +82,50 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       return;
     }
 
-    const selected = files.slice(0, slots);
+    const selected = files.slice(0, 1); // Process one at a time for cropper
     if (selected.some((file) => !isImageFile(file) || isFileTooBig(file))) {
       setError(t("modalCar.imageError"));
       return;
     }
 
+    // Show cropper for the first selected file
+    setFileForCropping(selected[0]);
+    setIsCropperOpen(true);
+  };
+
+  const handleCropperSave = async (croppedFile) => {
+    if (!croppedFile) {
+      console.error("[ModalNewCar] croppedFile é nulo");
+      return false;
+    }
+
     setUploading(true);
     try {
-      // As fotos vão para o Storage; o documento guarda só a URL.
-      const urls = await Promise.all(
-        selected.map((file) =>
-          uploadUserPhoto(file, { userId: auth.currentUser?.uid, folder: "cars" }),
-        ),
-      );
-      setPhotos((current) => [...current, ...urls].slice(0, MAX_CAR_PHOTOS));
-    } catch (uploadError) {
-      console.error(uploadError);
-      setError(t("modalCar.imageError"));
-    } finally {
+      console.log("[ModalNewCar] Iniciando upload:", {
+        name: croppedFile.name,
+        size: croppedFile.size,
+        type: croppedFile.type,
+      });
+
+      // Upload the cropped file
+      const url = await uploadUserPhoto(croppedFile, {
+        userId: auth.currentUser?.uid,
+        folder: "cars",
+      });
+
+      console.log("[ModalNewCar] Upload concluído, URL:", url);
+
+      setPhotos((current) => [...current, url].slice(0, MAX_CAR_PHOTOS));
+      setFileForCropping(null);
+      setError("");
       setUploading(false);
+      return true;
+    } catch (uploadError) {
+      console.error("[ModalNewCar] Erro no upload:", uploadError);
+      const errorMsg = uploadError?.message || t("modalCar.imageError");
+      setError(errorMsg);
+      setUploading(false);
+      return false;
     }
   };
 
@@ -215,7 +242,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
 
   return (
     <div className="engine-modal-overlay">
-      <div className="engine-modal-panel engine-pop sm:max-w-md">
+      <div className="engine-modal-panel engine-pop sm:max-w-4xl">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--engine-border)] px-5 py-4 sm:px-7">
           <h2 className="text-lg font-extrabold tracking-tight text-[var(--engine-text)]">
             {carToEdit ? t("modalCar.editTitle") : t("modalCar.newTitle")}
@@ -241,9 +268,9 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
                 {photos.map((photo, index) => (
                   <div
                     key={photo}
-                    className="relative aspect-[4/3] overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]"
+                    className="relative aspect-[4/3] min-h-[200px] overflow-hidden rounded-xl border border-[var(--engine-border)] bg-gradient-to-br from-[var(--engine-surface-2)] via-[var(--engine-surface-2)]/50 to-[var(--engine-surface)] flex items-center justify-center"
                   >
-                    <img src={photo} alt="" className="h-full w-full object-cover" />
+                    <img src={photo} alt="" className="h-full w-full object-contain" />
                     {index === 0 && (
                       <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
                         {t("modalCar.cover")}
@@ -405,6 +432,16 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
           </button>
         </form>
       </div>
+
+      <ImageCropper
+        imageFile={fileForCropping}
+        isOpen={isCropperOpen}
+        onClose={() => {
+          setIsCropperOpen(false);
+          setFileForCropping(null);
+        }}
+        onSave={handleCropperSave}
+      />
     </div>
   );
 }

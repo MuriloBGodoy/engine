@@ -479,19 +479,19 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           onOpen(listing);
         }
       }}
-      className="group flex min-h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] transition hover:-translate-y-0.5 hover:border-[var(--engine-accent)]/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:shadow-none"
+      className="group flex h-[420px] cursor-pointer flex-col overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] transition hover:-translate-y-0.5 hover:border-[var(--engine-accent)]/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:shadow-none"
     >
-      <div className="relative aspect-[4/3] bg-[var(--engine-surface-2)] sm:aspect-[16/10]">
+      <div className="relative h-[160px] overflow-hidden bg-[var(--engine-surface-2)] sm:h-[180px]">
         <img
           src={activePhoto}
           alt={listing.title}
           onError={(event) => {
             event.currentTarget.src = fallbackPhoto;
           }}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/75 to-transparent" />
-        <span className="absolute left-3 top-3 max-w-[calc(100%-5.75rem)] truncate rounded-full bg-[var(--engine-accent)] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <span className="absolute left-3 top-3 rounded-full bg-[var(--engine-accent)] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
           {getServiceCategoryLabel(listing.category, t)}
         </span>
         {photos.length > 1 && (
@@ -525,7 +525,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
                     setActivePhotoIndex(index);
                   }}
                   className={`h-1.5 rounded-full transition ${
-                    index === activePhotoIndex ?"w-6 bg-[var(--engine-surface)]" :"w-1.5 bg-[var(--engine-surface)]/45"
+                    index === activePhotoIndex ?"w-6 bg-white" :"w-1.5 bg-white/45"
                   }`}
                   title={t("services.viewPhoto", { value: index + 1 })}
                 />
@@ -535,97 +535,98 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5 p-3.5 sm:p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="line-clamp-2 text-base font-extrabold italic leading-5 tracking-tight text-[var(--engine-text)] sm:text-lg sm:leading-6 dark:text-white">
-              {listing.title}
-            </h2>
-            <p className="mt-1 truncate text-xs font-semibold text-[var(--engine-text-subtle)]">
-              {listing.providerName || t("services.engineProfessional")}
-            </p>
-          </div>
-          {isMine && (
-            <div className="flex shrink-0 gap-1.5">
-              <button
-                type="button"
-                onClick={(event) => {
-                  stopAction(event);
-                  onEdit(listing);
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
-                title={t("services.editListing")}
-              >
-                <Edit3 size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={(event) => {
-                  stopAction(event);
-                  onDelete(listing);
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
-                title={t("services.deleteListing")}
-              >
-                <Trash2 size={16} />
-              </button>
+      <div className="flex flex-1 flex-col justify-between gap-3 p-3.5 sm:p-4">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h2 className="line-clamp-2 text-base font-extrabold italic leading-5 tracking-tight text-[var(--engine-text)] sm:text-lg sm:leading-6 dark:text-white">
+                {listing.title}
+              </h2>
+              <p className="mt-1 truncate text-xs font-semibold text-[var(--engine-text-subtle)]">
+                {listing.providerName || t("services.engineProfessional")}
+              </p>
             </div>
-          )}
+            {isMine && (
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    stopAction(event);
+                    onEdit(listing);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+                  title={t("services.editListing")}
+                >
+                  <Edit3 size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    stopAction(event);
+                    onDelete(listing);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-accent)] hover:text-white"
+                  title={t("services.deleteListing")}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-2 line-clamp-2 text-xs font-medium leading-4 text-[var(--engine-text-muted)]">
+            {listing.description}
+          </p>
         </div>
 
-        <p className="line-clamp-2 text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
-          {listing.description}
-        </p>
-
-        <div className="grid gap-1.5 text-xs font-bold text-[var(--engine-text-muted)]">
-          <p className="flex min-w-0 items-center gap-2">
-            <ModeIcon className="shrink-0 text-[var(--engine-accent)]" size={16} />
+        <div className="grid gap-2 text-xs font-semibold text-[var(--engine-text-muted)]">
+          <div className="flex min-w-0 items-center gap-2">
+            <ModeIcon className="shrink-0 text-[var(--engine-accent)]" size={15} />
             <span className="truncate">{t(modeLabelKeys[listing.serviceMode] || modeLabelKeys.hybrid)}</span>
-          </p>
-          <p className="flex min-w-0 items-center gap-2">
-            <MapPin className="shrink-0 text-emerald-500" size={16} />
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <MapPin className="shrink-0 text-emerald-500" size={15} />
             <span className="truncate">
               {listing.city || listing.serviceArea || t("services.locationFallback")}
             </span>
-          </p>
-          <p className="flex min-w-0 items-center gap-2">
-            <Clock className="shrink-0 text-amber-500" size={16} />
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <Clock className="shrink-0 text-amber-500" size={15} />
             <span className="truncate">{listing.availability || t("services.scheduleFallback")}</span>
-          </p>
-          {listing.experience && (
-            <p className="flex min-w-0 items-center gap-2">
-              <Gauge className="shrink-0 text-sky-500" size={16} />
-              <span className="truncate">{listing.experience}</span>
-            </p>
-          )}
+          </div>
         </div>
 
-        <div className="mt-auto space-y-2.5">
-          <div className="flex items-center justify-between gap-3 border-t border-[var(--engine-border)] pt-2.5">
-            <p className="min-w-0 truncate text-base font-black italic text-[var(--engine-accent)]">
+        <div className="space-y-2.5 border-t border-[var(--engine-border)] pt-2.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+              {t("services.price")}
+            </span>
+            <p className="text-sm font-black italic text-[var(--engine-accent)]">
               {listing.price || t("services.priceFallback")}
             </p>
-            {isMine ? <StatusBadge status={listing.moderationStatus} /> : null}
           </div>
 
-          {isMine && listing.moderationNote && (
-            <p className="rounded-lg bg-[var(--engine-accent)]/10 px-3 py-2 text-xs font-bold leading-5 text-[var(--engine-accent)]">
-              {listing.moderationNote}
-            </p>
+          {isMine && listing.moderationStatus && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+                {t("services.status")}
+              </span>
+              <StatusBadge status={listing.moderationStatus} />
+            </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            {(listing.tags || []).slice(0, 3).map((tag) => (
+          <div className="flex flex-wrap gap-1.5">
+            {(listing.tags || []).slice(0, 2).map((tag) => (
               <span
                 key={`${listing.id}-${tag}`}
-                className="rounded-full border border-[var(--engine-border)] px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]"
+                className="rounded-full border border-[var(--engine-border)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--engine-text-muted)]"
               >
                 {tag}
               </span>
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-3 gap-1.5 pt-1 sm:gap-2">
             <a
               href={phone ? `https://wa.me/${phone}` : undefined}
               onClick={stopAction}
@@ -633,28 +634,30 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               rel="noreferrer"
               aria-disabled={!phone}
               aria-label={t("services.whatsapp")}
-              className={`flex h-11 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-10 ${
+              className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
                 phone
                   ?"bg-emerald-600 text-white hover:bg-emerald-700"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
               }`}
               title={t("services.whatsapp")}
             >
-              <WhatsAppIcon className="shrink-0" size={20} />
+              <WhatsAppIcon className="shrink-0" size={16} />
+              <span className="hidden sm:inline">Chat</span>
             </a>
             <a
               href={listing.email ? `mailto:${listing.email}?subject=${encodeURIComponent(t("services.emailSubject", { title: listing.title }))}` : undefined}
               onClick={stopAction}
               aria-disabled={!listing.email}
               aria-label={t("services.sendEmail")}
-              className={`flex h-11 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-10 ${
+              className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
                 listing.email
-                  ?"bg-[var(--engine-accent)] text-white hover:bg-[var(--engine-accent)] hover:brightness-95"
+                  ?"bg-[var(--engine-accent)] text-white hover:brightness-95"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
               }`}
               title={t("services.sendEmail")}
             >
-              <Mail className="shrink-0" size={20} />
+              <Mail className="shrink-0" size={16} />
+              <span className="hidden sm:inline">Email</span>
             </a>
             <a
               href={showMap ? getDirectionsUrl(listing) : undefined}
@@ -663,14 +666,15 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               rel="noreferrer"
               aria-disabled={!showMap}
               aria-label={t("services.viewRoute")}
-              className={`flex h-11 min-w-0 items-center justify-center rounded-lg text-sm font-black transition sm:h-10 ${
+              className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
                 showMap
                   ?"border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
               }`}
               title={t("services.viewRouteShort")}
             >
-              <Map className="shrink-0" size={20} />
+              <Map className="shrink-0" size={16} />
+              <span className="hidden sm:inline">Map</span>
             </a>
           </div>
         </div>

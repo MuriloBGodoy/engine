@@ -1,0 +1,471 @@
+{
+  "compiledAt": "2026-07-31T22:03:07.142Z",
+  "version": "1.0",
+  "stats": {
+    "totalModels": 91,
+    "withRealConsumption": 91,
+    "coverage": "100.0%"
+  },
+  "models": {
+    "208": {
+      "gasoline": 13.5,
+      "ethanol": 9.8,
+      "diesel": 14
+    },
+    "308": {
+      "gasoline": 12.8,
+      "ethanol": 9.2,
+      "diesel": 13.5
+    },
+    "408": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "2008": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "3008": {
+      "gasoline": 11.2,
+      "ethanol": 8,
+      "diesel": 12
+    },
+    "gol": {
+      "gasoline": 13.5,
+      "ethanol": 9.8,
+      "diesel": 14
+    },
+    "polo": {
+      "gasoline": 14.2,
+      "ethanol": 10.2,
+      "diesel": 14.8
+    },
+    "t-cross": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "tiguan": {
+      "gasoline": 11.8,
+      "ethanol": 8.5,
+      "diesel": 12.5
+    },
+    "jetta": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "passat": {
+      "gasoline": 11.2,
+      "ethanol": 8,
+      "diesel": 12
+    },
+    "voyage": {
+      "gasoline": 13.2,
+      "ethanol": 9.5,
+      "diesel": 13.8
+    },
+    "onix": {
+      "gasoline": 13.8,
+      "ethanol": 10,
+      "diesel": 14.2
+    },
+    "onix-plus": {
+      "gasoline": 13.5,
+      "ethanol": 9.8,
+      "diesel": 14
+    },
+    "tracker": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "equinox": {
+      "gasoline": 10.5,
+      "ethanol": 7.5,
+      "diesel": 11.2
+    },
+    "s10": {
+      "gasoline": 10.2,
+      "ethanol": 7.3,
+      "diesel": 11
+    },
+    "malibu": {
+      "gasoline": 11.5,
+      "ethanol": 8.3,
+      "diesel": 12.2
+    },
+    "montana": {
+      "gasoline": 11.8,
+      "ethanol": 8.5,
+      "diesel": 12.5
+    },
+    "spin": {
+      "gasoline": 11,
+      "ethanol": 7.9,
+      "diesel": 11.8
+    },
+    "argo": {
+      "gasoline": 14,
+      "ethanol": 10.2,
+      "diesel": 14.5
+    },
+    "pulse": {
+      "gasoline": 13.2,
+      "ethanol": 9.5,
+      "diesel": 13.8
+    },
+    "cronos": {
+      "gasoline": 13,
+      "ethanol": 9.4,
+      "diesel": 13.5
+    },
+    "palio": {
+      "gasoline": 14.8,
+      "ethanol": 10.8,
+      "diesel": 15.2
+    },
+    "uno": {
+      "gasoline": 13.5,
+      "ethanol": 9.8,
+      "diesel": 14
+    },
+    "toro": {
+      "gasoline": 11.2,
+      "ethanol": 8,
+      "diesel": 12
+    },
+    "mobi": {
+      "gasoline": 14.5,
+      "ethanol": 10.5,
+      "diesel": 15
+    },
+    "hb20": {
+      "gasoline": 14.5,
+      "ethanol": 10.5,
+      "diesel": 15
+    },
+    "creta": {
+      "gasoline": 12.8,
+      "ethanol": 9.2,
+      "diesel": 13.5
+    },
+    "i30": {
+      "gasoline": 12.2,
+      "ethanol": 8.8,
+      "diesel": 12.8
+    },
+    "tucson": {
+      "gasoline": 11.5,
+      "ethanol": 8.3,
+      "diesel": 12.2
+    },
+    "santa fe": {
+      "gasoline": 10.8,
+      "ethanol": 7.8,
+      "diesel": 11.5
+    },
+    "elantra": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "kwid": {
+      "gasoline": 14.2,
+      "ethanol": 10.3,
+      "diesel": 14.8
+    },
+    "sandero": {
+      "gasoline": 13.5,
+      "ethanol": 9.8,
+      "diesel": 14
+    },
+    "logan": {
+      "gasoline": 13.2,
+      "ethanol": 9.5,
+      "diesel": 13.8
+    },
+    "duster": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "captur": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "corolla": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "hilux": {
+      "gasoline": 10.2,
+      "ethanol": 7.3,
+      "diesel": 11
+    },
+    "fortuner": {
+      "gasoline": 9.8,
+      "ethanol": 7,
+      "diesel": 10.5
+    },
+    "yaris": {
+      "gasoline": 14,
+      "ethanol": 10.2,
+      "diesel": 14.5
+    },
+    "prius": {
+      "gasoline": 18,
+      "ethanol": 13,
+      "diesel": 18.5
+    },
+    "rav4": {
+      "gasoline": 11.5,
+      "ethanol": 8.3,
+      "diesel": 12.2
+    },
+    "etios": {
+      "gasoline": 14.2,
+      "ethanol": 10.3,
+      "diesel": 14.8
+    },
+    "civic": {
+      "gasoline": 12.8,
+      "ethanol": 9.2,
+      "diesel": 13.5
+    },
+    "hr-v": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "fit": {
+      "gasoline": 13.8,
+      "ethanol": 10,
+      "diesel": 14.2
+    },
+    "city": {
+      "gasoline": 13.5,
+      "ethanol": 9.8,
+      "diesel": 14
+    },
+    "accord": {
+      "gasoline": 11.5,
+      "ethanol": 8.3,
+      "diesel": 12.2
+    },
+    "cr-v": {
+      "gasoline": 11,
+      "ethanol": 7.9,
+      "diesel": 11.8
+    },
+    "fiesta": {
+      "gasoline": 13.2,
+      "ethanol": 9.5,
+      "diesel": 13.8
+    },
+    "focus": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "ka": {
+      "gasoline": 14.5,
+      "ethanol": 10.5,
+      "diesel": 15
+    },
+    "ranger": {
+      "gasoline": 10.2,
+      "ethanol": 7.3,
+      "diesel": 11
+    },
+    "ecosport": {
+      "gasoline": 12.2,
+      "ethanol": 8.8,
+      "diesel": 12.8
+    },
+    "c3": {
+      "gasoline": 13.2,
+      "ethanol": 9.5,
+      "diesel": 13.8
+    },
+    "c4 cactus": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "c5": {
+      "gasoline": 11.8,
+      "ethanol": 8.5,
+      "diesel": 12.5
+    },
+    "c3 aircross": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "renegade": {
+      "gasoline": 12.2,
+      "ethanol": 8.8,
+      "diesel": 12.8
+    },
+    "compass": {
+      "gasoline": 11.5,
+      "ethanol": 8.3,
+      "diesel": 12.2
+    },
+    "wrangler": {
+      "gasoline": 9.5,
+      "ethanol": 6.8,
+      "diesel": 10.2
+    },
+    "cherokee": {
+      "gasoline": 10.8,
+      "ethanol": 7.8,
+      "diesel": 11.5
+    },
+    "versa": {
+      "gasoline": 13,
+      "ethanol": 9.4,
+      "diesel": 13.5
+    },
+    "march": {
+      "gasoline": 14.2,
+      "ethanol": 10.3,
+      "diesel": 14.8
+    },
+    "qashqai": {
+      "gasoline": 11.8,
+      "ethanol": 8.5,
+      "diesel": 12.5
+    },
+    "x-trail": {
+      "gasoline": 11.2,
+      "ethanol": 8,
+      "diesel": 12
+    },
+    "kicks": {
+      "gasoline": 13.8,
+      "ethanol": 10,
+      "diesel": 14.2
+    },
+    "seagull": {
+      "gasoline": 15.5,
+      "ethanol": 11.2,
+      "diesel": 16
+    },
+    "qin": {
+      "gasoline": 14,
+      "ethanol": 10.2,
+      "diesel": 14.5
+    },
+    "yuan": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "song": {
+      "gasoline": 13,
+      "ethanol": 9.4,
+      "diesel": 13.5
+    },
+    "f3": {
+      "gasoline": 14.2,
+      "ethanol": 10.3,
+      "diesel": 14.8
+    },
+    "arrizo": {
+      "gasoline": 13.2,
+      "ethanol": 9.5,
+      "diesel": 13.8
+    },
+    "tiggo": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "qq3": {
+      "gasoline": 14.5,
+      "ethanol": 10.5,
+      "diesel": 15
+    },
+    "emgrand": {
+      "gasoline": 13,
+      "ethanol": 9.4,
+      "diesel": 13.5
+    },
+    "coolray": {
+      "gasoline": 12.2,
+      "ethanol": 8.8,
+      "diesel": 12.8
+    },
+    "h6": {
+      "gasoline": 11.8,
+      "ethanol": 8.5,
+      "diesel": 12.5
+    },
+    "h2": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "h9": {
+      "gasoline": 10.5,
+      "ethanol": 7.5,
+      "diesel": 11.2
+    },
+    "mg3": {
+      "gasoline": 14,
+      "ethanol": 10.2,
+      "diesel": 14.5
+    },
+    "mg5": {
+      "gasoline": 13,
+      "ethanol": 9.4,
+      "diesel": 13.5
+    },
+    "mg zs": {
+      "gasoline": 12.2,
+      "ethanol": 8.8,
+      "diesel": 12.8
+    },
+    "hector": {
+      "gasoline": 11.5,
+      "ethanol": 8.3,
+      "diesel": 12.2
+    },
+    "bmw 320i": {
+      "gasoline": 12,
+      "ethanol": 8.7,
+      "diesel": 12.8
+    },
+    "audi a4": {
+      "gasoline": 11.8,
+      "ethanol": 8.5,
+      "diesel": 12.5
+    },
+    "mercedes c180": {
+      "gasoline": 12.5,
+      "ethanol": 9,
+      "diesel": 13.2
+    },
+    "bmw 530i": {
+      "gasoline": 10.5,
+      "ethanol": 7.5,
+      "diesel": 11.2
+    },
+    "audi a6": {
+      "gasoline": 10.8,
+      "ethanol": 7.8,
+      "diesel": 11.5
+    }
+  },
+  "default": {
+    "gasoline": 11.5,
+    "ethanol": 8,
+    "diesel": 12.5
+  }
+}

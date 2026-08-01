@@ -245,13 +245,15 @@ const resources = {
             "Dinheiro guardado ANTES de comprar, para cobrir sinistro, multa ou conserto inesperado sem se endividar. Sugerimos ~3 meses de custo do carro.",
           maintainOnly:
             "Renda necessária considerando só os custos de manter o carro (sem a parcela) — útil se você for comprar à vista.",
+          monthlyRate:
+            "Taxa média do mercado: 1.99% a.m. (23.8% a.a.). Bancos privados cobram ~2.2%, Caixa/públicos ~1.8%, financeiras ~3%+. Quanto melhor seu crédito (CPF 660+), mais chance de negociar taxa menor. Vale a pena pesquisar!",
           lifeSituation:
             "Sua situação define quanto da renda dá para comprometer sem aperto. Morando com os pais, sobra mais para o carro; sustentando a casa sozinho, é preciso mais folga. Ao trocar, sugerimos a % ideal — mas a palavra final é sua.",
           comfort:
             "Avaliação baseada na sua situação de vida: confortável até {{comfortable}}% da renda, zona de atenção até {{warning}}%, crítico acima disso.",
         },
         disclaimer:
-          "Estimativas de planejamento com base em médias públicas (FIPE, ANP, SUSEP, alíquotas estaduais 2026). Cotações reais de seguro e financiamento variam por perfil e podem ser diferentes.",
+          "⚠️ Estimativa educativa — para planejamento, não decisão de compra. Usa médias públicas (FIPE, ANP, SUSEP, 2026). Seguro real varia 20-50% conforme perfil; juros do banco variam 0.5-2% conforme seu crédito; consumo real difere por modelo e uso. Antes de comprar: cotar seguro com agregadores (Type, Muxi), taxa com seu banco, e consumo real no site do modelo.",
         save: "Salvar simulação no carro",
       },
       modalCar: {
@@ -275,6 +277,13 @@ const resources = {
         photoLimit: "Máximo de {{value}} fotos por meta.",
         addPhoto: "Adicionar foto ({{count}} restantes)",
         cover: "Capa",
+      },
+      imageCropper: {
+        title: "Cortar imagem",
+        zoom: "Zoom",
+        rotate: "Rotação",
+        reset: "Redefinir",
+        save: "Salvar",
       },
       deleteModal: {
         title: "Espere um segundo",
@@ -849,13 +858,15 @@ const resources = {
             "Money saved BEFORE buying, to cover accidents, fines or unexpected repairs without debt. We suggest ~3 months of car costs.",
           maintainOnly:
             "Income needed counting only the costs of keeping the car (no installment) — useful if you're buying in cash.",
+          monthlyRate:
+            "Market average: 1.99% p.m. (23.8% p.a.). Private banks charge ~2.2%, public ~1.8%, finance companies ~3%+. Better credit (score 660+) gives you room to negotiate. Worth shopping around!",
           lifeSituation:
             "Your situation defines how much income you can commit without strain. Living with your parents leaves more room for the car; running a household alone needs more slack. Switching suggests the ideal % — the final call is yours.",
           comfort:
             "Assessment based on your life situation: comfortable up to {{comfortable}}% of income, caution zone up to {{warning}}%, critical beyond that.",
         },
         disclaimer:
-          "Planning estimates based on public averages (FIPE, ANP, SUSEP, 2026 state tax rates). Real insurance and financing quotes vary by profile.",
+          "⚠️ Educational estimate — for planning, not purchase decision. Uses public averages (FIPE, ANP, SUSEP, 2026). Real insurance varies 20-50% by profile; bank rates vary 0.5-2% by credit score; fuel consumption differs by model and usage. Before buying: quote insurance with aggregators, check your bank's rate, verify real consumption on the model's website.",
         save: "Save simulation to this car",
       },
       modalCar: {
@@ -879,6 +890,13 @@ const resources = {
         photoLimit: "Up to {{value}} photos per goal.",
         addPhoto: "Add photo ({{count}} left)",
         cover: "Cover",
+      },
+      imageCropper: {
+        title: "Crop image",
+        zoom: "Zoom",
+        rotate: "Rotate",
+        reset: "Reset",
+        save: "Save",
       },
       deleteModal: {
         title: "Wait a second",
@@ -1451,13 +1469,15 @@ const resources = {
             "Dinero ahorrado ANTES de comprar, para cubrir siniestros, multas o reparaciones sin endeudarte. Sugerimos ~3 meses de costo del auto.",
           maintainOnly:
             "Ingreso necesario contando solo los costos de mantener el auto (sin cuota) — útil si compras al contado.",
+          monthlyRate:
+            "Promedio de mercado: 1.99% mensual (23.8% anual). Bancos privados cobran ~2.2%, públicos ~1.8%, financieras ~3%+. Mejor crédito (score 660+) te deja negociar mejor tasa. ¡Vale la pena comparar!",
           lifeSituation:
             "Tu situación define cuánto ingreso puedes comprometer sin apuros. Viviendo con tus padres queda más margen para el auto; manteniendo la casa solo, necesitas más holgura. Al cambiar, sugerimos el % ideal — la decisión final es tuya.",
           comfort:
             "Evaluación según tu situación de vida: cómodo hasta {{comfortable}}% del ingreso, zona de atención hasta {{warning}}%, crítico por encima.",
         },
         disclaimer:
-          "Estimaciones de planificación basadas en promedios públicos (FIPE, ANP, SUSEP, tasas estatales 2026). Las cotizaciones reales varían según el perfil.",
+          "⚠️ Estimación educativa — para planificación, no para decisión de compra. Usa promedios públicos (FIPE, ANP, SUSEP, 2026). El seguro real varía 20-50% según perfil; las tasas bancarias varían 0.5-2% según tu crédito; el consumo real difiere por modelo y uso. Antes de comprar: cotiza seguro con agregadores, verifica la tasa de tu banco, y consulta el consumo real en el sitio del modelo.",
         save: "Guardar simulación en este auto",
       },
       modalCar: {
@@ -1481,6 +1501,13 @@ const resources = {
         photoLimit: "Máximo de {{value}} fotos por meta.",
         addPhoto: "Agregar foto ({{count}} restantes)",
         cover: "Portada",
+      },
+      imageCropper: {
+        title: "Recortar imagen",
+        zoom: "Zoom",
+        rotate: "Girar",
+        reset: "Restablecer",
+        save: "Guardar",
       },
       deleteModal: {
         title: "Espera un segundo",

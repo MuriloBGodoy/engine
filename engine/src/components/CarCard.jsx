@@ -16,8 +16,8 @@ export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) 
     "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
 
   return (
-    <div className="engine-card engine-card-hover group relative flex flex-col overflow-hidden">
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--engine-surface-2)]">
+    <div className="engine-card engine-card-hover group relative flex h-[560px] flex-col overflow-hidden">
+      <div className="relative w-full overflow-hidden bg-gradient-to-br from-[var(--engine-surface-2)] via-[var(--engine-surface-2)]/50 to-[var(--engine-surface)] flex items-center justify-center aspect-video">
         <img
           src={car.image}
           alt={car.model}
@@ -39,20 +39,20 @@ export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) 
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
-        <div>
+      <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--engine-accent)]">
             {car.brand?.toUpperCase()}
           </p>
-          <h3 className="mt-1 text-xl font-extrabold italic tracking-tight text-[var(--engine-text)]">
+          <h3 className="mt-1 truncate text-xl font-extrabold italic tracking-tight text-[var(--engine-text)]">
             {car.model}
           </h3>
-          <p className="mt-1 text-xs font-medium text-[var(--engine-text-subtle)]">
+          <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-subtle)]">
             {car.year}
           </p>
         </div>
 
-        <div className="mt-auto pt-5">
+        <div className="space-y-3 pt-2">
           <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
             <span className="text-[var(--engine-text-subtle)]">
               {t("car.progress")}
@@ -68,7 +68,7 @@ export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) 
             />
           </div>
 
-          <div className="mt-4 flex items-end justify-between border-t border-[var(--engine-border)] pt-4">
+          <div className="flex items-end justify-between border-t border-[var(--engine-border)] pt-3">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
               {t("car.remaining")}
             </p>
@@ -88,7 +88,7 @@ export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) 
                 event.stopPropagation();
                 onOpenOwnership(car);
               }}
-              className="mt-3 flex w-full items-center justify-between rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
+              className="flex w-full items-center justify-between rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
             >
               <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
                 <Calculator size={14} className="text-[var(--engine-accent)]" />

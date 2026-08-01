@@ -102,7 +102,7 @@ public class EngineFirestoreService {
   public List<Map<String, Object>> getCommunityGoals(String userId) throws Exception {
     List<Map<String, Object>> goals = new ArrayList<>();
     for (DocumentSnapshot snapshot :
-        firestore.collection(COMMUNITY).orderBy("updatedAt", Direction.DESCENDING).get().get().getDocuments()) {
+        firestore.collection(COMMUNITY).orderBy("updatedAt", Direction.DESCENDING).limit(50).get().get().getDocuments()) {
       goals.add(normalizeCommunityGoal(FirestoreMapper.withId(snapshot), userId));
     }
     return goals;
@@ -416,15 +416,21 @@ public class EngineFirestoreService {
     double rating =
         ratingsBy.values().stream().mapToDouble(EngineNormalizer::positiveNumber).filter(value -> value > 0).average().orElse(0);
     Map<String, Object> likesBy = EngineNormalizer.mutableMap(goal.get("likesBy"));
-    List<Object> comments = goal.get("comments") instanceof List<?> list ? new ArrayList<>(list) : List.of();
+    List<Object> comments = goal.get("comments") instanceof List<?> list ? new ArrayList<>(list.stream().limit(10).toList()) : List.of();
     String author = EngineNormalizer.string(goal.get("author")).isBlank() ? "Usuário Engine" : EngineNormalizer.string(goal.get("author"));
 
-    Map<String, Object> normalized = new LinkedHashMap<>(goal);
+    Map<String, Object> normalized = new LinkedHashMap<>();
+    normalized.put("id", goal.get("id"));
+    normalized.put("ownerId", goal.get("ownerId"));
+    normalized.put("carId", goal.get("carId"));
     normalized.put("author", author);
     normalized.put("username", EngineNormalizer.string(goal.get("username")).isBlank() ? "@engine" : goal.get("username"));
     normalized.put("avatar", EngineNormalizer.string(goal.get("avatar")).isBlank() ? goal.getOrDefault("avatarInitials", "") : goal.get("avatar"));
     normalized.put("city", EngineNormalizer.string(goal.get("city")).isBlank() ? "Engine Garage" : goal.get("city"));
     normalized.put("title", EngineNormalizer.string(goal.get("title")).isBlank() ? (EngineNormalizer.string(goal.get("brand")) + " " + EngineNormalizer.string(goal.get("model"))).trim() : goal.get("title"));
+    normalized.put("brand", goal.get("brand"));
+    normalized.put("model", goal.get("model"));
+    normalized.put("year", goal.get("year"));
     normalized.put("savedValue", EngineNormalizer.positiveNumber(goal.get("savedValue")));
     normalized.put("targetValue", EngineNormalizer.positiveNumber(goal.get("targetValue")));
     normalized.put("streak", EngineNormalizer.positiveNumber(goal.getOrDefault("streak", 1)));
@@ -436,6 +442,8 @@ public class EngineFirestoreService {
     normalized.put("isMine", userId.equals(goal.get("ownerId")));
     normalized.put("likesBy", likesBy);
     normalized.put("ratingsBy", ratingsBy);
+    normalized.put("createdAt", goal.get("createdAt"));
+    normalized.put("updatedAt", goal.get("updatedAt"));
     return normalized;
   }
 

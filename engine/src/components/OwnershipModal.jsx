@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   X,
   Wallet,
@@ -29,6 +29,7 @@ import {
   LIFE_SITUATION_TYPES,
 } from "../services/ownership";
 import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
+import { fipeService } from "../services/fipeService";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-sm text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
@@ -113,8 +114,22 @@ function OwnershipDialog({ car, settings, onClose, onSave }) {
     () => car.ownership?.state || settings?.profile?.state || "",
   );
   const [saving, setSaving] = useState(false);
+  const [realConsumption, setRealConsumption] = useState(null);
 
   const states = useMemo(() => getStates(country), [country]);
+
+  // Carregar consumo real do modelo quando abrir o modal
+  useEffect(() => {
+    const loadRealConsumption = async () => {
+      if (car?.model) {
+        const consumption = await fipeService.getConsumption(car.model);
+        if (consumption) {
+          setRealConsumption(consumption);
+        }
+      }
+    };
+    loadRealConsumption();
+  }, [car?.model]);
 
   const result = useMemo(
     () => estimateOwnership(car, inputs, { country, state }),
@@ -256,18 +271,37 @@ function OwnershipDialog({ car, settings, onClose, onSave }) {
                   </select>
                 </Field>
                 <Field
-                  label={t("ownership.fields.consumption")}
-                  hint={t("ownership.fields.consumptionHint", {
-                    value: defaultConsumption,
-                  })}
+                  label={
+                    <div className="flex items-center gap-1.5">
+                      {t("ownership.fields.consumption")}
+                      <InfoTip text={
+                        inputs.userConsumption
+                          ? "Usando seu consumo informado"
+                          : realConsumption && realConsumption[inputs.fuelType]
+                          ? `Consumo real INMETRO: ${realConsumption[inputs.fuelType].toFixed(1)} km/l`
+                          : "Usando estimativa padrão"
+                      } />
+                    </div>
+                  }
+                  hint={
+                    inputs.userConsumption
+                      ? `Seu consumo: ${inputs.userConsumption} km/l`
+                      : realConsumption && realConsumption[inputs.fuelType]
+                      ? `Real INMETRO: ${realConsumption[inputs.fuelType].toFixed(1)} km/l — edite se conhecer seu real`
+                      : `Padrão: ${defaultConsumption} km/l — edite se conhecer seu real`
+                  }
                 >
                   <input
                     type="number"
                     min="0"
                     step="0.1"
-                    placeholder={String(defaultConsumption)}
-                    value={inputs.consumption || ""}
-                    onChange={(e) => set("consumption", e.target.value)}
+                    placeholder={
+                      realConsumption && realConsumption[inputs.fuelType]
+                        ? `Real: ${realConsumption[inputs.fuelType].toFixed(1)} km/l`
+                        : `Padrão: ${defaultConsumption} km/l`
+                    }
+                    value={inputs.userConsumption || ""}
+                    onChange={(e) => set("userConsumption", e.target.value)}
                     className={fieldClass}
                   />
                 </Field>
@@ -367,7 +401,14 @@ function OwnershipDialog({ car, settings, onClose, onSave }) {
                     </select>
                   </Field>
                   <Field
-                    label={t("ownership.fields.monthlyRate")}
+                    label={
+                      <div className="flex items-center gap-1.5">
+                        {t("ownership.fields.monthlyRate")}
+                        <InfoTip text={t("ownership.tips.monthlyRate", {
+                          defaultValue: (financing?.monthlyRate * 100 || 1.99).toFixed(2)
+                        })} />
+                      </div>
+                    }
                     hint={t("ownership.fields.monthlyRateHint", {
                       value: (financing?.monthlyRate * 100 || 1.99).toFixed(2),
                     })}

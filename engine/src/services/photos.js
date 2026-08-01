@@ -101,27 +101,51 @@ export const uploadUserPhoto = async (file, { userId, folder }) => {
     const path = `users/${userId}/${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}.jpg`;
 
     try {
-      // Comprime ANTES de subir — o arquivo cru do celular não vai para o
-      // Storage. Se a compressão falhar (formato exótico), sobe o original.
       let payload = file;
       let contentType = file.type;
-      try {
-        payload = await renderCompressed(file, {
-          maxSize: UPLOAD_MAX_SIZE,
-          quality: UPLOAD_QUALITY,
-          output: "blob",
-        });
-        contentType = "image/jpeg";
-      } catch (compressError) {
-        console.warn(
-          "[photos] Falha ao comprimir, subindo original.",
-          compressError,
-        );
+      const isSmallJpeg = file.type === "image/jpeg" && file.size < 500 * 1024;
+
+      const startTime = performance.now();
+      console.log("[photos] Iniciando upload:", {
+        file: safeName,
+        size: `${(file.size / 1024).toFixed(1)}KB`,
+        type: file.type,
+        skipRecompress: isSmallJpeg,
+      });
+
+      if (!isSmallJpeg) {
+        try {
+          const compressStart = performance.now();
+          payload = await renderCompressed(file, {
+            maxSize: UPLOAD_MAX_SIZE,
+            quality: UPLOAD_QUALITY,
+            output: "blob",
+          });
+          contentType = "image/jpeg";
+          console.log(
+            `[photos] Compressão concluída em ${(performance.now() - compressStart).toFixed(0)}ms`,
+          );
+        } catch (compressError) {
+          console.warn(
+            "[photos] Falha ao comprimir, subindo original.",
+            compressError,
+          );
+        }
       }
 
+      const uploadStart = performance.now();
       const fileRef = ref(storage, path);
       await withUploadTimeout(uploadBytes(fileRef, payload, { contentType }));
-      return await withUploadTimeout(getDownloadURL(fileRef));
+      console.log(
+        `[photos] Upload Firebase concluído em ${(performance.now() - uploadStart).toFixed(0)}ms`,
+      );
+
+      const urlStart = performance.now();
+      const url = await withUploadTimeout(getDownloadURL(fileRef));
+      console.log(
+        `[photos] URL gerada em ${(performance.now() - urlStart).toFixed(0)}ms (total: ${(performance.now() - startTime).toFixed(0)}ms)`,
+      );
+      return url;
     } catch (error) {
       console.warn("[photos] Storage indisponível, comprimindo local.", error);
     }

@@ -41,4 +41,21 @@ export const fipeService = {
     );
     return response.data.Valor;
   },
+
+  getConsumption: async (modelName) => {
+    // Busca consumo real (km/l) do modelo
+    if (!ENGINE_API_URL) {
+      console.warn("Consumption data only available with backend API");
+      return null;
+    }
+    try {
+      const response = await axios.get(
+        engineApiUrl(`/fipe/consumption/${encodeURIComponent(modelName)}`),
+      );
+      return response.data; // { gasoline: 13.5, ethanol: 9.8, diesel: 14.0 }
+    } catch (error) {
+      console.error("Erro ao carregar consumo real:", error);
+      return null;
+    }
+  },
 };
