@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { useTranslation } from "react-i18next";
 import { auth } from "./services/firebase";
@@ -296,6 +296,8 @@ function AppLayout({
   onSaveOwnership,
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const isMessages = location.pathname.startsWith("/messages");
 
   return (
     <div
@@ -365,7 +367,7 @@ function AppLayout({
         )}
 
         {/* Rodapé global — acompanha o conteúdo no fim da rolagem. */}
-        {!dbLoading && <Footer />}
+        {!dbLoading && !isMessages && <Footer />}
       </main>
 
       {/* A key remonta o formulário a cada carro: sem isso o modal fica

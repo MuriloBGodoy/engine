@@ -1047,12 +1047,14 @@ h5 {
 }
 
 .region-pop {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 60;
-  width: 264px;
-  max-width: calc(100vw - 24px);
+  position: fixed;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: calc(100vw - 32px);
+  max-width: 360px;
+  max-height: 70vh;
   padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--engine-border);
@@ -1061,14 +1063,16 @@ h5 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
 }
 
-@media (max-width: 380px) {
+@media (min-width: 1024px) {
   .region-pop {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100vw - 32px);
+    left: auto;
+    right: 16px;
+    transform: none;
+    top: 70px;
+    width: 264px;
   }
 }
 

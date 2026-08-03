@@ -83,12 +83,12 @@ export function MobileNav({
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/85 px-4 py-2.5 backdrop-blur-xl lg:hidden">
-        <Link to="/" className="min-w-0 shrink" aria-label="Engine">
-          <Logo markSize={28} />
+      <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/85 px-4 py-2.5 backdrop-blur-xl lg:hidden">
+        <Link to="/" aria-label="Engine">
+          <Logo markSize={36} collapsed />
         </Link>
 
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-1">
           <RegionPicker compact className="mr-0.5" />
           {settings && onSettingsUpdate && !isGuest && (
             <Topbar
