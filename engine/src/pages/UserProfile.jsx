@@ -15,8 +15,8 @@ import {
 import { engineDB } from "../services/db";
 import { auth } from "../services/firebase";
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=900";
+// Banner will be solid color gradient - no default image
+const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-accent)]/70";
 
 function FollowingUserCard({ userId }) {
   const [userData, setUserData] = useState(null);
@@ -62,7 +62,7 @@ function FollowingUserCard({ userId }) {
           {userData.author || "Usuário Engine"}
         </p>
         <p className="text-xs text-[var(--engine-text-muted)]">
-          @{userData.username || "user"}
+          @{(userData.username || "user").replace(/^@/, "")}
         </p>
       </div>
     </div>
@@ -184,7 +184,7 @@ export function UserProfile() {
     );
   }
 
-  const coverImage = profile.coverImage || fallbackImage;
+  const coverImage = profile.coverImage || null;
   const avatar = profile.avatar || null;
   const initials = profile.author
     ?.split(" ")
@@ -248,11 +248,11 @@ export function UserProfile() {
                     {profile.author || "Usuário Engine"}
                   </h2>
                   <p className="text-sm font-medium text-[var(--engine-text-muted)]">
-                    @{profile.username || "engine"}
+                    @{(profile.username || "engine").replace(/^@/, "")}
                   </p>
                   {profile.city && (
-                    <p className="mt-1 flex items-center gap-1 text-xs text-[var(--engine-text-subtle)]">
-                      📍 {profile.city}
+                    <p className="mt-1 text-xs text-[var(--engine-text-subtle)]">
+                      {profile.city}
                     </p>
                   )}
                 </div>
@@ -329,10 +329,10 @@ export function UserProfile() {
         {/* Tabs */}
         <div className="mb-6 flex gap-2 border-b border-[var(--engine-border)]">
           {[
-            { id: "posts", label: "Metas", icon: "🎯" },
-            { id: "followers", label: "Seguidores", icon: "👥" },
-            { id: "following", label: "Seguindo", icon: "✔️" },
-            { id: "achievements", label: "Conquistas", icon: "🏆" },
+            { id: "posts", label: "Metas" },
+            { id: "followers", label: "Seguidores" },
+            { id: "following", label: "Seguindo" },
+            { id: "achievements", label: "Conquistas" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -343,7 +343,6 @@ export function UserProfile() {
                   : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
               }`}
             >
-              <span className="mr-2">{tab.icon}</span>
               {tab.label}
             </button>
           ))}
@@ -429,7 +428,7 @@ export function UserProfile() {
                         {follower.author || "Usuário Engine"}
                       </p>
                       <p className="text-xs text-[var(--engine-text-muted)]">
-                        @{follower.username || "user"}
+                        @{(follower.username || "user").replace(/^@/, "")}
                       </p>
                     </div>
                   </div>
