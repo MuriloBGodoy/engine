@@ -9,7 +9,7 @@
 //   2. chute pelo idioma do navegador (navigator.languages / Accept-Language)
 //   3. default do app                (sem filtro — "todas as regiões")
 // Geo-IP "de verdade" fica para depois (precisa de header do host tipo
-// Vercel/Cloudflare ou de uma API externa) — o chute por idioma já cobre a
+// Cloudflare ou de uma API externa) — o chute por idioma já cobre a
 // maioria dos casos sem backend nenhum.
 
 import {
