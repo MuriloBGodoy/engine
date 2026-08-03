@@ -51,6 +51,13 @@ public class CommunityController {
     return engineFirestoreService.getCommunityGoals(user.uid());
   }
 
+  @GetMapping("/users")
+  @Operation(summary = "Lista todos os perfis públicos da comunidade")
+  Map<String, Object> getPublicProfiles(HttpServletRequest request) throws Exception {
+    AuthenticatedUser viewer = AuthContext.requireUser(request);
+    return engineFirestoreService.getPublicProfiles(viewer.uid());
+  }
+
   @GetMapping("/users/{userId}")
   @Operation(summary = "Busca perfil publico da comunidade")
   Map<String, Object> getPublicProfile(HttpServletRequest request, @PathVariable String userId)

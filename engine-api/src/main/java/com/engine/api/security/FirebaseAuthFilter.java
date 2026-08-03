@@ -34,6 +34,8 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
+    addCorsHeaders(request, response);
+
     if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
       filterChain.doFilter(request, response);
       return;
@@ -52,7 +54,19 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
           new AuthenticatedUser(token.getUid(), token.getEmail(), token.getName()));
       filterChain.doFilter(request, response);
     } catch (FirebaseAuthException error) {
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token invalido.");
+      System.err.println("Firebase validation error: " + error.getMessage());
+      error.printStackTrace();
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token invalido: " + error.getMessage());
+    }
+  }
+
+  private void addCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
+    String origin = request.getHeader("Origin");
+    if (origin != null && (origin.equals("http://localhost:5173") || origin.equals("http://127.0.0.1:5173"))) {
+      response.setHeader("Access-Control-Allow-Origin", origin);
+      response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      response.setHeader("Access-Control-Allow-Headers", "*");
+      response.setHeader("Access-Control-Allow-Credentials", "true");
     }
   }
 }

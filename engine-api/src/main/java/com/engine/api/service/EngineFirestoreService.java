@@ -11,6 +11,7 @@ import com.google.cloud.firestore.WriteBatch;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -231,6 +232,15 @@ public class EngineFirestoreService {
       notifications.add(FirestoreMapper.withId(snapshot));
     }
     return notifications;
+  }
+
+  public Map<String, Object> getPublicProfiles(String viewerId) throws Exception {
+    Map<String, Object> profiles = new HashMap<>();
+    for (DocumentSnapshot snapshot : firestore.collection(PUBLIC_PROFILES).get().get().getDocuments()) {
+      Map<String, Object> profile = FirestoreMapper.withId(snapshot);
+      profiles.put(snapshot.getId(), profile);
+    }
+    return profiles;
   }
 
   public Map<String, Object> getPublicProfile(String viewerId, String profileUserId) throws Exception {

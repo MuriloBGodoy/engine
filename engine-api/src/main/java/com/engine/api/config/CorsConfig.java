@@ -17,7 +17,8 @@ public class CorsConfig {
             .addMapping("/api/**")
             .allowedOrigins(properties.cors().allowedOrigins().toArray(String[]::new))
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .allowedHeaders("*");
+            .allowedHeaders("*")
+            .allowCredentials(true);
       }
     };
   }
