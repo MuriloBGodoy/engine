@@ -83,6 +83,8 @@ export function UserProfile() {
   const [activeTab, setActiveTab] = useState("posts");
   const [loading, setLoading] = useState(true);
   const [myFollowing, setMyFollowing] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const isOwnProfile = currentUserId === profile?.userId;
 
   useEffect(() => {
     (async () => {
@@ -260,7 +262,14 @@ export function UserProfile() {
 
               {/* Action Buttons */}
               <div className="flex w-full gap-2 sm:w-auto">
-                {currentUserId && currentUserId !== profile.userId && (
+                {isOwnProfile ? (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition hover:brightness-95 sm:flex-initial"
+                  >
+                    Editar Perfil
+                  </button>
+                ) : currentUserId && currentUserId !== profile?.userId && (
                   <>
                     <button
                       onClick={handleFollow}
