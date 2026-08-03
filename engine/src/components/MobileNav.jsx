@@ -50,7 +50,7 @@ export function MobileNav({
   const isGuest = !currentUser;
   const displayName = profileSettings.displayName || currentUser?.displayName;
   const avatar = profileSettings.avatar || currentUser?.photoURL;
-  const username = profileSettings.username || "";
+  const username = profileSettings.username || currentUser?.email?.split("@")[0] || "";
   const unreadMessages = useUnreadMessages(currentUser?.uid);
 
   const handleLogout = async () => {

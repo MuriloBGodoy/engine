@@ -43,7 +43,7 @@ export function Sidebar({
   const isGuest = !user;
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
-  const username = profileSettings.username || "";
+  const username = profileSettings.username || user?.email?.split("@")[0] || "";
   const showEmail = privacySettings.showEmailInSidebar !== false;
   const unreadMessages = useUnreadMessages(user?.uid);
 

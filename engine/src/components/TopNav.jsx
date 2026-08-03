@@ -47,7 +47,7 @@ export function TopNav({
   const isGuest = !user;
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
-  const username = profileSettings.username || "";
+  const username = profileSettings.username || user?.email?.split("@")[0] || "";
   const unreadMessages = useUnreadMessages(user?.uid);
 
   const handleLogout = async () => {
