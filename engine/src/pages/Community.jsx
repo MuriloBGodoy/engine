@@ -521,7 +521,7 @@ function GoalCard({
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
   const isModal = variant === "modal";
-  const photos = goal.images?.length ? goal.images : [goal.image || fallbackImage];
+  const photos = goal.images?.length ? goal.images : (goal.image ? [goal.image] : [fallbackImage]);
   // No modal de publicação (desktop) os comentários já estão ao lado: o balão
   // leva o foco para o compositor em vez de abrir outra folha.
   const showComments = onCommentClick || (() => setCommentsOpen(true));
@@ -1169,7 +1169,7 @@ function ShareModal({
                     className="flex min-w-0 flex-1 items-center gap-4 text-left"
                   >
                     <img
-                      src={goal.image}
+                      src={goal.images?.[0] || fallbackImage}
                       alt={goal.title}
                       className="h-16 w-20 rounded-lg object-cover"
                     />
@@ -1399,6 +1399,48 @@ function UserProfileModal({
             <Metric icon={Award} label={t("community.profileStats.avg")} value={`${Number(stats.averageProgress || 0).toFixed(0)}%`} />
           </div>
 
+          {/* Followers and Following sections */}
+          <div className="grid grid-cols-2 gap-4 border-t border-[var(--engine-border)] pt-4">
+            <div>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--engine-text-muted)]">
+                Seguidores
+              </h4>
+              <div className="space-y-2">
+                {profile?.followers && profile.followers.length > 0 ? (
+                  profile.followers.slice(0, 5).map((follower) => (
+                    <div
+                      key={follower.id}
+                      className="rounded-lg border border-[var(--engine-border)] p-2 text-sm text-[var(--engine-text)]"
+                    >
+                      {follower.author || "Usuário"}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-[var(--engine-text-muted)]">Sem seguidores</p>
+                )}
+              </div>
+            </div>
+            <div>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--engine-text-muted)]">
+                Seguindo
+              </h4>
+              <div className="space-y-2">
+                {profile?.following && profile.following.length > 0 ? (
+                  profile.following.slice(0, 5).map((following) => (
+                    <div
+                      key={following.id}
+                      className="rounded-lg border border-[var(--engine-border)] p-2 text-sm text-[var(--engine-text)]"
+                    >
+                      {following.author || "Usuário"}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-[var(--engine-text-muted)]">Não segue ninguém</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-[var(--engine-text)] dark:text-white">
               {t("community.profileGoals")}
@@ -1412,7 +1454,7 @@ function UserProfileModal({
                   className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 text-left transition hover:border-[var(--engine-accent)] "
                 >
                   <img
-                    src={goal.image || fallbackImage}
+                    src={goal.images?.[0] || fallbackImage}
                     alt={goal.title}
                     className="h-16 w-20 rounded-lg object-cover"
                     onError={(event) => {
@@ -2322,6 +2364,18 @@ export function Community({ cars = [], settings, user }) {
     { id: "clubes", label: "Clubes", icon: Building },
   ];
 
+  const [peopleSubTab, setPeopleSubTab] = useState("following");
+
+  const followingPeople = useMemo(
+    () => peopleDirectory.filter((person) => communityState.following.includes(person.userId)),
+    [peopleDirectory, communityState.following],
+  );
+
+  const followerPeople = useMemo(
+    () => peopleDirectory.filter((person) => communityState.followers?.includes(person.userId) || false),
+    [peopleDirectory, communityState.followers],
+  );
+
   return (
     <section className="pb-4 sm:pb-8">
       {/* Coluna única centrada + trilho à direita, como as redes que servem
@@ -2332,7 +2386,7 @@ export function Community({ cars = [], settings, user }) {
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full min-w-0 max-w-[620px]">
           {/* Main Tabs (Goals, Users, Clubes) */}
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex w-full items-center gap-3">
             <div className="flex min-w-0 flex-1 rounded-full bg-[var(--engine-surface-2)] p-1">
               {mainTabs.map((tab) => {
                 const Icon = tab.icon;
@@ -2342,13 +2396,13 @@ export function Community({ cars = [], settings, user }) {
                     key={tab.id}
                     type="button"
                     onClick={() => setTopLevelTab(tab.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
+                    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
                       isActive
                         ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
                         : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
                     }`}
                   >
-                    <Icon size={14} className="shrink-0" />
+                    <Icon size={16} className="shrink-0" />
                     <span className="truncate">{tab.label}</span>
                   </button>
                 );
@@ -2356,19 +2410,15 @@ export function Community({ cars = [], settings, user }) {
             </div>
 
             {topLevelTab === "goals" && (
-              <div className="flex shrink-0 items-center gap-2">
-                {/* Publicar meta: no desktop mora no trilho lateral; aqui fica
-                    só no mobile (onde o trilho some) para não duplicar. */}
-                <button
-                  type="button"
-                  onClick={() => setShareModalOpen(true)}
-                  title={t("community.shareNewGoal")}
-                  aria-label={t("community.shareNewGoal")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(true)}
+                title={t("community.shareNewGoal")}
+                aria-label={t("community.shareNewGoal")}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
+              >
+                <Plus size={20} />
+              </button>
             )}
           </div>
 
@@ -2512,19 +2562,47 @@ export function Community({ cars = [], settings, user }) {
           {/* Users Tab */}
           {topLevelTab === "users" && (
             <div className="space-y-4">
-              <label className="flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
-                <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
-                <input
-                  value={peopleQuery}
-                  onChange={(event) => setPeopleQuery(event.target.value)}
-                  placeholder={t("community.peopleSearchPlaceholder")}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
-                />
-              </label>
+              <div className="flex w-full flex-col gap-3">
+                {/* People Sub-tabs */}
+                <div className="flex gap-2 rounded-full bg-[var(--engine-surface-2)] p-1 w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setPeopleSubTab("following")}
+                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition ${
+                      peopleSubTab === "following"
+                        ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
+                        : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                    }`}
+                  >
+                    Seguindo ({followingPeople.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeopleSubTab("followers")}
+                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition ${
+                      peopleSubTab === "followers"
+                        ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
+                        : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                    }`}
+                  >
+                    Seguidores ({followerPeople.length})
+                  </button>
+                </div>
+
+                <label className="flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
+                  <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
+                  <input
+                    value={peopleQuery}
+                    onChange={(event) => setPeopleQuery(event.target.value)}
+                    placeholder={t("community.peopleSearchPlaceholder")}
+                    className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
+                  />
+                </label>
+              </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {peopleDirectory.length ? (
-                  peopleDirectory.map((person) => {
+                {(peopleSubTab === "following" ? followingPeople : followerPeople).length ? (
+                  (peopleSubTab === "following" ? followingPeople : followerPeople).map((person) => {
                     const isFollowing = communityState.following.includes(person.userId);
                     return (
                       <div
@@ -2571,10 +2649,12 @@ export function Community({ cars = [], settings, user }) {
                   <div className="flex min-h-48 flex-col items-center justify-center px-6 text-center">
                     <Users className="mb-3 text-[var(--engine-text-subtle)]" size={30} />
                     <p className="text-sm font-bold text-[var(--engine-text)]">
-                      {t("community.peopleEmpty")}
+                      {peopleSubTab === "following" ? "Você não está seguindo ninguém" : "Você não tem seguidores"}
                     </p>
                     <p className="mt-1 max-w-xs text-xs font-medium text-[var(--engine-text-muted)]">
-                      {t("community.peopleEmptyHint")}
+                      {peopleSubTab === "following"
+                        ? "Comece a seguir pessoas para ver suas metas"
+                        : "Compartilhe suas metas para ganhar seguidores"}
                     </p>
                   </div>
                 )}

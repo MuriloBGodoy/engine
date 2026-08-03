@@ -223,7 +223,7 @@ export const MAX_CAR_PHOTOS = 4;
 /** Galeria do carro: aceita o campo antigo (`image`) e o novo (`images`). */
 const normalizeCarImages = (car = {}) => {
   const list = Array.isArray(car.images) ? car.images : [];
-  const all = [...list, car.image]
+  const all = list
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
@@ -929,7 +929,22 @@ export const engineDB = {
   },
 
   subscribePublicProfiles(callback) {
-    if (apiEnabled()) return () => {};
+    if (apiEnabled()) {
+      apiRequest("/community/users")
+        .then((profiles = {}) => {
+          const map = {};
+          Object.values(profiles).forEach((profile) => {
+            const id = profile.userId || profile.id;
+            map[id] = profile;
+          });
+          callback(map);
+        })
+        .catch((error) => {
+          console.warn("[db] subscribePublicProfiles (API)", error);
+          callback({});
+        });
+      return () => {};
+    }
 
     return onSnapshot(
       publicProfilesCollection(),
