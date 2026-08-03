@@ -88,7 +88,7 @@ export function UserProfile() {
     (async () => {
       try {
         setLoading(true);
-        const cleanUsername = username?.startsWith("@") ? username.slice(1) : username;
+        const cleanUsername = username?.toLowerCase().trim() || "";
 
         // Subscribe to public profiles to find the user
         const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
