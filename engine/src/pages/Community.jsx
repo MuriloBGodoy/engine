@@ -2400,21 +2400,9 @@ export function Community({ cars = [], settings, user }) {
             {topLevelTab === "goals" && (
               <button
                 type="button"
-                onClick={() => setShareModalOpen(true)}
-                title={t("community.shareNewGoal")}
-                aria-label={t("community.shareNewGoal")}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
-              >
-                <Plus size={20} />
-              </button>
-            )}
-
-            {topLevelTab === "clubes" && (
-              <button
-                type="button"
                 onClick={() => setPeopleModalOpen(true)}
-                title="Descobrir pessoas"
-                aria-label="Descobrir pessoas"
+                title="Descobrir e seguir pessoas"
+                aria-label="Descobrir e seguir pessoas"
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
               >
                 <Plus size={20} />

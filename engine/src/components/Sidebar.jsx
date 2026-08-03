@@ -43,6 +43,7 @@ export function Sidebar({
   const isGuest = !user;
   const displayName = profileSettings.displayName || user?.displayName;
   const avatar = profileSettings.avatar || user?.photoURL;
+  const username = profileSettings.username || "";
   const showEmail = privacySettings.showEmailInSidebar !== false;
   const unreadMessages = useUnreadMessages(user?.uid);
 
@@ -209,7 +210,7 @@ export function Sidebar({
             }`}
           >
             <Link
-              to="/settings"
+              to={username ? `/community/@${username.replace(/^@/, "")}` : "/community"}
               title={t("settings.sections.profile")}
               className="shrink-0 rounded-full transition-transform active:scale-95"
             >

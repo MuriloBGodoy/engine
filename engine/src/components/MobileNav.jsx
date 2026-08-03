@@ -50,6 +50,7 @@ export function MobileNav({
   const isGuest = !currentUser;
   const displayName = profileSettings.displayName || currentUser?.displayName;
   const avatar = profileSettings.avatar || currentUser?.photoURL;
+  const username = profileSettings.username || "";
   const unreadMessages = useUnreadMessages(currentUser?.uid);
 
   const handleLogout = async () => {
@@ -111,18 +112,12 @@ export function MobileNav({
             </div>
           ) : (
             <>
-              {/* O avatar é a porta de entrada de Ajustes no mobile (mesmo
-                  padrão da sidebar no desktop) — anel de destaque quando ativo. */}
+              {/* O avatar é a porta de entrada de Perfil no mobile. */}
               <Link
-                to="/settings"
-                title={t("nav.settings")}
-                aria-label={t("nav.settings")}
-                aria-current={settingsActive ? "page" : undefined}
-                className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95 ${
-                  settingsActive
-                    ? "ring-2 ring-[var(--engine-accent)] ring-offset-2 ring-offset-[var(--engine-bg)]"
-                    : ""
-                }`}
+                to={username ? `/community/@${username.replace(/^@/, "")}` : "/community"}
+                title={t("settings.sections.profile")}
+                aria-label={t("settings.sections.profile")}
+                className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95`}
               >
                 {avatar ? (
                   <img
