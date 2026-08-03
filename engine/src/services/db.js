@@ -1420,6 +1420,70 @@ export const engineDB = {
     }
   },
 
+  async getUserGoals(userId) {
+    if (!userId) return [];
+
+    try {
+      const goalsQuery = query(
+        collection(firestore, COMMUNITY_COLLECTION),
+        where("userId", "==", userId),
+        orderBy("updatedAt", "desc"),
+      );
+      const snapshot = await getDocs(goalsQuery);
+      return snapshot.docs.map((item) =>
+        normalizeCommunityGoal({ id: item.id, ...item.data() }),
+      );
+    } catch (error) {
+      console.error("Error fetching user goals:", error);
+      return [];
+    }
+  },
+
+  async getUserFollowers(userId) {
+    if (!userId) return [];
+
+    try {
+      const snapshot = await getDocs(followersCollection(userId));
+      return snapshot.docs.map((doc) => ({
+        userId: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error) {
+      console.error("Error fetching followers:", error);
+      return [];
+    }
+  },
+
+  async getUserFollowing(userId) {
+    if (!userId) return [];
+
+    try {
+      const communityDoc = doc(
+        firestore,
+        USERS_COLLECTION,
+        userId,
+        "private",
+        "community",
+      );
+      const snapshot = await getDoc(communityDoc);
+      const data = snapshot.data();
+      return Array.isArray(data?.following) ? data.following : [];
+    } catch (error) {
+      console.error("Error fetching user following:", error);
+      return [];
+    }
+  },
+
+  async followUser(followerId, targetUserId) {
+    if (!followerId || !targetUserId || followerId === targetUserId) return;
+    await this.setFollow(targetUserId, true, followerId);
+  },
+
+  async unfollowUser(followerId, targetUserId) {
+    if (!followerId || !targetUserId || followerId === targetUserId) return;
+    await this.setFollow(targetUserId, false, followerId);
+  },
+
   async notifyUser(userId, notification) {
     const actorId = notification?.actorId || currentUserId;
     if (!userId || userId === actorId) return;

@@ -18,6 +18,57 @@ import { auth } from "../services/firebase";
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=900";
 
+function FollowingUserCard({ userId }) {
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
+      const user = profiles[userId];
+      if (user) {
+        setUserData(user);
+      }
+    });
+
+    return () => unsubscribe?.();
+  }, [userId]);
+
+  if (!userData) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 animate-pulse">
+        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)]" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-24 rounded bg-[var(--engine-surface-2)]" />
+          <div className="h-2 w-32 rounded bg-[var(--engine-surface-2)]" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]">
+      {userData.avatar ? (
+        <img
+          src={userData.avatar}
+          alt={userData.author}
+          className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
+          {userData.avatarInitials || "EN"}
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-[var(--engine-text)]">
+          {userData.author || "Usuário Engine"}
+        </p>
+        <p className="text-xs text-[var(--engine-text-muted)]">
+          @{userData.username || "user"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function UserProfile() {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -38,37 +89,45 @@ export function UserProfile() {
       try {
         setLoading(true);
         const cleanUsername = username?.startsWith("@") ? username.slice(1) : username;
-        const profiles = await engineDB.getPublicProfiles?.();
 
-        const userProfile = Object.values(profiles || {}).find(
-          (p) => (p.username || "").toLowerCase() === cleanUsername?.toLowerCase()
-        );
+        // Subscribe to public profiles to find the user
+        const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
+          const userProfile = Object.values(profiles || {}).find(
+            (p) => (p.username || "").toLowerCase() === cleanUsername?.toLowerCase()
+          );
 
-        if (!userProfile) {
-          navigate("/community");
-          return;
-        }
+          if (!userProfile) {
+            navigate("/community");
+            return;
+          }
 
-        setProfile(userProfile);
+          setProfile(userProfile);
 
-        // Fetch user's goals
-        const goalsData = await engineDB.getGoalsByUserId?.(userProfile.userId);
-        setUserGoals(goalsData || []);
+          // Fetch user's goals, followers, and following
+          Promise.all([
+            engineDB.getUserGoals(userProfile.userId),
+            engineDB.getUserFollowers(userProfile.userId),
+            engineDB.getUserFollowing(userProfile.userId),
+          ]).then(([goals, followers, following]) => {
+            setUserGoals(goals || []);
+            setFollowers(followers || []);
+            setFollowing(following || []);
+          });
 
-        // Fetch followers/following
-        const followData = await engineDB.getUserFollowData?.(userProfile.userId);
-        setFollowers(followData?.followers || []);
-        setFollowing(followData?.following || []);
+          // Check if current user follows this profile
+          if (currentUserId) {
+            engineDB.getUserFollowing(currentUserId).then((currentFollowing) => {
+              setMyFollowing(currentFollowing || []);
+              setIsFollowing((currentFollowing || []).includes(userProfile.userId));
+            });
+          }
 
-        // Check if current user follows this profile
-        if (currentUserId) {
-          const currentUserFollowing = await engineDB.getFollowing?.(currentUserId);
-          setMyFollowing(currentUserFollowing || []);
-          setIsFollowing(currentUserFollowing?.includes(userProfile.userId) || false);
-        }
+          setLoading(false);
+        });
+
+        return () => unsubscribe?.();
       } catch (error) {
         console.error("Error loading user profile:", error);
-      } finally {
         setLoading(false);
       }
     })();
@@ -78,9 +137,9 @@ export function UserProfile() {
     if (!currentUserId || !profile) return;
     try {
       if (isFollowing) {
-        await engineDB.unfollowUser?.(currentUserId, profile.userId);
+        await engineDB.unfollowUser(currentUserId, profile.userId);
       } else {
-        await engineDB.followUser?.(currentUserId, profile.userId);
+        await engineDB.followUser(currentUserId, profile.userId);
       }
       setIsFollowing(!isFollowing);
     } catch (error) {
@@ -91,11 +150,8 @@ export function UserProfile() {
   const handleMessage = async () => {
     if (!currentUserId || !profile) return;
     try {
-      const conversationId = await engineDB.startConversation?.(
-        currentUserId,
-        profile.userId
-      );
-      navigate(`/messages/${conversationId}`);
+      // Navigate to messages - conversation creation can happen on the Messages page
+      navigate(`/messages?user=${profile.userId}`);
     } catch (error) {
       console.error("Error starting conversation:", error);
     }
@@ -347,24 +403,35 @@ export function UserProfile() {
           {activeTab === "followers" && (
             <div className="grid gap-3">
               {followers.length ? (
-                followers.map((followerId) => (
+                followers.map((follower) => (
                   <div
-                    key={followerId}
+                    key={follower.userId || follower.followerId}
                     className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]"
                   >
-                    <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)]" />
+                    {follower.avatar ? (
+                      <img
+                        src={follower.avatar}
+                        alt={follower.author}
+                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
+                        {follower.avatarInitials || "EN"}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-[var(--engine-text)]">
-                        Usuário Engine
+                        {follower.author || "Usuário Engine"}
                       </p>
                       <p className="text-xs text-[var(--engine-text-muted)]">
-                        @user
+                        @{follower.username || "user"}
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="flex min-h-48 flex-col items-center justify-center text-center">
+                  <Users size={40} className="mb-3 text-[var(--engine-text-subtle)]" />
                   <p className="text-sm font-bold text-[var(--engine-text)]">
                     Sem seguidores ainda
                   </p>
@@ -377,23 +444,11 @@ export function UserProfile() {
             <div className="grid gap-3">
               {following.length ? (
                 following.map((userId) => (
-                  <div
-                    key={userId}
-                    className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]"
-                  >
-                    <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)]" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[var(--engine-text)]">
-                        Usuário Engine
-                      </p>
-                      <p className="text-xs text-[var(--engine-text-muted)]">
-                        @user
-                      </p>
-                    </div>
-                  </div>
+                  <FollowingUserCard key={userId} userId={userId} />
                 ))
               ) : (
                 <div className="flex min-h-48 flex-col items-center justify-center text-center">
+                  <Users size={40} className="mb-3 text-[var(--engine-text-subtle)]" />
                   <p className="text-sm font-bold text-[var(--engine-text)]">
                     Não segue ninguém ainda
                   </p>
