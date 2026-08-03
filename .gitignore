@@ -3,3 +3,4 @@ node_modules/
 tools/
 engine-api/target/
 engine-api/src/main/resources/service-account.json
+engine/.env
