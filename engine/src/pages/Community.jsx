@@ -2360,21 +2360,9 @@ export function Community({ cars = [], settings, user }) {
 
   const mainTabs = [
     { id: "goals", label: "Metas", icon: Car },
-    { id: "users", label: "Pessoas", icon: Users },
     { id: "clubes", label: "Clubes", icon: Building },
   ];
 
-  const [peopleSubTab, setPeopleSubTab] = useState("following");
-
-  const followingPeople = useMemo(
-    () => peopleDirectory.filter((person) => communityState.following.includes(person.userId)),
-    [peopleDirectory, communityState.following],
-  );
-
-  const followerPeople = useMemo(
-    () => peopleDirectory.filter((person) => communityState.followers?.includes(person.userId) || false),
-    [peopleDirectory, communityState.followers],
-  );
 
   return (
     <section className="pb-4 sm:pb-8">
@@ -2416,6 +2404,18 @@ export function Community({ cars = [], settings, user }) {
                 title={t("community.shareNewGoal")}
                 aria-label={t("community.shareNewGoal")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] xl:hidden"
+              >
+                <Plus size={20} />
+              </button>
+            )}
+
+            {topLevelTab === "clubes" && (
+              <button
+                type="button"
+                onClick={() => setPeopleModalOpen(true)}
+                title="Descobrir pessoas"
+                aria-label="Descobrir pessoas"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
               >
                 <Plus size={20} />
               </button>
@@ -2559,108 +2559,6 @@ export function Community({ cars = [], settings, user }) {
             </>
           )}
 
-          {/* Users Tab */}
-          {topLevelTab === "users" && (
-            <div className="space-y-4">
-              <div className="flex w-full flex-col gap-3">
-                {/* People Sub-tabs */}
-                <div className="flex gap-2 rounded-full bg-[var(--engine-surface-2)] p-1 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setPeopleSubTab("following")}
-                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition ${
-                      peopleSubTab === "following"
-                        ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
-                        : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-                    }`}
-                  >
-                    Seguindo ({followingPeople.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPeopleSubTab("followers")}
-                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition ${
-                      peopleSubTab === "followers"
-                        ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
-                        : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-                    }`}
-                  >
-                    Seguidores ({followerPeople.length})
-                  </button>
-                </div>
-
-                <label className="flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
-                  <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
-                  <input
-                    value={peopleQuery}
-                    onChange={(event) => setPeopleQuery(event.target.value)}
-                    placeholder={t("community.peopleSearchPlaceholder")}
-                    className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                {(peopleSubTab === "following" ? followingPeople : followerPeople).length ? (
-                  (peopleSubTab === "following" ? followingPeople : followerPeople).map((person) => {
-                    const isFollowing = communityState.following.includes(person.userId);
-                    return (
-                      <div
-                        key={person.userId}
-                        className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 hover:bg-[var(--engine-surface-2)] transition"
-                      >
-                        <AvatarButton
-                          person={person}
-                          size="sm"
-                          onClick={() => handleOpenProfile(person.userId, person)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleOpenProfile(person.userId, person)}
-                          className="min-w-0 flex-1 text-left"
-                        >
-                          <p className="truncate text-sm font-bold text-[var(--engine-text)]">
-                            {person.author || "Usuário Engine"}
-                          </p>
-                          <p className="truncate text-xs font-medium text-[var(--engine-text-subtle)]">
-                            @{withoutAt(person.username) || "engine"}
-                            {person.city ? ` · ${person.city}` : ""}
-                          </p>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleFollow(person)}
-                          title={isFollowing ? t("community.following") : t("community.follow")}
-                          className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[10px] font-black uppercase tracking-widest transition ${
-                            isFollowing
-                              ? "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
-                              : "bg-[var(--engine-accent)] text-white hover:brightness-95"
-                          }`}
-                        >
-                          {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
-                          <span className="hidden min-[380px]:inline">
-                            {isFollowing ? t("community.following") : t("community.follow")}
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="flex min-h-48 flex-col items-center justify-center px-6 text-center">
-                    <Users className="mb-3 text-[var(--engine-text-subtle)]" size={30} />
-                    <p className="text-sm font-bold text-[var(--engine-text)]">
-                      {peopleSubTab === "following" ? "Você não está seguindo ninguém" : "Você não tem seguidores"}
-                    </p>
-                    <p className="mt-1 max-w-xs text-xs font-medium text-[var(--engine-text-muted)]">
-                      {peopleSubTab === "following"
-                        ? "Comece a seguir pessoas para ver suas metas"
-                        : "Compartilhe suas metas para ganhar seguidores"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Clubes Tab */}
           {topLevelTab === "clubes" && (

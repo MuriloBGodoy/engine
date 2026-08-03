@@ -30,6 +30,7 @@ import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Events } from "./pages/Events";
 import { EventDetails } from "./pages/EventDetails";
+import { UserProfile } from "./pages/UserProfile";
 
 function App() {
   const { i18n, t } = useTranslation();
@@ -217,6 +218,10 @@ function App() {
           <Route
             path="/community"
             element={<Community cars={cars} settings={settings} user={user} />}
+          />
+          <Route
+            path="/community/@:username"
+            element={<UserProfile />}
           />
           <Route
             path="/messages"
