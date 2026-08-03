@@ -13,6 +13,8 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
+  getDocs,
 } from "firebase/firestore";
 import { firestore } from "./firebase";
 
@@ -222,10 +224,10 @@ const notifyNewMessage = async (recipientId, senderId, sender, conversationId) =
 
 export const sendMessage = async (
   conversationId,
-  { senderId, text = "", attachment = null },
+  { senderId, text = "", attachment = null, imageData = null, gifData = null, gifId = null },
 ) => {
   const body = String(text || "").trim().slice(0, MESSAGE_MAX_LENGTH);
-  if (!conversationId || !senderId || (!body && !attachment)) return null;
+  if (!conversationId || !senderId || (!body && !attachment && !imageData && !gifData)) return null;
 
   const conversationRef = doc(firestore, CONVERSATIONS, conversationId);
   const snapshot = await getDoc(conversationRef);
@@ -236,20 +238,24 @@ export const sendMessage = async (
     (id) => id !== senderId,
   );
 
+  const messageType = gifData ? "gif" : imageData ? "image" : attachment ? "post" : "text";
   const created = await addDoc(collection(conversationRef, "messages"), {
     senderId,
     text: body,
-    type: attachment ? "post" : "text",
+    type: messageType,
+    status: "delivered",
     ...(attachment ? { attachment } : {}),
+    ...(imageData ? { imageData } : {}),
+    ...(gifData ? { gifData, gifId } : {}),
     createdAt: serverTimestamp(),
   });
 
   await updateDoc(conversationRef, {
     updatedAt: serverTimestamp(),
     lastMessage: {
-      text: body || attachmentSummary(attachment),
+      text: body || (gifData ? "🎬 GIF" : imageData ? "📷 Imagem" : attachmentSummary(attachment)),
       senderId,
-      type: attachment ? "post" : "text",
+      type: messageType,
       createdAt: serverTimestamp(),
     },
     [`unread.${senderId}`]: 0,
@@ -276,6 +282,23 @@ export const markConversationRead = async (conversationId, userId) => {
   await updateDoc(doc(firestore, CONVERSATIONS, conversationId), {
     [`unread.${userId}`]: 0,
   }).catch((error) => console.warn("[chat] markConversationRead", error));
+
+  // Marcar mensagens não-lidas como vistas
+  try {
+    const messagesRef = collection(firestore, CONVERSATIONS, conversationId, "messages");
+    const messagesQuery = query(messagesRef, where("senderId", "!=", userId), where("status", "==", "delivered"));
+    const snapshot = await getDocs(messagesQuery);
+
+    if (!snapshot.empty) {
+      const batch = writeBatch(firestore);
+      snapshot.docs.forEach((messageDoc) => {
+        batch.update(messageDoc.ref, { status: "seen" });
+      });
+      await batch.commit();
+    }
+  } catch (error) {
+    console.warn("[chat] markMessagesAsSeen", error);
+  }
 };
 
 export const deleteMessage = async (conversationId, messageId) => {

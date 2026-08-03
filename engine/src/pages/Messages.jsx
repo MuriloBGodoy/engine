@@ -9,6 +9,9 @@ import {
   Send,
   Trash2,
   UserRound,
+  Image,
+  Check,
+  CheckCheck,
 } from "lucide-react";
 import { engineDB } from "../services/db";
 import {
@@ -31,6 +34,10 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useToast } from "../components/ToastProvider";
 import { useConfirm } from "../components/ConfirmProvider";
 import { ChatAvatar } from "../components/ChatAvatar";
+import { ImagePreviewModal } from "../components/ImagePreviewModal";
+import { EmojiPicker } from "../components/EmojiPicker";
+import { GiphyPicker } from "../components/GiphyPicker";
+import { compressImage, readFileAsDataUrl, blobToDataUrl } from "../services/imageCompression";
 
 const matchesQuery = (person, term) =>
   `${person.author || ""} ${person.username || ""} ${person.city || ""}`
@@ -58,6 +65,10 @@ export function Messages({ user, settings }) {
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [compressing, setCompressing] = useState(false);
+  const [showGiphyPicker, setShowGiphyPicker] = useState(false);
+  const fileInputRef = useRef(null);
 
   const userId = user?.uid || "";
   const locale = i18n.language || "pt-BR";
@@ -178,11 +189,83 @@ export function Messages({ user, settings }) {
     }
   };
 
+  const handleImageSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) {
+      toast(t("messages.invalidImage"));
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setPreviewImage(dataUrl);
+    } catch (error) {
+      console.error(error);
+      toast(t("messages.imageError"));
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImagePreviewSend = async (imageUrl, caption, rotation) => {
+    if (!conversationId) return;
+
+    setCompressing(true);
+    try {
+      const isGif = imageUrl.includes("data:image/gif");
+      const blob = await compressImage(imageUrl, 1600, 0.8, isGif);
+      const compressedUrl = await blobToDataUrl(blob);
+
+      setSending(true);
+      setDraft("");
+      setPreviewImage(null);
+
+      await sendMessage(conversationId, {
+        senderId: userId,
+        text: caption || "",
+        imageData: compressedUrl,
+      });
+    } catch (error) {
+      console.error(error);
+      toast(t("messages.sendError"));
+    } finally {
+      setSending(false);
+      setCompressing(false);
+    }
+  };
+
+  const handleEmojiSelect = (emoji) => {
+    setDraft((prev) => prev + emoji);
+  };
+
+  const handleGiphySelect = async (gif) => {
+    if (!conversationId) return;
+
+    setShowGiphyPicker(false);
+    setSending(true);
+
+    try {
+      await sendMessage(conversationId, {
+        senderId: userId,
+        text: "",
+        gifData: gif.gifUrl,
+        gifId: gif.gifId,
+      });
+    } catch (error) {
+      console.error(error);
+      toast(t("messages.sendError"));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const showList = !conversationId || isDesktop;
   const showThread = Boolean(conversationId);
 
   return (
-    <section className="flex flex-1 flex-col">
+    <section className="flex flex-1 flex-col" style={{ gridColumn: "1 / -1" }}>
       {/* No celular a caixa encosta nas bordas (ganha largura útil) e volta a
           ser cartão a partir de sm — mesmo padrão do header da comunidade. */}
       <div className="engine-chat-shell -mx-4 flex overflow-hidden border-y border-[var(--engine-border)] bg-[var(--engine-surface)] sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
@@ -320,8 +403,43 @@ export function Messages({ user, settings }) {
 
             <form
               onSubmit={handleSend}
-              className="flex shrink-0 items-end gap-2 border-t border-[var(--engine-border)] p-3"
+              className="flex shrink-0 items-stretch gap-2 border-t border-[var(--engine-border)] p-3"
             >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,image/gif"
+                onChange={handleImageSelected}
+                className="hidden"
+                aria-label="Upload image"
+              />
+
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending || compressing}
+                  title="Foto"
+                  aria-label="Foto"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)] disabled:opacity-40"
+                >
+                  <Image size={18} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGiphyPicker(true)}
+                  disabled={sending}
+                  title="GIF"
+                  aria-label="GIF"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)] disabled:opacity-40 font-black text-xs"
+                >
+                  GIF
+                </button>
+
+                <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              </div>
+
               <textarea
                 value={draft}
                 rows={1}
@@ -332,7 +450,8 @@ export function Messages({ user, settings }) {
                   }
                 }}
                 placeholder={t("messages.composerPlaceholder")}
-                className="engine-scroll max-h-32 min-h-11 w-full min-w-0 flex-1 resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-sm font-semibold text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
+                className="engine-scroll max-h-32 min-h-11 w-full min-w-0 flex-1 resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-2 text-sm font-semibold text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
+                style={{ lineHeight: "1.5" }}
               />
               <button
                 type="submit"
@@ -344,6 +463,22 @@ export function Messages({ user, settings }) {
                 <Send size={18} />
               </button>
             </form>
+
+            {previewImage && (
+              <ImagePreviewModal
+                imageUrl={previewImage}
+                onSend={handleImagePreviewSend}
+                onCancel={() => setPreviewImage(null)}
+                isLoading={compressing}
+              />
+            )}
+
+            {showGiphyPicker && (
+              <GiphyPicker
+                onSelect={handleGiphySelect}
+                onClose={() => setShowGiphyPicker(false)}
+              />
+            )}
           </div>
         ) : (
           <div className="hidden min-w-0 flex-1 flex-col items-center justify-center px-6 text-center lg:flex">
@@ -480,6 +615,8 @@ function MessageList({ messages, userId, locale, dayLabels, t, onOpenPost, onDel
 
 function MessageBubble({ message, mine, locale, t, onOpenPost, onDelete }) {
   const attachment = message.attachment;
+  const imageData = message.imageData;
+  const gifData = message.gifData;
 
   return (
     <div className={`group flex items-end gap-1.5 ${mine ? "justify-end" : "justify-start"}`}>
@@ -502,6 +639,22 @@ function MessageBubble({ message, mine, locale, t, onOpenPost, onDelete }) {
             : "rounded-bl-md bg-[var(--engine-surface-2)] text-[var(--engine-text)]"
         }`}
       >
+        {gifData && (
+          <img
+            src={gifData}
+            alt="GIF enviado"
+            className="mb-2 max-h-64 w-full rounded-lg object-cover"
+          />
+        )}
+
+        {imageData && (
+          <img
+            src={imageData}
+            alt="Imagem enviada"
+            className="mb-2 max-h-64 w-full rounded-lg object-cover"
+          />
+        )}
+
         {attachment && (
           <button
             type="button"
@@ -538,13 +691,23 @@ function MessageBubble({ message, mine, locale, t, onOpenPost, onDelete }) {
           </p>
         )}
 
-        <p
-          className={`mt-0.5 text-right text-[10px] font-semibold ${
+        <div
+          className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] font-semibold ${
             mine ? "text-white/70" : "text-[var(--engine-text-subtle)]"
           }`}
         >
-          {formatMessageTime(message.createdAt, locale)}
-        </p>
+          <span>{formatMessageTime(message.createdAt, locale)}</span>
+          {mine && (
+            <>
+              {message.status === "seen" && (
+                <CheckCheck size={12} className="text-white/70" />
+              )}
+              {message.status === "delivered" && (
+                <Check size={12} className="text-white/70" />
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
