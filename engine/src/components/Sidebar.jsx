@@ -210,7 +210,7 @@ export function Sidebar({
             }`}
           >
             <Link
-              to={username ? `/profile/${username.replace(/^@/, "")}` : "/community"}
+              to={username ? `/community/@${username.replace(/^@/, "")}` : "/community"}
               title={t("settings.sections.profile")}
               className="shrink-0 rounded-full transition-transform active:scale-95"
             >

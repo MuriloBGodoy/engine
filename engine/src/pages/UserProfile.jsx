@@ -70,7 +70,7 @@ function FollowingUserCard({ userId }) {
 }
 
 export function UserProfile() {
-  const { username } = useParams();
+  const { identifier } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const currentUserId = auth.currentUser?.uid;
@@ -88,12 +88,17 @@ export function UserProfile() {
     (async () => {
       try {
         setLoading(true);
-        const cleanUsername = username?.toLowerCase().trim() || "";
+        const cleanUsername = identifier?.replace(/^@/, "").toLowerCase().trim() || "";
+
+        if (!cleanUsername) {
+          navigate("/community");
+          return;
+        }
 
         // Subscribe to public profiles to find the user
         const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
           const userProfile = Object.values(profiles || {}).find(
-            (p) => (p.username || "").toLowerCase() === cleanUsername?.toLowerCase()
+            (p) => (p.username || "").replace(/^@/, "").toLowerCase() === cleanUsername
           );
 
           if (!userProfile) {
@@ -131,7 +136,7 @@ export function UserProfile() {
         setLoading(false);
       }
     })();
-  }, [username, currentUserId, navigate]);
+  }, [identifier, currentUserId, navigate]);
 
   const handleFollow = async () => {
     if (!currentUserId || !profile) return;

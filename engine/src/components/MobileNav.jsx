@@ -114,7 +114,7 @@ export function MobileNav({
             <>
               {/* O avatar é a porta de entrada de Perfil no mobile. */}
               <Link
-                to={username ? `/profile/${username.replace(/^@/, "")}` : "/community"}
+                to={username ? `/community/@${username.replace(/^@/, "")}` : "/community"}
                 title={t("settings.sections.profile")}
                 aria-label={t("settings.sections.profile")}
                 className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95`}

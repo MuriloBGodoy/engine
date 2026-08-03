@@ -134,7 +134,7 @@ export function TopNav({
               />
               <span className="mx-1.5 h-6 w-px bg-[var(--engine-border)]" />
               <Link
-                to={username ? `/profile/${username.replace(/^@/, "")}` : "/community"}
+                to={username ? `/community/@${username.replace(/^@/, "")}` : "/community"}
                 title={t("settings.sections.profile")}
                 className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95"
               >

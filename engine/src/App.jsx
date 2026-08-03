@@ -220,7 +220,7 @@ function App() {
             element={<Community cars={cars} settings={settings} user={user} />}
           />
           <Route
-            path="/profile/:username"
+            path="/community/:identifier"
             element={<UserProfile />}
           />
           <Route
