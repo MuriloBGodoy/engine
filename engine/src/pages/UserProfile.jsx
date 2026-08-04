@@ -198,20 +198,17 @@ export function UserProfile({ settings = {}, user = null }) {
 
   return (
     <div className="min-h-screen bg-[var(--engine-bg)]">
-      {/* Header com Back Button */}
-      <div className="sticky top-0 z-40 border-b border-[var(--engine-border)] bg-[var(--engine-surface)]/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
-          <button
-            onClick={() => navigate("/community")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
-            aria-label="Voltar"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="flex-1 text-sm font-bold text-[var(--engine-text)]">
-            {profile.author || "Usuário"}
-          </h1>
-        </div>
+      {/* Back Button - Floating */}
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--engine-border)] bg-gradient-to-b from-[var(--engine-bg)]/80 to-transparent px-4 py-3 backdrop-blur-sm sm:px-6">
+        <button
+          onClick={() => window.history.back()}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+          aria-label="Voltar"
+          title="Voltar para a página anterior"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div className="flex-1" />
       </div>
 
       <div className="mx-auto w-full max-w-2xl">
