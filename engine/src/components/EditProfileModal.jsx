@@ -5,23 +5,23 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, firestore, storage } from '../services/firebase';
 import { countries, getStates } from '../services/locations';
 
-export function EditProfileModal({ isOpen, onClose, onSave, currentProfile = {} }) {
+export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {} }) {
   const user = auth.currentUser;
 
   const [formData, setFormData] = useState({
-    displayName: currentProfile.displayName || user?.displayName || '',
-    username: currentProfile.username || '',
-    bio: currentProfile.bio || '',
-    phoneCountry: currentProfile.phoneCountry || '+55',
-    phone: currentProfile.phone || '',
-    country: currentProfile.country || 'BR',
-    state: currentProfile.state || '',
-    city: currentProfile.city || '',
+    displayName: profileSettings?.displayName || profileSettings?.profile?.displayName || user?.displayName || '',
+    username: profileSettings?.username || profileSettings?.profile?.username || '',
+    bio: profileSettings?.bio || profileSettings?.profile?.bio || '',
+    phoneCountry: profileSettings?.phoneCountry || profileSettings?.profile?.phoneCountry || '+55',
+    phone: profileSettings?.phone || profileSettings?.profile?.phone || '',
+    country: profileSettings?.country || profileSettings?.profile?.country || 'BR',
+    state: profileSettings?.state || profileSettings?.profile?.state || '',
+    city: profileSettings?.city || profileSettings?.profile?.city || '',
   });
 
   const [preview, setPreview] = useState({
-    avatar: currentProfile.avatar || null,
-    banner: currentProfile.bannerURL || null,
+    avatar: profileSettings?.avatar || profileSettings?.profile?.avatar || null,
+    banner: profileSettings?.bannerURL || profileSettings?.profile?.bannerURL || null,
   });
 
   const [files, setFiles] = useState({
@@ -190,7 +190,7 @@ export function EditProfileModal({ isOpen, onClose, onSave, currentProfile = {} 
       const profileRef = doc(firestore, 'publicProfiles', user.uid);
       const updateData = {
         displayName: formData.displayName,
-        username: formData.username.toLowerCase(),
+        username: formData.username.toLowerCase().replace(/^@/, ''),
         bio: formData.bio,
         phoneCountry: formData.phoneCountry,
         phone: formData.phone,

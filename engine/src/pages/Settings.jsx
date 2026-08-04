@@ -2,21 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Bell,
-  Camera,
   CheckCircle2,
   Download,
   EyeOff,
-  KeyRound,
   Loader2,
-  Lock,
-  Mail,
   Palette,
   RefreshCw,
-  Save,
   Shield,
-  Trash2,
-  Upload,
-  User,
 } from "lucide-react";
 import {
   deleteUser,
@@ -28,15 +20,13 @@ import {
   updatePassword,
   updateProfile,
 } from "firebase/auth";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { engineDB } from "../services/db";
-import { auth, storage } from "../services/firebase";
+import { auth } from "../services/firebase";
 import { languageOptions } from "../services/languages";
-import { countries, getStates, getCities, isCityInCountry } from "../services/locations";
+import { countries, getStates } from "../services/locations";
 import { PageHeader } from "../components/PageHeader";
-import { PhoneField } from "../components/PhoneField";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useRegion } from "../hooks/RegionProvider";
 
@@ -99,59 +89,6 @@ function StatusMessage({ status }) {
   );
 }
 
-async function imageToDataUrl(file) {
-  if (!file.type.startsWith("image/") || file.size > 4 * 1024 * 1024) {
-    throw new Error("invalid-image");
-  }
-
-  const dataUrl = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("invalid-image"));
-    reader.readAsDataURL(file);
-  });
-
-  const image = await new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("invalid-image"));
-    img.src = dataUrl;
-  });
-
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext("2d");
-  const minSide = Math.min(image.width, image.height);
-
-  context.drawImage(
-    image,
-    (image.width - minSide) / 2,
-    (image.height - minSide) / 2,
-    minSide,
-    minSide,
-    0,
-    0,
-    size,
-    size,
-  );
-
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (result) =>
-        result ? resolve(result) : reject(new Error("invalid-image")),
-      "image/jpeg",
-      0.78,
-    );
-  });
-
-  return {
-    blob,
-    dataUrl: canvas.toDataURL("image/jpeg", 0.78),
-  };
-}
-
 const withTimeout = (promise, label, ms = 4500) =>
   Promise.race([
     promise,
@@ -165,8 +102,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const { region, setRegion } = useRegion();
-  const fileRef = useRef(null);
-  const [activeSection, setActiveSection] = useState("profile");
+  const [activeSection, setActiveSection] = useState("preferences");
   const [draft, setDraft] = useState(settings);
   const [email, setEmail] = useState(user?.email || "");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -176,10 +112,8 @@ export function Settings({ user, settings, onSettingsUpdate }) {
   const [status, setStatus] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
   const [securityLoading, setSecurityLoading] = useState(false);
-  const [pendingAvatarBlob, setPendingAvatarBlob] = useState(null);
 
   const sections = [
-    { id: "profile", label: t("settings.sections.profile"), icon: User },
     {
       id: "preferences",
       label: t("settings.sections.preferences"),
@@ -200,23 +134,6 @@ export function Settings({ user, settings, onSettingsUpdate }) {
     setEmail(user?.email || "");
   }, [settings, user]);
 
-  const completion = useMemo(() => {
-    if (!draft?.profile) return 0;
-    const fields = [
-      draft.profile.displayName,
-      draft.profile.username,
-      draft.profile.phone,
-      draft.profile.location,
-      draft.profile.bio,
-      draft.profile.avatar,
-    ];
-    return Math.round((fields.filter(Boolean).length / fields.length) * 100);
-  }, [draft?.profile]);
-
-  const profileCities = useMemo(
-    () => getCities(draft?.profile?.country || "BR", draft?.profile?.state || ""),
-    [draft?.profile?.country, draft?.profile?.state],
-  );
 
   const updateGroup = (group, key, value) => {
     setDraft((current) => ({
@@ -228,87 +145,12 @@ export function Settings({ user, settings, onSettingsUpdate }) {
     }));
   };
 
-  const handleAvatarChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const avatar = await imageToDataUrl(file);
-      setPendingAvatarBlob(avatar.blob);
-      updateGroup("profile", "avatar", avatar.dataUrl);
-      setStatus({ type: "success", text: t("settings.status.imageReady") });
-    } catch {
-      setStatus({ type: "error", text: t("modalCar.imageError") });
-    } finally {
-      event.target.value = "";
-    }
-  };
-
   const saveSettings = async () => {
-    if (
-      draft.profile?.location?.trim() &&
-      !isCityInCountry(draft.profile.country, draft.profile.location)
-    ) {
-      setActiveSection("profile");
-      setStatus({
-        type: "error",
-        text: t("settings.status.cityCountryMismatch"),
-      });
-      return;
-    }
-
     setSaving(true);
     setStatus({ type: "", text: "" });
 
     try {
-      let avatarUrl = draft.profile.avatar;
-
-      if (pendingAvatarBlob && user) {
-        try {
-          const avatarRef = ref(
-            storage,
-            `users/${user.uid}/profile/avatar.jpg`,
-          );
-          await withTimeout(
-            uploadBytes(avatarRef, pendingAvatarBlob, {
-              contentType: "image/jpeg",
-            }),
-            "avatar-upload-timeout",
-            3500,
-          );
-          avatarUrl = await withTimeout(
-            getDownloadURL(avatarRef),
-            "avatar-url-timeout",
-            2500,
-          );
-        } catch (error) {
-          console.warn("Avatar upload fallback:", error);
-        }
-      }
-
-      const settingsToSave = {
-        ...draft,
-        profile: {
-          ...draft.profile,
-          username: engineDB.normalizeUsername(draft.profile.username),
-          phone: engineDB.normalizePhone(draft.profile.phone),
-          avatar: avatarUrl,
-        },
-      };
-
-      await updateProfile(user, {
-        displayName:
-          settingsToSave.profile.displayName || user.displayName || "",
-        photoURL:
-          avatarUrl && avatarUrl.startsWith("http")
-            ? avatarUrl
-            : "",
-      });
-
-      const savedSettings = await engineDB.saveSettings(
-        settingsToSave,
-        user.uid,
-      );
+      const savedSettings = await engineDB.saveSettings(draft, user.uid);
       setDraft(savedSettings);
       setPendingAvatarBlob(null);
       onSettingsUpdate(savedSettings);
@@ -465,19 +307,6 @@ export function Settings({ user, settings, onSettingsUpdate }) {
           eyebrow="Engine Control"
           title={t("settings.title")}
           subtitle={t("settings.subtitle")}
-          actions={
-            <div className="engine-card flex w-full items-center gap-3 rounded-xl px-4 py-3 sm:w-auto sm:gap-4 sm:px-5 sm:py-4">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)] sm:w-28 sm:flex-none">
-                <div
-                  className="h-full rounded-full bg-[var(--engine-accent)]"
-                  style={{ width: `${completion}%` }}
-                />
-              </div>
-              <span className="shrink-0 text-xs font-semibold text-[var(--engine-text-muted)]">
-                {t("settings.profileCompletion", { value: completion })}
-              </span>
-            </div>
-          }
         />
       </div>
 
@@ -512,175 +341,6 @@ export function Settings({ user, settings, onSettingsUpdate }) {
           <StatusMessage status={status} />
 
           <form onSubmit={handleSaveSettings} className="space-y-6">
-            {activeSection === "profile" && (
-              <div className={cardClass}>
-                <div className="grid gap-6 xl:grid-cols-[260px_1fr] xl:gap-8">
-                  <div className="space-y-4">
-                    <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] sm:h-44 sm:w-44">
-                      {draft?.profile?.avatar ? (
-                        <img
-                          src={draft.profile.avatar}
-                          alt="Avatar"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-5xl font-black italic text-[var(--engine-accent)]">
-                          {(
-                            draft?.profile?.displayName ||
-                            user?.displayName ||
-                            "U"
-                          )
-                            .slice(0, 1)
-                            .toUpperCase()}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        className="absolute bottom-3 right-3 rounded-lg bg-[var(--engine-accent)] p-2 text-white shadow-xl transition-colors hover:brightness-95"
-                        title={t("common.upload")}
-                      >
-                        <Camera size={18} />
-                      </button>
-                    </div>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-                    <div className="mx-auto grid w-full max-w-xs grid-cols-2 gap-3 xl:max-w-none">
-                      <button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-[11px] font-black uppercase tracking-wider text-[var(--engine-text)] hover:border-[var(--engine-accent)] sm:px-4 sm:py-3 sm:text-xs sm:tracking-widest"
-                      >
-                        <Upload size={16} className="shrink-0" />
-                        {t("common.upload")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPendingAvatarBlob(null);
-                          updateGroup("profile", "avatar", "");
-                        }}
-                        className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-[11px] font-black uppercase tracking-wider text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-text)] sm:px-4 sm:py-3 sm:text-xs sm:tracking-widest"
-                      >
-                        <Trash2 size={16} className="shrink-0" />
-                        {t("common.remove")}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label={t("settings.fields.publicName")}>
-                      <input
-                        className={inputClass}
-                        value={draft?.profile?.displayName || ""}
-                        onChange={(e) =>
-                          updateGroup("profile", "displayName", e.target.value)
-                        }
-                        placeholder={
-                          user?.displayName || t("settings.placeholders.name")
-                        }
-                      />
-                    </Field>
-                    <Field label={t("settings.fields.username")}>
-                      <input
-                        className={inputClass}
-                        value={draft?.profile?.username || ""}
-                        onChange={(e) =>
-                          updateGroup(
-                            "profile",
-                            "username",
-                            engineDB.normalizeUsername(e.target.value),
-                          )
-                        }
-                        placeholder={t("settings.placeholders.username")}
-                      />
-                    </Field>
-                    <Field label={t("settings.fields.phone")}>
-                      <PhoneField
-                        value={draft?.profile?.phone || ""}
-                        onChange={(value) => updateGroup("profile", "phone", value)}
-                        inputClassName={inputClass}
-                        selectClassName={inputClass}
-                        placeholder={t("settings.placeholders.phone")}
-                      />
-                    </Field>
-                    <Field label={t("settings.fields.country")}>
-                      <select
-                        className={inputClass}
-                        value={draft?.profile?.country || "BR"}
-                        onChange={(e) => {
-                          updateGroup("profile", "country", e.target.value);
-                          updateGroup("profile", "state", "");
-                          updateGroup("profile", "location", "");
-                        }}
-                      >
-                        {countries.map((item) => (
-                          <option key={item.code} value={item.code}>
-                            {item.flag} {item.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("settings.fields.state")}>
-                      <select
-                        className={inputClass}
-                        value={draft?.profile?.state || ""}
-                        onChange={(e) =>
-                          updateGroup("profile", "state", e.target.value)
-                        }
-                        disabled={!getStates(draft?.profile?.country || "BR").length}
-                      >
-                        <option value="">
-                          {getStates(draft?.profile?.country || "BR").length
-                            ? t("auth.selectState")
-                            : t("auth.stateUnavailable")}
-                        </option>
-                        {getStates(draft?.profile?.country || "BR").map((item) => (
-                          <option key={item.code} value={item.code}>
-                            {item.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("settings.fields.location")}>
-                      <input
-                        className={inputClass}
-                        value={draft?.profile?.location || ""}
-                        onChange={(e) =>
-                          updateGroup("profile", "location", e.target.value)
-                        }
-                        placeholder={t("settings.placeholders.location")}
-                        list={profileCities.length ? "settings-city-suggestions" : undefined}
-                      />
-                      {profileCities.length > 0 && (
-                        <datalist id="settings-city-suggestions">
-                          {profileCities.map((city) => (
-                            <option key={city} value={city} />
-                          ))}
-                        </datalist>
-                      )}
-                    </Field>
-                    <div className="md:col-span-2">
-                      <Field label={t("settings.fields.bio")}>
-                        <textarea
-                          className={`${inputClass} min-h-32`}
-                          value={draft?.profile?.bio || ""}
-                          onChange={(e) =>
-                            updateGroup("profile", "bio", e.target.value)
-                          }
-                          placeholder={t("settings.placeholders.bio")}
-                        />
-                      </Field>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {activeSection === "preferences" && (
               <div className={cardClass}>

@@ -63,18 +63,18 @@ function FollowingUserCard({ userId }) {
           {userData.author || "Usuário Engine"}
         </p>
         <p className="text-xs text-[var(--engine-text-muted)]">
-          @{(userData.username || "user").replace(/^@/, "")}
+          {(userData.username || "user").replace(/^@/, "") ? `@${(userData.username || "user").replace(/^@/, "")}` : "@user"}
         </p>
       </div>
     </div>
   );
 }
 
-export function UserProfile() {
+export function UserProfile({ settings = {}, user = null }) {
   const { identifier } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const currentUserId = auth.currentUser?.uid;
+  const currentUserId = user?.uid || auth.currentUser?.uid;
 
   const [profile, setProfile] = useState(null);
   const [userGoals, setUserGoals] = useState([]);
@@ -251,7 +251,7 @@ export function UserProfile() {
                     {profile.author || "Usuário Engine"}
                   </h2>
                   <p className="text-sm font-medium text-[var(--engine-text-muted)]">
-                    @{(profile.username || "engine").replace(/^@/, "")}
+                    {(profile.username || "engine").replace(/^@/, "") ? `@${(profile.username || "engine").replace(/^@/, "")}` : "@engine"}
                   </p>
                   {profile.city && (
                     <p className="mt-1 text-xs text-[var(--engine-text-subtle)]">
@@ -438,7 +438,7 @@ export function UserProfile() {
                         {follower.author || "Usuário Engine"}
                       </p>
                       <p className="text-xs text-[var(--engine-text-muted)]">
-                        @{(follower.username || "user").replace(/^@/, "")}
+                        {(follower.username || "user").replace(/^@/, "") ? `@${(follower.username || "user").replace(/^@/, "")}` : "@user"}
                       </p>
                     </div>
                   </div>
@@ -493,7 +493,7 @@ export function UserProfile() {
         <EditProfileModal
           isOpen={isEditing}
           onClose={() => setIsEditing(false)}
-          currentProfile={profile}
+          profileSettings={settings.profile || profile}
           onSave={(updated) => {
             setProfile(prev => ({ ...prev, ...updated }));
           }}

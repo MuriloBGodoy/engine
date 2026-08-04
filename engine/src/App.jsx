@@ -221,7 +221,7 @@ function App() {
           />
           <Route
             path="/community/:identifier"
-            element={<UserProfile />}
+            element={<UserProfile settings={settings} user={user} />}
           />
           <Route
             path="/messages"
