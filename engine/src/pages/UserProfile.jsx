@@ -198,8 +198,8 @@ export function UserProfile({ settings = {}, user = null }) {
 
   return (
     <div className="min-h-screen bg-[var(--engine-bg)]">
-      {/* Back Button - Floating */}
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--engine-border)] bg-gradient-to-b from-[var(--engine-bg)]/80 to-transparent px-4 py-3 backdrop-blur-sm sm:px-6">
+      {/* Back Button - Fixed Sticky */}
+      <div className="sticky top-0 z-50 flex items-center px-4 py-3 backdrop-blur-md sm:px-6 border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/95 shadow-sm">
         <button
           onClick={() => window.history.back()}
           className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
@@ -208,7 +208,6 @@ export function UserProfile({ settings = {}, user = null }) {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex-1" />
       </div>
 
       <div className="mx-auto w-full max-w-2xl">
