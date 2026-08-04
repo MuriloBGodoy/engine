@@ -214,22 +214,18 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
 
     setLoading(true);
     try {
+      // TODO: Ativar upload quando Firebase Storage estiver habilitado
+      // Por enquanto, usa apenas as imagens do preview (local)
       let photoURL = preview.avatar || null;
       let bannerURL = preview.banner || null;
 
-      if (files.avatar) {
-        photoURL = await uploadFile(
-          files.avatar,
-          `users/${user.uid}/avatar-${Date.now()}`
-        );
-      }
-
-      if (files.banner) {
-        bannerURL = await uploadFile(
-          files.banner,
-          `users/${user.uid}/banner-${Date.now()}`
-        );
-      }
+      // Descomentar quando Storage estiver pronto:
+      // if (files.avatar) {
+      //   photoURL = await uploadFile(files.avatar, `users/${user.uid}/avatar-${Date.now()}`);
+      // }
+      // if (files.banner) {
+      //   bannerURL = await uploadFile(files.banner, `users/${user.uid}/banner-${Date.now()}`);
+      // }
 
       await updateProfile(user, {
         displayName: formData.displayName,
