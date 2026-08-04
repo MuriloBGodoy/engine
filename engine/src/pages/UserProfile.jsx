@@ -198,216 +198,201 @@ export function UserProfile({ settings = {}, user = null }) {
 
   return (
     <div className="min-h-screen bg-[var(--engine-bg)]">
-      {/* Header Sticky */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-surface)]/80 px-4 py-3 backdrop-blur-md sm:px-6">
-        <button
-          onClick={() => navigate("/community")}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--engine-border)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
-          aria-label="Voltar"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="flex-1 truncate text-sm font-bold text-[var(--engine-text)]">
-          {profile.author || "Usuário Engine"}
-        </h1>
+      {/* Header com Back Button */}
+      <div className="sticky top-0 z-40 border-b border-[var(--engine-border)] bg-[var(--engine-surface)]/95 backdrop-blur-sm">
+        <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
+          <button
+            onClick={() => navigate("/community")}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+            aria-label="Voltar"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="flex-1 text-sm font-bold text-[var(--engine-text)]">
+            {profile.author || "Usuário"}
+          </h1>
+        </div>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
-        {/* Hero Section */}
-        <div className="relative mb-6 overflow-hidden rounded-2xl bg-[var(--engine-surface)]">
-          {/* Cover Image */}
-          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-[var(--engine-accent)] to-[var(--engine-accent)]/70 sm:h-56 lg:h-64">
-            {coverImage && (
-              <img
-                src={coverImage}
-                alt="Cover"
-                className="h-full w-full object-cover"
-              />
-            )}
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Profile Info - Instagram Style */}
+        <div className="border-b border-[var(--engine-border)] px-4 py-6 sm:px-6">
+          {/* Avatar + Name/Username Row */}
+          <div className="mb-4 flex items-start gap-4 sm:gap-6">
+            {/* Avatar */}
+            <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-2 border-[var(--engine-border)] bg-[var(--engine-surface-2)] sm:h-24 sm:w-24">
+              {avatar ? (
+                <img
+                  src={avatar}
+                  alt={profile.author}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-[var(--engine-text-muted)] sm:text-3xl">
+                  {initials}
+                </div>
+              )}
+            </div>
+
+            {/* Stats - next to avatar on desktop, below on mobile */}
+            <div className="flex-1">
+              <div className="mb-3 grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="text-center">
+                  <p className="text-lg font-black text-[var(--engine-accent)] sm:text-xl">
+                    {userGoals.length}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase text-[var(--engine-text-muted)] sm:text-[11px]">
+                    Metas
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-black text-[var(--engine-accent)] sm:text-xl">
+                    {followers.length}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase text-[var(--engine-text-muted)] sm:text-[11px]">
+                    Seguidores
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-black text-[var(--engine-accent)] sm:text-xl">
+                    {following.length}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase text-[var(--engine-text-muted)] sm:text-[11px]">
+                    Seguindo
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Avatar & Info */}
-          <div className="px-6 pb-6 pt-0">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-4">
-                {/* Avatar */}
-                <div className="relative -mt-16 h-28 w-28 overflow-hidden rounded-2xl border-4 border-[var(--engine-surface)] bg-[var(--engine-surface-2)] sm:h-32 sm:w-32">
-                  {avatar ? (
-                    <img
-                      src={avatar}
-                      alt={profile.author}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-[var(--engine-text-muted)]">
-                      {initials}
-                    </div>
-                  )}
-                </div>
+          {/* Name & Username */}
+          <div className="mb-3">
+            <h2 className="text-base font-black text-[var(--engine-text)] sm:text-lg">
+              {profile.author || "Usuário Engine"}
+            </h2>
+            <p className="text-sm font-medium text-[var(--engine-text-muted)]">
+              {(profile.username || "engine").replace(/^@/, "") ? `@${(profile.username || "engine").replace(/^@/, "")}` : "@engine"}
+            </p>
+          </div>
 
-                {/* Name & Username */}
-                <div className="min-w-0">
-                  <h2 className="text-xl font-bold text-[var(--engine-text)] sm:text-2xl">
-                    {profile.author || "Usuário Engine"}
-                  </h2>
-                  <p className="text-sm font-medium text-[var(--engine-text-muted)]">
-                    {(profile.username || "engine").replace(/^@/, "") ? `@${(profile.username || "engine").replace(/^@/, "")}` : "@engine"}
-                  </p>
-                  {profile.city && (
-                    <p className="mt-1 text-xs text-[var(--engine-text-subtle)]">
-                      {profile.city}
-                    </p>
-                  )}
-                </div>
-              </div>
+          {/* Bio */}
+          {profile.bio && (
+            <p className="mb-4 text-sm text-[var(--engine-text)] leading-relaxed">
+              {profile.bio}
+            </p>
+          )}
 
-              {/* Action Buttons */}
-              <div className="flex w-full gap-2 sm:w-auto">
-                {isOwnProfile ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition hover:brightness-95 sm:flex-initial"
-                  >
-                    Editar Perfil
-                  </button>
-                ) : currentUserId && currentUserId !== profile?.userId && (
-                  <>
-                    <button
-                      onClick={handleFollow}
-                      className={`flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition sm:flex-initial ${
-                        isFollowing
-                          ? "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
-                          : "bg-[var(--engine-accent)] text-white hover:brightness-95"
-                      }`}
-                    >
-                      {isFollowing ? (
-                        <UserCheck size={14} />
-                      ) : (
-                        <UserPlus size={14} />
-                      )}
-                      {isFollowing ? "Seguindo" : "Seguir"}
-                    </button>
-                    <button
-                      onClick={handleMessage}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[var(--engine-border)] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] sm:flex-initial"
-                    >
-                      <Mail size={14} />
-                      <span className="hidden min-[420px]:inline">Mensagem</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+          {/* Location */}
+          {profile.city && (
+            <p className="mb-4 text-xs text-[var(--engine-text-muted)]">
+              {profile.city}
+            </p>
+          )}
 
-            {/* Bio */}
-            {profile.bio && (
-              <p className="mt-4 text-sm text-[var(--engine-text)]">
-                {profile.bio}
-              </p>
+          {/* Action Buttons - Full width on mobile */}
+          <div className="flex w-full gap-2 sm:gap-3">
+            {isOwnProfile ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex-1 rounded-lg bg-[var(--engine-accent)] py-2 text-xs font-black uppercase tracking-wide text-white transition hover:brightness-95 sm:py-2.5"
+              >
+                Editar Perfil
+              </button>
+            ) : currentUserId && currentUserId !== profile?.userId && (
+              <>
+                <button
+                  onClick={handleFollow}
+                  className={`flex-1 rounded-lg py-2 text-xs font-black uppercase tracking-wide transition sm:py-2.5 ${
+                    isFollowing
+                      ? "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                      : "bg-[var(--engine-accent)] text-white hover:brightness-95"
+                  }`}
+                >
+                  {isFollowing ? "Seguindo" : "Seguir"}
+                </button>
+                <button
+                  onClick={handleMessage}
+                  className="flex-1 rounded-lg border border-[var(--engine-border)] py-2 text-xs font-black uppercase tracking-wide text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] sm:py-2.5"
+                >
+                  Mensagem
+                </button>
+              </>
             )}
-
-            {/* Stats */}
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-[var(--engine-border)] p-3 text-center transition hover:border-[var(--engine-accent)] hover:bg-[var(--engine-surface-2)]">
-                <p className="text-lg font-bold text-[var(--engine-accent)]">
-                  {userGoals.length}
-                </p>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--engine-text-muted)]">
-                  Metas
-                </p>
-              </div>
-              <div className="rounded-xl border border-[var(--engine-border)] p-3 text-center transition hover:border-[var(--engine-accent)] hover:bg-[var(--engine-surface-2)]">
-                <p className="text-lg font-bold text-[var(--engine-accent)]">
-                  {followers.length}
-                </p>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--engine-text-muted)]">
-                  Seguidores
-                </p>
-              </div>
-              <div className="rounded-xl border border-[var(--engine-border)] p-3 text-center transition hover:border-[var(--engine-accent)] hover:bg-[var(--engine-surface-2)]">
-                <p className="text-lg font-bold text-[var(--engine-accent)]">
-                  {following.length}
-                </p>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--engine-text-muted)]">
-                  Seguindo
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex gap-2 border-b border-[var(--engine-border)]">
-          {[
-            { id: "posts", label: "Metas" },
-            { id: "followers", label: "Seguidores" },
-            { id: "following", label: "Seguindo" },
-            { id: "achievements", label: "Conquistas" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition ${
-                activeTab === tab.id
-                  ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
-                  : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="border-b border-[var(--engine-border)]">
+          <div className="flex gap-6 overflow-x-auto px-4 sm:px-6">
+            {[
+              { id: "posts", label: "Metas" },
+              { id: "followers", label: "Seguidores" },
+              { id: "following", label: "Seguindo" },
+              { id: "achievements", label: "Conquistas" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`whitespace-nowrap border-b-2 py-4 text-sm font-bold uppercase tracking-wide transition ${
+                  activeTab === tab.id
+                    ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
+                    : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab Content */}
-        <div>
+        <div className="px-4 py-6 sm:px-6">
           {activeTab === "posts" && (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div>
               {userGoals.length ? (
-                userGoals.map((goal) => (
-                  <div
-                    key={goal.id}
-                    className="rounded-xl border border-[var(--engine-border)] p-4 transition hover:-translate-y-1 hover:shadow-md"
-                  >
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-2xl">🚗</span>
-                      <span className="text-xs font-bold uppercase tracking-wide text-[var(--engine-text-muted)]">
-                        Meta
-                      </span>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {userGoals.map((goal) => (
+                    <div
+                      key={goal.id}
+                      className="group overflow-hidden rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3 transition hover:border-[var(--engine-accent)]"
+                    >
+                      <div className="mb-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--engine-text-muted)]">
+                          Meta
+                        </h3>
+                        <p className="mt-1 line-clamp-2 text-sm font-bold text-[var(--engine-text)]">
+                          {goal.title || `${goal.brand} ${goal.model}`}
+                        </p>
+                      </div>
+                      <div className="mb-3 space-y-1 text-xs text-[var(--engine-text-muted)]">
+                        <p>
+                          Alvo: R${goal.targetValue ? (goal.targetValue / 1000).toFixed(1) : "—"}k
+                        </p>
+                        <p>
+                          Poupado: R${goal.savedValue ? (goal.savedValue / 1000).toFixed(1) : "0"}k
+                        </p>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--engine-border)]">
+                        <div
+                          className="h-full bg-[var(--engine-accent)]"
+                          style={{
+                            width: `${Math.min(
+                              (goal.savedValue / goal.targetValue) * 100,
+                              100
+                            )}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <h3 className="mb-2 font-bold text-[var(--engine-text)]">
-                      {goal.title || `${goal.brand} ${goal.model}`}
-                    </h3>
-                    <div className="mb-3 space-y-1 text-xs text-[var(--engine-text-muted)]">
-                      <p>
-                        Alvo: R${
-                          goal.targetValue
-                            ? (goal.targetValue / 1000).toFixed(1)
-                            : "—"
-                        }k
-                      </p>
-                      <p>
-                        Poupado: R${
-                          goal.savedValue ? (goal.savedValue / 1000).toFixed(1) : "0"
-                        }k
-                      </p>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
-                      <div
-                        className="h-full bg-[var(--engine-accent)]"
-                        style={{
-                          width: `${Math.min(
-                            (goal.savedValue / goal.targetValue) * 100,
-                            100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="col-span-2 flex min-h-48 flex-col items-center justify-center text-center">
+                <div className="flex min-h-64 flex-col items-center justify-center text-center">
                   <p className="text-sm font-bold text-[var(--engine-text)]">
                     Nenhuma meta compartilhada
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--engine-text-muted)]">
+                    {isOwnProfile ? "Crie uma meta na Garagem" : "Este usuário não compartilhou metas"}
                   </p>
                 </div>
               )}
@@ -415,21 +400,21 @@ export function UserProfile({ settings = {}, user = null }) {
           )}
 
           {activeTab === "followers" && (
-            <div className="grid gap-3">
+            <div className="space-y-3">
               {followers.length ? (
                 followers.map((follower) => (
                   <div
                     key={follower.userId || follower.followerId}
-                    className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]"
+                    className="flex items-center gap-3 rounded-lg border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]"
                   >
                     {follower.avatar ? (
                       <img
                         src={follower.avatar}
                         alt={follower.author}
-                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                        className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
+                      <div className="h-12 w-12 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
                         {follower.avatarInitials || "EN"}
                       </div>
                     )}
@@ -444,8 +429,8 @@ export function UserProfile({ settings = {}, user = null }) {
                   </div>
                 ))
               ) : (
-                <div className="flex min-h-48 flex-col items-center justify-center text-center">
-                  <Users size={40} className="mb-3 text-[var(--engine-text-subtle)]" />
+                <div className="flex min-h-64 flex-col items-center justify-center text-center">
+                  <Users size={48} className="mb-3 text-[var(--engine-text-subtle)]" />
                   <p className="text-sm font-bold text-[var(--engine-text)]">
                     Sem seguidores ainda
                   </p>
@@ -455,14 +440,14 @@ export function UserProfile({ settings = {}, user = null }) {
           )}
 
           {activeTab === "following" && (
-            <div className="grid gap-3">
+            <div className="space-y-3">
               {following.length ? (
                 following.map((userId) => (
                   <FollowingUserCard key={userId} userId={userId} />
                 ))
               ) : (
-                <div className="flex min-h-48 flex-col items-center justify-center text-center">
-                  <Users size={40} className="mb-3 text-[var(--engine-text-subtle)]" />
+                <div className="flex min-h-64 flex-col items-center justify-center text-center">
+                  <Users size={48} className="mb-3 text-[var(--engine-text-subtle)]" />
                   <p className="text-sm font-bold text-[var(--engine-text)]">
                     Não segue ninguém ainda
                   </p>
@@ -473,15 +458,13 @@ export function UserProfile({ settings = {}, user = null }) {
 
           {activeTab === "achievements" && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-4">
-                <span className="text-3xl">🏆</span>
+              <div className="flex items-center gap-3 rounded-lg border border-[var(--engine-border)] p-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--engine-accent)]/10">
+                  <Trophy size={24} className="text-[var(--engine-accent)]" />
+                </div>
                 <div>
-                  <p className="font-bold text-[var(--engine-text)]">
-                    Primeira Meta
-                  </p>
-                  <p className="text-xs text-[var(--engine-text-muted)]">
-                    Desbloqueado
-                  </p>
+                  <p className="font-bold text-[var(--engine-text)]">Primeira Meta</p>
+                  <p className="text-xs text-[var(--engine-text-muted)]">Desbloqueado</p>
                 </div>
               </div>
             </div>
