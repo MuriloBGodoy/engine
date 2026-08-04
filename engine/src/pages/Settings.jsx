@@ -240,7 +240,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
       user: {
         uid: user.uid,
         email: user.email,
-        displayName: draft.profile.displayName || user.displayName,
+        displayName: user.displayName,
       },
       settings: draft,
       cars,
@@ -560,7 +560,7 @@ export function Settings({ user, settings, onSettingsUpdate }) {
               </div>
             )}
 
-            {["profile", "preferences", "notifications", "privacy"].includes(
+            {["preferences", "notifications", "privacy"].includes(
               activeSection,
             ) && (
               <button
