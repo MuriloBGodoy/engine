@@ -91,6 +91,30 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
     handleFieldChange('username', newUsername);
   };
 
+  const handlePhoneChange = (value) => {
+    // Remove caracteres não numéricos
+    let cleaned = value.replace(/\D/g, '');
+
+    // Limita a 11 dígitos
+    if (cleaned.length > 11) {
+      cleaned = cleaned.slice(0, 11);
+    }
+
+    // Formata: (XX) XXXXX-XXXX
+    let formatted = '';
+    if (cleaned.length > 0) {
+      if (cleaned.length <= 2) {
+        formatted = `(${cleaned}`;
+      } else if (cleaned.length <= 7) {
+        formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+      } else {
+        formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+      }
+    }
+
+    handleFieldChange('phone', formatted);
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -190,8 +214,8 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
 
     setLoading(true);
     try {
-      let photoURL = currentProfile.avatar || null;
-      let bannerURL = currentProfile.bannerURL || null;
+      let photoURL = preview.avatar || null;
+      let bannerURL = preview.banner || null;
 
       if (files.avatar) {
         photoURL = await uploadFile(
@@ -395,13 +419,17 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
                 <select
                   value={formData.phoneCountry}
                   onChange={(e) => handleFieldChange('phoneCountry', e.target.value)}
-                  className="w-full px-3 py-2.5 mt-2 bg-[var(--engine-elevated)] border border-[var(--engine-border)] rounded-lg text-sm transition focus:outline-none focus:border-[var(--engine-accent)]"
+                  className="w-full px-3 py-2.5 mt-2 bg-[var(--engine-elevated)] border border-[var(--engine-border)] rounded-lg text-sm text-[var(--engine-text)] transition focus:outline-none focus:border-[var(--engine-accent)]"
                 >
                   <option value="+55">Brasil (+55)</option>
                   <option value="+1">EUA (+1)</option>
                   <option value="+34">Espanha (+34)</option>
                   <option value="+54">Argentina (+54)</option>
                   <option value="+56">Chile (+56)</option>
+                  <option value="+57">Colômbia (+57)</option>
+                  <option value="+51">Peru (+51)</option>
+                  <option value="+55">Portugal (+351)</option>
+                  <option value="+55">México (+52)</option>
                 </select>
               </div>
               <div>
@@ -409,10 +437,10 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
                 <input
                   type="tel"
                   placeholder="(11) 99999-9999"
-                  maxLength={20}
+                  maxLength={15}
                   value={formData.phone}
-                  onChange={(e) => handleFieldChange('phone', e.target.value)}
-                  className={`w-full px-3 py-2.5 mt-2 bg-[var(--engine-elevated)] border rounded-lg text-sm transition focus:outline-none focus:border-[var(--engine-accent)] ${
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  className={`w-full px-3 py-2.5 mt-2 bg-[var(--engine-elevated)] border rounded-lg text-sm font-mono transition focus:outline-none focus:border-[var(--engine-accent)] ${
                     errors.phone ? 'border-red-500' : 'border-[var(--engine-border)]'
                   }`}
                 />
