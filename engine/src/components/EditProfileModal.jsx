@@ -68,6 +68,29 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
     }
   };
 
+  const handleUsernameChange = (value) => {
+    // Remove @ se existir
+    let cleanValue = value.replace(/^@/, '');
+
+    // Se vazio, coloca só @
+    if (!cleanValue) {
+      handleFieldChange('username', '@');
+      return;
+    }
+
+    // Remove caracteres inválidos (keep only alphanumeric and underscore)
+    cleanValue = cleanValue.replace(/[^a-zA-Z0-9_]/g, '');
+
+    // Limita a 30 caracteres (+ @ na frente)
+    if (cleanValue.length > 30) {
+      cleanValue = cleanValue.slice(0, 30);
+    }
+
+    // Adiciona @ na frente
+    const newUsername = `@${cleanValue}`;
+    handleFieldChange('username', newUsername);
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -78,13 +101,15 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
       newErrors.displayName = 'Nome não pode exceder 50 caracteres';
     }
 
-    if (!formData.username.trim()) {
+    if (!formData.username || formData.username === '@') {
       newErrors.username = 'Nome de usuário é obrigatório';
     }
-    if (formData.username.length < 3 || formData.username.length > 30) {
+    // Remove @ pra validar apenas os caracteres
+    const usernameWithoutAt = formData.username.replace(/^@/, '');
+    if (usernameWithoutAt.length < 3 || usernameWithoutAt.length > 30) {
       newErrors.username = 'Username deve ter 3–30 caracteres';
     }
-    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+    if (!/^[a-zA-Z0-9_]*$/.test(usernameWithoutAt)) {
       newErrors.username = 'Apenas letras, números e underscore';
     }
 
@@ -330,20 +355,17 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
                 <label className="text-sm font-medium text-[var(--engine-text)]">
                   Usuário <span className="text-[var(--engine-accent)]">*</span>
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--engine-text-muted)] font-medium">@</span>
-                  <input
-                    type="text"
-                    maxLength={30}
-                    placeholder="username"
-                    value={formData.username}
-                    onChange={(e) => handleFieldChange('username', e.target.value)}
-                    className={`w-full px-3 py-2.5 pl-7 mt-2 bg-[var(--engine-elevated)] border rounded-lg text-sm transition focus:outline-none focus:border-[var(--engine-accent)] focus:ring-4 focus:ring-[var(--engine-accent)]/20 ${
-                      errors.username ? 'border-red-500' : 'border-[var(--engine-border)]'
-                    }`}
-                  />
-                </div>
-                <p className="text-xs text-[var(--engine-text-subtle)] mt-1">3–30 caracteres, letras e números</p>
+                <input
+                  type="text"
+                  maxLength={31}
+                  placeholder="@username"
+                  value={formData.username}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  className={`w-full px-3 py-2.5 mt-2 bg-[var(--engine-elevated)] border rounded-lg text-sm font-mono transition focus:outline-none focus:border-[var(--engine-accent)] focus:ring-4 focus:ring-[var(--engine-accent)]/20 ${
+                    errors.username ? 'border-red-500' : 'border-[var(--engine-border)]'
+                  }`}
+                />
+                <p className="text-xs text-[var(--engine-text-subtle)] mt-1">@ é adicionado automaticamente • 3–30 caracteres</p>
                 {errors.username && (
                   <p className="text-xs text-red-500 mt-1">{errors.username}</p>
                 )}
