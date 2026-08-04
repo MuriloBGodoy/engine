@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { engineDB } from "../services/db";
 import { auth } from "../services/firebase";
+import { EditProfileModal } from "../components/EditProfileModal";
 
 // Banner will be solid color gradient - no default image
 const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-accent)]/70";
@@ -487,6 +488,17 @@ export function UserProfile() {
           )}
         </div>
       </div>
+
+      {isEditing && (
+        <EditProfileModal
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          currentProfile={profile}
+          onSave={(updated) => {
+            setProfile(prev => ({ ...prev, ...updated }));
+          }}
+        />
+      )}
     </div>
   );
 }
