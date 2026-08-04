@@ -5,10 +5,15 @@ import {
   CheckCircle2,
   Download,
   EyeOff,
+  KeyRound,
   Loader2,
+  Lock,
+  Mail,
   Palette,
   RefreshCw,
+  Save,
   Shield,
+  Trash2,
 } from "lucide-react";
 import {
   deleteUser,
