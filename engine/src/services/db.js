@@ -335,6 +335,18 @@ const followerDoc = (targetUserId, followerId) =>
     String(followerId),
   );
 
+const followingCollection = (userId) =>
+  collection(firestore, PUBLIC_PROFILES_COLLECTION, String(userId), "following");
+
+const followingDoc = (userId, targetUserId) =>
+  doc(
+    firestore,
+    PUBLIC_PROFILES_COLLECTION,
+    String(userId),
+    "following",
+    String(targetUserId),
+  );
+
 const usernameDocId = (username) => normalizeUsername(username).replace(/^@/, "");
 
 const getProfileSnapshot = (settings = {}, userId = currentUserId) => {
@@ -372,6 +384,7 @@ const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
 
   return {
     id: `goal-${userId}-${goal.id}`,
+    userId: userId,
     ownerId: userId,
     carId: String(goal.id),
     author: profile.author,
@@ -479,6 +492,7 @@ const normalizeCommunityGoal = (goal = {}) => {
     note: goal.note || "",
     isMine: goal.ownerId === currentUserId,
     ownerId: goal.ownerId,
+    userId: goal.userId || goal.ownerId,
     carId: goal.carId,
     likesBy: goal.likesBy || {},
     ratingsBy: goal.ratingsBy || {},
@@ -809,9 +823,13 @@ export const engineDB = {
       );
     }
 
-    await setDoc(userCommunityDoc(), serializeForFirestore(normalizedState), {
-      merge: true,
-    });
+    try {
+      await setDoc(userCommunityDoc(), serializeForFirestore(normalizedState), {
+        merge: true,
+      });
+    } catch (error) {
+      console.warn("Could not save to private community doc:", error);
+    }
     return normalizedState;
   },
 
@@ -1396,27 +1414,37 @@ export const engineDB = {
   async setFollow(targetUserId, isFollowing, followerId = currentUserId) {
     if (!targetUserId || !followerId || targetUserId === followerId) return;
 
-    if (apiEnabled()) {
-      await apiRequest(`/community/users/${targetUserId}/follow`, {
-        method: isFollowing ? "POST" : "DELETE",
-      });
-      return;
-    }
+    // Sem branch de API aqui de propósito: o endpoint /users/{id}/follow só
+    // dispara notificação (quem chama isso é notifyFollow). Delegar pra ele
+    // deixava o vínculo sem gravar nenhum lado e ainda notificava duas vezes.
+    const followerRef = followerDoc(targetUserId, followerId);
+    const followingRef = followingDoc(followerId, targetUserId);
 
-    const ref = followerDoc(targetUserId, followerId);
     if (isFollowing) {
       const actorSettings = await this.getSettings();
       const actor = getProfileSnapshot(actorSettings, followerId);
-      await setDoc(ref, {
-        followerId,
-        author: actor.author,
-        username: actor.username,
-        avatar: actor.avatar,
-        avatarInitials: actor.avatarInitials,
-        createdAt: serverTimestamp(),
-      });
+
+      await Promise.all([
+        setDoc(followerRef, {
+          followerId,
+          author: actor.author,
+          username: actor.username,
+          avatar: actor.avatar,
+          avatarInitials: actor.avatarInitials,
+          createdAt: serverTimestamp(),
+        }),
+        // O espelho guarda só o id do alvo: os dados de exibição vêm de
+        // publicProfiles na hora de renderizar, então nunca ficam defasados.
+        setDoc(followingRef, {
+          userId: targetUserId,
+          createdAt: serverTimestamp(),
+        }),
+      ]);
     } else {
-      await deleteDoc(ref);
+      await Promise.all([
+        deleteDoc(followerRef),
+        deleteDoc(followingRef),
+      ]);
     }
   },
 
@@ -1427,12 +1455,13 @@ export const engineDB = {
       const goalsQuery = query(
         collection(firestore, COMMUNITY_COLLECTION),
         where("userId", "==", userId),
-        orderBy("updatedAt", "desc"),
       );
       const snapshot = await getDocs(goalsQuery);
-      return snapshot.docs.map((item) =>
-        normalizeCommunityGoal({ id: item.id, ...item.data() }),
-      );
+      return snapshot.docs
+        .map((item) =>
+          normalizeCommunityGoal({ id: item.id, ...item.data() }),
+        )
+        .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
     } catch (error) {
       console.error("Error fetching user goals:", error);
       return [];
@@ -1458,16 +1487,9 @@ export const engineDB = {
     if (!userId) return [];
 
     try {
-      const communityDoc = doc(
-        firestore,
-        USERS_COLLECTION,
-        userId,
-        "private",
-        "community",
-      );
-      const snapshot = await getDoc(communityDoc);
-      const data = snapshot.data();
-      return Array.isArray(data?.following) ? data.following : [];
+      const snapshot = await getDocs(followingCollection(userId));
+      // O id do doc é o uid de quem está sendo seguido.
+      return snapshot.docs.map((doc) => doc.id);
     } catch (error) {
       console.error("Error fetching user following:", error);
       return [];
@@ -1881,4 +1903,128 @@ export const engineDB = {
   getDefaultCommunityState() {
     return defaultCommunityState;
   },
+
+  async migrateGoalsAddUserId() {
+    try {
+      const goalsQuery = query(collection(firestore, COMMUNITY_COLLECTION));
+      const snapshot = await getDocs(goalsQuery);
+      let updated = 0;
+
+      const batch = writeBatch(firestore);
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.ownerId && !data.userId) {
+          batch.update(doc.ref, { userId: data.ownerId });
+          updated++;
+        }
+      });
+
+      if (updated > 0) {
+        await batch.commit();
+        console.log(`Migração concluída: ${updated} metas atualizadas com userId`);
+      } else {
+        console.log("Todas as metas já possuem userId");
+      }
+      return updated;
+    } catch (error) {
+      console.error("Erro ao migrar metas:", error);
+      return 0;
+    }
+  },
+
+  async debugCommunityGoals() {
+    try {
+      const snapshot = await getDocs(collection(firestore, COMMUNITY_COLLECTION));
+      console.log(`Total de metas no Firestore: ${snapshot.size}`);
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        console.log(`ID: ${doc.id}`, {
+          ownerId: data.ownerId,
+          userId: data.userId,
+          title: data.title,
+          author: data.author,
+        });
+      });
+      return snapshot.size;
+    } catch (error) {
+      console.error("Erro ao debugar metas:", error);
+      return 0;
+    }
+  },
+
+  async migratePublicProfilesAddUserId() {
+    try {
+      const profilesSnapshot = await getDocs(collection(firestore, PUBLIC_PROFILES_COLLECTION));
+      console.log(`Total de perfis: ${profilesSnapshot.size}`);
+      let updated = 0;
+
+      const batch = writeBatch(firestore);
+      profilesSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (!data.userId) {
+          batch.update(doc.ref, { userId: doc.id });
+          updated++;
+          console.log(`Atualizando perfil ${doc.id} com userId`);
+        }
+      });
+
+      if (updated > 0) {
+        await batch.commit();
+        console.log(`Migração de perfis concluída: ${updated} perfis atualizados com userId`);
+      } else {
+        console.log("Todos os perfis já possuem userId");
+      }
+      return updated;
+    } catch (error) {
+      console.error("Erro ao migrar perfis:", error);
+      return 0;
+    }
+  },
+
+  async debugPublicProfiles() {
+    try {
+      const profilesSnapshot = await getDocs(collection(firestore, PUBLIC_PROFILES_COLLECTION));
+      console.log(`Total de perfis públicos: ${profilesSnapshot.size}`);
+
+      profilesSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        console.log(`Perfil: ${doc.id}`, {
+          userId: data.userId,
+          username: data.username,
+          author: data.author,
+          id: data.id,
+        });
+      });
+
+      return profilesSnapshot.size;
+    } catch (error) {
+      console.error("Erro ao debugar perfis:", error);
+      return 0;
+    }
+  },
+
+  async debugGoalsForUser(userId) {
+    try {
+      const goalsSnapshot = await getDocs(
+        query(collection(firestore, COMMUNITY_COLLECTION), where("userId", "==", userId))
+      );
+      console.log(`Goals para userId ${userId}: ${goalsSnapshot.size}`);
+
+      goalsSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        console.log(`Goal: ${doc.id}`, {
+          userId: data.userId,
+          ownerId: data.ownerId,
+          title: data.title,
+          author: data.author,
+        });
+      });
+
+      return goalsSnapshot.size;
+    } catch (error) {
+      console.error("Erro ao debugar goals:", error);
+      return 0;
+    }
+  },
+
 };

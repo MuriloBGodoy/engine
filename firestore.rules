@@ -41,9 +41,19 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
 
       // Seguidores: cada pessoa só cria/remove o próprio doc de seguidor.
+      // `update` entra junto porque setDoc num doc que já existe (re-seguir
+      // sem ter deixado de seguir) é update, não create.
       match /followers/{followerId} {
         allow read: if signedIn();
-        allow create, delete: if signedIn() && request.auth.uid == followerId;
+        allow create, update, delete: if signedIn() && request.auth.uid == followerId;
+      }
+
+      // Seguindo: espelho do doc de seguidor, guardado na conta de quem segue.
+      // Qualquer pessoa logada lê (a aba "Seguindo" é pública), mas só o dono
+      // da lista escreve nela.
+      match /following/{targetUserId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isOwner(userId);
       }
     }
 

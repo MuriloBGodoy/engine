@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,31 +19,13 @@ import { EditProfileModal } from "../components/EditProfileModal";
 // Banner will be solid color gradient - no default image
 const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-accent)]/70";
 
-function FollowingUserCard({ userId }) {
-  const [userData, setUserData] = useState(null);
 
-  useEffect(() => {
-    const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
-      const user = profiles[userId];
-      if (user) {
-        setUserData(user);
-      }
-    });
-
-    return () => unsubscribe?.();
-  }, [userId]);
-
-  if (!userData) {
-    return (
-      <div className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 animate-pulse">
-        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)]" />
-        <div className="flex-1 space-y-2">
-          <div className="h-3 w-24 rounded bg-[var(--engine-surface-2)]" />
-          <div className="h-2 w-32 rounded bg-[var(--engine-surface-2)]" />
-        </div>
-      </div>
-    );
-  }
+// Um item das abas Seguidores/Seguindo. O perfil vem sempre de publicProfiles
+// (dado vivo); `fallback` é o retrato gravado no doc de seguidor, usado só
+// enquanto a lista de perfis não chegou ou se o perfil público sumiu.
+function UserListItem({ userId, profiles, fallback = {} }) {
+  const userData = profiles?.[userId] || fallback;
+  const username = (userData.username || "user").replace(/^@/, "") || "user";
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]">
@@ -51,10 +33,10 @@ function FollowingUserCard({ userId }) {
         <img
           src={userData.avatar}
           alt={userData.author}
-          className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+          className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
         />
       ) : (
-        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
+        <div className="h-12 w-12 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
           {userData.avatarInitials || "EN"}
         </div>
       )}
@@ -62,9 +44,7 @@ function FollowingUserCard({ userId }) {
         <p className="text-sm font-bold text-[var(--engine-text)]">
           {userData.author || "Usuário Engine"}
         </p>
-        <p className="text-xs text-[var(--engine-text-muted)]">
-          {(userData.username || "user").replace(/^@/, "") ? `@${(userData.username || "user").replace(/^@/, "")}` : "@user"}
-        </p>
+        <p className="text-xs text-[var(--engine-text-muted)]">@{username}</p>
       </div>
     </div>
   );
@@ -83,8 +63,8 @@ export function UserProfile({ settings = {}, user = null }) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
   const [loading, setLoading] = useState(true);
-  const [myFollowing, setMyFollowing] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [publicProfiles, setPublicProfiles] = useState(null);
   const isOwnProfile = currentUserId === profile?.userId;
 
   useEffect(() => {
@@ -100,6 +80,7 @@ export function UserProfile({ settings = {}, user = null }) {
 
         // Subscribe to public profiles to find the user
         const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
+          setPublicProfiles(profiles || {});
           const userProfile = Object.values(profiles || {}).find(
             (p) => (p.username || "").replace(/^@/, "").toLowerCase() === cleanUsername
           );
@@ -111,7 +92,9 @@ export function UserProfile({ settings = {}, user = null }) {
 
           setProfile(userProfile);
 
-          // Fetch user's goals, followers, and following
+          // O perfil é a vitrine pública: mesmo no próprio perfil mostramos só
+          // as metas publicadas na comunidade, nunca a garagem inteira — quem
+          // quiser guardar um carro só pra si simplesmente não publica.
           Promise.all([
             engineDB.getUserGoals(userProfile.userId),
             engineDB.getUserFollowers(userProfile.userId),
@@ -123,9 +106,8 @@ export function UserProfile({ settings = {}, user = null }) {
           });
 
           // Check if current user follows this profile
-          if (currentUserId) {
+          if (currentUserId && currentUserId !== userProfile.userId) {
             engineDB.getUserFollowing(currentUserId).then((currentFollowing) => {
-              setMyFollowing(currentFollowing || []);
               setIsFollowing((currentFollowing || []).includes(userProfile.userId));
             });
           }
@@ -187,7 +169,6 @@ export function UserProfile({ settings = {}, user = null }) {
     );
   }
 
-  const coverImage = profile.coverImage || null;
   const avatar = profile.avatar || null;
   const initials = profile.author
     ?.split(" ")
@@ -347,40 +328,41 @@ export function UserProfile({ settings = {}, user = null }) {
             <div>
               {userGoals.length ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {userGoals.map((goal) => (
-                    <div
-                      key={goal.id}
-                      className="group overflow-hidden rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3 transition hover:border-[var(--engine-accent)]"
-                    >
-                      <div className="mb-2">
-                        <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--engine-text-muted)]">
-                          Meta
-                        </h3>
-                        <p className="mt-1 line-clamp-2 text-sm font-bold text-[var(--engine-text)]">
-                          {goal.title || `${goal.brand} ${goal.model}`}
-                        </p>
+                  {userGoals.map((goal) => {
+                    const progress = goal.targetValue ? (goal.savedValue / goal.targetValue) * 100 : 0;
+                    return (
+                      <div
+                        key={goal.id}
+                        className="group overflow-hidden rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] transition hover:border-[var(--engine-accent)]"
+                      >
+                        {goal.image && (
+                          <div className="relative h-32 overflow-hidden bg-[var(--engine-surface)]">
+                            <img
+                              src={goal.image}
+                              alt={goal.title}
+                              className="h-full w-full object-cover transition group-hover:scale-105"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="mb-3">
+                            <p className="line-clamp-2 text-sm font-bold text-[var(--engine-text)]">
+                              {goal.title || `${goal.brand} ${goal.model}`}
+                            </p>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-[var(--engine-border)]">
+                            <div
+                              className="h-full bg-[var(--engine-accent)]"
+                              style={{ width: `${Math.min(progress, 100)}%` }}
+                            />
+                          </div>
+                          <p className="mt-2 text-xs font-bold text-[var(--engine-text)]">
+                            {Math.min(Math.round(progress), 100)}%
+                          </p>
+                        </div>
                       </div>
-                      <div className="mb-3 space-y-1 text-xs text-[var(--engine-text-muted)]">
-                        <p>
-                          Alvo: R${goal.targetValue ? (goal.targetValue / 1000).toFixed(1) : "—"}k
-                        </p>
-                        <p>
-                          Poupado: R${goal.savedValue ? (goal.savedValue / 1000).toFixed(1) : "0"}k
-                        </p>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--engine-border)]">
-                        <div
-                          className="h-full bg-[var(--engine-accent)]"
-                          style={{
-                            width: `${Math.min(
-                              (goal.savedValue / goal.targetValue) * 100,
-                              100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex min-h-64 flex-col items-center justify-center text-center">
@@ -388,8 +370,18 @@ export function UserProfile({ settings = {}, user = null }) {
                     Nenhuma meta compartilhada
                   </p>
                   <p className="mt-1 text-xs text-[var(--engine-text-muted)]">
-                    {isOwnProfile ? "Crie uma meta na Garagem" : "Este usuário não compartilhou metas"}
+                    {isOwnProfile
+                      ? "Só aparece aqui o que você publicar na comunidade"
+                      : "Este usuário não compartilhou metas"}
                   </p>
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => navigate("/garagem")}
+                      className="mt-4 rounded-lg border border-[var(--engine-border)] px-4 py-2 text-xs font-black uppercase tracking-wide text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                    >
+                      Ir para a Garagem
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -399,30 +391,12 @@ export function UserProfile({ settings = {}, user = null }) {
             <div className="space-y-3">
               {followers.length ? (
                 followers.map((follower) => (
-                  <div
+                  <UserListItem
                     key={follower.userId || follower.followerId}
-                    className="flex items-center gap-3 rounded-lg border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]"
-                  >
-                    {follower.avatar ? (
-                      <img
-                        src={follower.avatar}
-                        alt={follower.author}
-                        className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 flex-shrink-0 rounded-full bg-[var(--engine-surface-2)] flex items-center justify-center text-xs font-bold">
-                        {follower.avatarInitials || "EN"}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[var(--engine-text)]">
-                        {follower.author || "Usuário Engine"}
-                      </p>
-                      <p className="text-xs text-[var(--engine-text-muted)]">
-                        {(follower.username || "user").replace(/^@/, "") ? `@${(follower.username || "user").replace(/^@/, "")}` : "@user"}
-                      </p>
-                    </div>
-                  </div>
+                    userId={follower.userId || follower.followerId}
+                    profiles={publicProfiles}
+                    fallback={follower}
+                  />
                 ))
               ) : (
                 <div className="flex min-h-64 flex-col items-center justify-center text-center">
@@ -439,7 +413,7 @@ export function UserProfile({ settings = {}, user = null }) {
             <div className="space-y-3">
               {following.length ? (
                 following.map((userId) => (
-                  <FollowingUserCard key={userId} userId={userId} />
+                  <UserListItem key={userId} userId={userId} profiles={publicProfiles} />
                 ))
               ) : (
                 <div className="flex min-h-64 flex-col items-center justify-center text-center">

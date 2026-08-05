@@ -378,10 +378,10 @@ export function Messages({ user, settings }) {
                 </p>
               </div>
 
-              {partner?.userId && (
+              {partner?.username && (
                 <button
                   type="button"
-                  onClick={() => navigate(`/community?user=${partner.userId}`)}
+                  onClick={() => navigate(`/community/${partner.username}`)}
                   title={t("messages.viewProfile")}
                   aria-label={t("messages.viewProfile")}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
