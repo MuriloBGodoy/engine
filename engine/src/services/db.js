@@ -915,21 +915,9 @@ export const engineDB = {
       return () => {};
     }
 
-    if (apiEnabled()) {
-      let active = true;
-      apiRequest(`/community/goals/${goalId}`)
-        .then((goal) => {
-          if (active) callback(goal);
-        })
-        .catch((error) => {
-          warnFirestoreFallback("subscribeCommunityGoal", error);
-          if (active) callback(null);
-        });
-      return () => {
-        active = false;
-      };
-    }
-
+    // Sem branch de API: não existe GET /community/goals/{id} no backend Java,
+    // e o catch entregava callback(null) — abrir um post por link direto ou
+    // notificação simplesmente não achava a publicação em dev.
     return onSnapshot(
       doc(firestore, COMMUNITY_COLLECTION, String(goalId)),
       (snapshot) => {
@@ -1259,11 +1247,9 @@ export const engineDB = {
 
     const text = String(note || "").trim().slice(0, 280);
 
-    if (apiEnabled()) {
-      await apiJson("PATCH", `/community/goals/${goalId}`, { note: text });
-      return;
-    }
-
+    // Sem branch de API: não existe PATCH /community/goals/{id} no backend
+    // Java (só /like e /rating), então delegar pra lá derrubava o salvamento
+    // da legenda em dev.
     await updateDoc(doc(firestore, COMMUNITY_COLLECTION, String(goalId)), {
       note: text,
       updatedAt: serverTimestamp(),

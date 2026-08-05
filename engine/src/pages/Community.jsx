@@ -2002,7 +2002,7 @@ export function Community({ cars = [], settings, user }) {
     });
   };
 
-  const flash = (message) => toast(message);
+  const flash = (message, tone) => toast(message, tone ? { tone } : undefined);
 
   const searchedGoals = goals.filter((goal) =>
     `${goal.author} ${goal.title} ${goal.username}`
@@ -2216,7 +2216,7 @@ export function Community({ cars = [], settings, user }) {
       navigate(`/messages/${conversationId}`);
     } catch (error) {
       console.error(error);
-      flash(t("messages.startError"));
+      flash(t("messages.startError"), "error");
     }
   };
 
@@ -2244,7 +2244,7 @@ export function Community({ cars = [], settings, user }) {
       }
       flash(t("community.linkCopied"));
     } catch {
-      flash(t("community.linkCopyError"));
+      flash(t("community.linkCopyError"), "error");
     }
   };
 
@@ -2289,7 +2289,7 @@ export function Community({ cars = [], settings, user }) {
       flash(t("community.unsharedNotice"));
     } catch (error) {
       console.error(error);
-      flash(t("community.unshareError"));
+      flash(t("community.unshareError"), "error");
     }
   };
 
@@ -2300,7 +2300,7 @@ export function Community({ cars = [], settings, user }) {
       flash(t("community.captionSaved"));
     } catch (error) {
       console.error(error);
-      flash(t("community.captionError"));
+      flash(t("community.captionError"), "error");
     }
   };
 
@@ -2321,7 +2321,7 @@ export function Community({ cars = [], settings, user }) {
       flash(t("community.clearPublishedNotice"));
     } catch (error) {
       console.error(error);
-      flash(t("community.clearPublishedError"));
+      flash(t("community.clearPublishedError"), "error");
     }
   };
 

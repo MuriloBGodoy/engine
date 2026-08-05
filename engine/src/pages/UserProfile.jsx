@@ -24,11 +24,33 @@ const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-ac
 // (dado vivo); `fallback` é o retrato gravado no doc de seguidor, usado só
 // enquanto a lista de perfis não chegou ou se o perfil público sumiu.
 function UserListItem({ userId, profiles, fallback = {} }) {
+  const navigate = useNavigate();
   const userData = profiles?.[userId] || fallback;
-  const username = (userData.username || "user").replace(/^@/, "") || "user";
+  const rawUsername = (userData.username || "").replace(/^@/, "").trim();
+  const username = rawUsername || "user";
+  // Só vira botão quando dá pra chegar em algum lugar: a rota do perfil
+  // resolve por username, não por uid.
+  const canOpen = Boolean(rawUsername);
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)]">
+    <div
+      role={canOpen ? "button" : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      onClick={canOpen ? () => navigate(`/community/@${rawUsername}`) : undefined}
+      onKeyDown={
+        canOpen
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                navigate(`/community/@${rawUsername}`);
+              }
+            }
+          : undefined
+      }
+      className={`flex items-center gap-3 rounded-xl border border-[var(--engine-border)] p-3 transition hover:bg-[var(--engine-surface-2)] ${
+        canOpen ? "cursor-pointer hover:border-[var(--engine-accent)]" : ""
+      }`}
+    >
       {userData.avatar ? (
         <img
           src={userData.avatar}
@@ -71,6 +93,9 @@ export function UserProfile({ settings = {}, user = null }) {
     (async () => {
       try {
         setLoading(true);
+        // Pular de perfil em perfil pelas listas não pode deixar o visitante
+        // parado na aba Seguidores do anterior.
+        setActiveTab("posts");
         const cleanUsername = identifier?.replace(/^@/, "").toLowerCase().trim() || "";
 
         if (!cleanUsername) {
