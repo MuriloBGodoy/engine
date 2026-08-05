@@ -669,12 +669,16 @@ function GoalCard({
           )}
         </p>
 
-        <p className="text-sm leading-6 text-[var(--engine-text)]">
-          <span className="font-bold italic">{getVehicleTitle(goal)}</span>
-          {goal.year && (
-            <span className="text-[var(--engine-text-subtle)]">{` · ${goal.year}`}</span>
-          )}
-        </p>
+        {/* No modal o cabeçalho já anuncia o veículo — repetir aqui rouba o
+            lugar da descrição, que é o que a pessoa escreveu. */}
+        {!isModal && (
+          <p className="text-sm leading-6 text-[var(--engine-text)]">
+            <span className="font-bold italic">{getVehicleTitle(goal)}</span>
+            {goal.year && (
+              <span className="text-[var(--engine-text-subtle)]">{` · ${goal.year}`}</span>
+            )}
+          </p>
+        )}
 
         {/* Progresso logo abaixo do veículo: barra fina + %. O aviso de
             privacidade virou tooltip, em vez de um parágrafo por post. */}
@@ -699,7 +703,11 @@ function GoalCard({
         )}
 
         {goal.note && (
-          <p className="line-clamp-2 text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
+          <p
+            className={`text-sm font-medium leading-6 text-[var(--engine-text-muted)] ${
+              isModal ? "whitespace-pre-line" : "line-clamp-2"
+            }`}
+          >
             {goal.note}
           </p>
         )}

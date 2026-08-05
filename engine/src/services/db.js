@@ -833,26 +833,12 @@ export const engineDB = {
     return normalizedState;
   },
 
+  // Sem branch de API: GET /community/goals devolve o goal sem `note`,
+  // `image`, `images` nem `verified` (o normalizador do backend monta um
+  // `noteKey` e larga a legenda pra trás), então em dev a legenda publicada
+  // nunca chegava no feed. O Firestore ainda troca polling de 10s por
+  // tempo real.
   subscribeCommunityGoals(callback) {
-    if (apiEnabled()) {
-      let active = true;
-      const load = async () => {
-        try {
-          const goals = await apiRequest("/community/goals");
-          if (active) callback(goals, { hasMore: false });
-        } catch (error) {
-          warnFirestoreFallback("subscribeCommunityGoals", error);
-          if (active) callback([], { hasMore: false });
-        }
-      };
-      load();
-      const interval = window.setInterval(load, 10000);
-      return () => {
-        active = false;
-        window.clearInterval(interval);
-      };
-    }
-
     communityGoalsCursorDoc = null;
     communityGoalsHasMore = true;
 
@@ -882,7 +868,7 @@ export const engineDB = {
   },
 
   async loadMoreCommunityGoals() {
-    if (apiEnabled() || !communityGoalsCursorDoc || !communityGoalsHasMore) {
+    if (!communityGoalsCursorDoc || !communityGoalsHasMore) {
       return { goals: [], hasMore: false };
     }
 
