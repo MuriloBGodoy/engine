@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -23,7 +23,6 @@ import {
   sendPasswordResetEmail,
   updateEmail,
   updatePassword,
-  updateProfile,
 } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -76,6 +75,96 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
+// Sem esta lista, bloquear seria via de mão única: o menu do post esconde a
+// pessoa e não sobra lugar nenhum pra voltar atrás.
+function BlockedUsers({ t, userId }) {
+  const [blocked, setBlocked] = useState([]);
+  const [profiles, setProfiles] = useState({});
+  const [busyId, setBusyId] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    engineDB
+      .getBlockedUsers(userId)
+      .then((ids) => {
+        if (alive) setBlocked(ids);
+      })
+      .catch((error) => console.error(error));
+
+    const unsubscribe = engineDB.subscribePublicProfiles((all) => {
+      if (alive) setProfiles(all || {});
+    });
+
+    return () => {
+      alive = false;
+      unsubscribe?.();
+    };
+  }, [userId]);
+
+  const unblock = async (blockedId) => {
+    setBusyId(blockedId);
+    try {
+      await engineDB.setUserBlocked(blockedId, false, userId);
+      setBlocked((current) => current.filter((item) => item !== blockedId));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  return (
+    <div className={`${cardClass} space-y-3`}>
+      <div>
+        <h3 className="text-sm font-black uppercase tracking-widest text-[var(--engine-text)]">
+          {t("settings.blockedTitle")}
+        </h3>
+        <p className="mt-1 text-xs text-[var(--engine-text-muted)]">
+          {t("settings.blockedHint")}
+        </p>
+      </div>
+
+      {blocked.length ? (
+        <ul className="space-y-2">
+          {blocked.map((blockedId) => {
+            const person = profiles[blockedId] || {};
+            const username = (person.username || "").replace(/^@/, "");
+            return (
+              <li
+                key={blockedId}
+                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--engine-border)] px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-[var(--engine-text)]">
+                    {person.author || t("settings.blockedUnknown")}
+                  </p>
+                  {username && (
+                    <p className="truncate text-xs text-[var(--engine-text-muted)]">
+                      @{username}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => unblock(blockedId)}
+                  disabled={busyId === blockedId}
+                  className="shrink-0 rounded-lg border border-[var(--engine-border)] px-3 py-1.5 text-xs font-black uppercase tracking-wide text-[var(--engine-text-muted)] transition-colors hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] disabled:opacity-50"
+                >
+                  {t("settings.unblock")}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-sm text-[var(--engine-text-muted)]">
+          {t("settings.blockedEmpty")}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function StatusMessage({ status }) {
   if (!status.text) return null;
   const Icon = status.type === "error" ? AlertTriangle : CheckCircle2;
@@ -93,14 +182,6 @@ function StatusMessage({ status }) {
     </div>
   );
 }
-
-const withTimeout = (promise, label, ms = 4500) =>
-  Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      window.setTimeout(() => reject(new Error(label)), ms);
-    }),
-  ]);
 
 export function Settings({ user, settings, onSettingsUpdate }) {
   const { i18n, t } = useTranslation();
@@ -157,7 +238,6 @@ export function Settings({ user, settings, onSettingsUpdate }) {
     try {
       const savedSettings = await engineDB.saveSettings(draft, user.uid);
       setDraft(savedSettings);
-      setPendingAvatarBlob(null);
       onSettingsUpdate(savedSettings);
       i18n.changeLanguage(savedSettings.preferences.language);
       setStatus({ type: "success", text: t("settings.status.saved") });
@@ -563,6 +643,10 @@ export function Settings({ user, settings, onSettingsUpdate }) {
                   />
                 ))}
               </div>
+            )}
+
+            {activeSection === "privacy" && (
+              <BlockedUsers t={t} userId={user?.uid} />
             )}
 
             {["preferences", "notifications", "privacy"].includes(

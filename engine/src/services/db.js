@@ -1,6 +1,7 @@
 import { get, set, del } from "idb-keyval";
 import {
   addDoc,
+  arrayRemove,
   arrayUnion,
   collection,
   deleteDoc,
@@ -74,6 +75,7 @@ const USERS_COLLECTION = "users";
 const USERNAMES_COLLECTION = "usernames";
 const COMMUNITY_COLLECTION = "communityGoals";
 const PUBLIC_PROFILES_COLLECTION = "publicProfiles";
+const REPORTS_COLLECTION = "reports";
 const SERVICE_LISTINGS_COLLECTION = "serviceListings";
 const SERVICE_STATUS_APPROVED = "approved";
 const SERVICE_STATUS_PENDING = "pending";
@@ -314,6 +316,10 @@ const userSettingsDoc = (userId = currentUserId) =>
 
 const userCommunityDoc = (userId = currentUserId) =>
   doc(userDoc(userId), "private", "community");
+
+// Lista de bloqueados: mora no espaço privado do usuário, que só ele lê.
+const userModerationDoc = (userId = currentUserId) =>
+  doc(userDoc(userId), "private", "moderation");
 
 const userNotificationsCollection = (userId = currentUserId) =>
   collection(userDoc(userId), "notifications");
@@ -1466,6 +1472,49 @@ export const engineDB = {
       console.error("Error fetching user following:", error);
       return [];
     }
+  },
+
+  /**
+   * Abre uma denúncia. Só a moderação lê a coleção `reports` — quem denuncia
+   * não relê a própria denúncia, para ninguém mapear o que já foi reportado.
+   */
+  async reportContent({ targetType, targetId, reportedUserId = "", reason = "" }) {
+    if (!currentUserId || !targetId) return;
+
+    await addDoc(collection(firestore, REPORTS_COLLECTION), {
+      targetType: String(targetType || "goal"),
+      targetId: String(targetId),
+      reportedUserId: String(reportedUserId || ""),
+      reporterId: currentUserId,
+      reason: String(reason || "").slice(0, 280),
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+  },
+
+  async getBlockedUsers(userId = currentUserId) {
+    if (!userId) return [];
+
+    try {
+      const snapshot = await getDoc(userModerationDoc(userId));
+      return snapshot.exists() ? snapshot.data().blockedUserIds || [] : [];
+    } catch (error) {
+      warnFirestoreFallback("getBlockedUsers", error);
+      return [];
+    }
+  },
+
+  async setUserBlocked(targetUserId, blocked, userId = currentUserId) {
+    if (!userId || !targetUserId || targetUserId === userId) return;
+
+    await setDoc(
+      userModerationDoc(userId),
+      {
+        blockedUserIds: blocked ? arrayUnion(targetUserId) : arrayRemove(targetUserId),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
   },
 
   async followUser(followerId, targetUserId) {

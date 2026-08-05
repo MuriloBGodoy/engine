@@ -13,6 +13,7 @@ import {
   Clapperboard,
   Copy,
   Edit3,
+  Flag,
   Heart,
   MapPin,
   MoreHorizontal,
@@ -29,6 +30,7 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  UserX,
   X,
 } from "lucide-react";
 import { ClubsTab } from "../components/community/ClubsTab";
@@ -503,6 +505,8 @@ function GoalCard({
   onOpenPost,
   onSendToChat,
   onEditCaption,
+  onReport,
+  onBlock,
   onCommentClick,
   currentUserId,
   variant = "feed",
@@ -565,6 +569,26 @@ function GoalCard({
             icon: Trash2,
             label: t("community.unshare"),
             onClick: () => onUnshare(goal),
+            danger: true,
+          },
+        ]
+      : []),
+    // Denunciar e bloquear só fazem sentido no conteúdo dos outros.
+    ...(!isOwner && onReport
+      ? [
+          {
+            icon: Flag,
+            label: t("community.report"),
+            onClick: () => onReport(goal),
+          },
+        ]
+      : []),
+    ...(!isOwner && onBlock
+      ? [
+          {
+            icon: UserX,
+            label: t("community.block"),
+            onClick: () => onBlock(goal),
             danger: true,
           },
         ]
@@ -1830,6 +1854,7 @@ export function Community({ cars = [], settings, user }) {
   const [remoteGoal, setRemoteGoal] = useState(null);
   const [postToShare, setPostToShare] = useState(null);
   const [captionGoal, setCaptionGoal] = useState(null);
+  const [blockedUserIds, setBlockedUserIds] = useState([]);
   const handledProfileId = useRef("");
   const [communityState, setCommunityState] = useState(
     engineDB.getDefaultCommunityState(),
@@ -1891,28 +1916,40 @@ export function Community({ cars = [], settings, user }) {
     [cars],
   );
 
+  const blockedSet = useMemo(() => new Set(blockedUserIds), [blockedUserIds]);
+
   const goals = useMemo(
     () =>
-      communityGoals.map((goal) => {
-        const currentCar =
-          goal.ownerId === user?.uid ? carsById.get(String(goal.carId)) : null;
-        const mergedGoal =
-          currentCar?.model
-            ? {
-                ...goal,
-                title: `${currentCar.brand} ${currentCar.model}`.trim(),
-                brand: currentCar.brand || goal.brand,
-                model: currentCar.model || goal.model,
-                year: currentCar.year || goal.year,
-                image: currentCar.image || goal.image,
-                savedValue: currentCar.savedValue ?? goal.savedValue,
-                targetValue: currentCar.targetValue ?? goal.targetValue,
-              }
-            : goal;
+      communityGoals
+        // Bloquear some com a publicação e também com os comentários da
+        // pessoa nos posts dos outros — meia-medida não é bloqueio.
+        .filter((goal) => !blockedSet.has(goal.ownerId))
+        .map((goal) => ({
+          ...goal,
+          comments: (goal.comments || []).filter(
+            (comment) => !blockedSet.has(comment.userId),
+          ),
+        }))
+        .map((goal) => {
+          const currentCar =
+            goal.ownerId === user?.uid ? carsById.get(String(goal.carId)) : null;
+          const mergedGoal =
+            currentCar?.model
+              ? {
+                  ...goal,
+                  title: `${currentCar.brand} ${currentCar.model}`.trim(),
+                  brand: currentCar.brand || goal.brand,
+                  model: currentCar.model || goal.model,
+                  year: currentCar.year || goal.year,
+                  image: currentCar.image || goal.image,
+                  savedValue: currentCar.savedValue ?? goal.savedValue,
+                  targetValue: currentCar.targetValue ?? goal.targetValue,
+                }
+              : goal;
 
-        return enrichGoalProfiles(mergedGoal, profiles);
-      }),
-    [carsById, communityGoals, profiles, user?.uid],
+          return enrichGoalProfiles(mergedGoal, profiles);
+        }),
+    [blockedSet, carsById, communityGoals, profiles, user?.uid],
   );
 
   useEffect(() => {
@@ -1937,6 +1974,21 @@ export function Community({ cars = [], settings, user }) {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    engineDB
+      .getBlockedUsers(user?.uid)
+      .then((ids) => {
+        if (alive) setBlockedUserIds(ids);
+      })
+      .catch((error) => console.error(error));
+
+    return () => {
+      alive = false;
+    };
+  }, [user?.uid]);
 
   const handleLoadMoreGoals = async () => {
     if (loadingMoreGoals || !hasMoreGoals) return;
@@ -2312,6 +2364,50 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
+  const handleReportGoal = async (goal) => {
+    const ok = await confirm({
+      title: t("community.reportTitle"),
+      message: t("community.reportMessage"),
+      confirmLabel: t("community.report"),
+      cancelLabel: t("common.cancel"),
+    });
+    if (!ok) return;
+
+    try {
+      await engineDB.reportContent({
+        targetType: "goal",
+        targetId: goal.id,
+        reportedUserId: goal.ownerId,
+      });
+      flash(t("community.reportSent"));
+    } catch (error) {
+      console.error(error);
+      flash(t("community.reportError"), "error");
+    }
+  };
+
+  const handleBlockUser = async (goal) => {
+    if (!goal.ownerId) return;
+    const ok = await confirm({
+      title: t("community.blockTitle"),
+      message: t("community.blockMessage", { user: goal.username || goal.author }),
+      confirmLabel: t("community.block"),
+      cancelLabel: t("common.cancel"),
+    });
+    if (!ok) return;
+
+    try {
+      await engineDB.setUserBlocked(goal.ownerId, true, user?.uid);
+      setBlockedUserIds((current) =>
+        current.includes(goal.ownerId) ? current : [...current, goal.ownerId],
+      );
+      flash(t("community.blockedNotice"));
+    } catch (error) {
+      console.error(error);
+      flash(t("community.blockError"), "error");
+    }
+  };
+
   const handleClearMyPublications = async () => {
     const ok = await confirm({
       title: t("community.clearPublishedTitle"),
@@ -2497,6 +2593,8 @@ export function Community({ cars = [], settings, user }) {
                             onOpenPost={isDesktop ? openPost : undefined}
                             onSendToChat={setPostToShare}
                             onEditCaption={setCaptionGoal}
+                            onReport={handleReportGoal}
+                            onBlock={handleBlockUser}
                             currentUserId={user?.uid}
                           />
                           {/* Card patrocinado nativo — entra no meio do feed
@@ -2677,6 +2775,8 @@ export function Community({ cars = [], settings, user }) {
             onDeleteComment: handleDeleteComment,
             onSendToChat: setPostToShare,
             onEditCaption: setCaptionGoal,
+            onReport: handleReportGoal,
+            onBlock: handleBlockUser,
             currentUserId: user?.uid,
           }}
         />

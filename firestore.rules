@@ -58,10 +58,41 @@ service cloud.firestore {
     }
 
     match /communityGoals/{goalId} {
+      function isGoalOwner() {
+        return signedIn() && resource.data.ownerId == request.auth.uid;
+      }
+
+      // Curtir, avaliar e comentar são updates no documento de OUTRA pessoa,
+      // então update não pode ser negado pra quem não é dono — mas também não
+      // pode ser liberado inteiro, senão qualquer um logado reescreve titulo,
+      // foto, valores ou legenda de qualquer publicação. Visitante só encosta
+      // nestes campos, e em likesBy/ratingsBy só na própria chave.
+      // O `.get(campo, {})` cobre documento antigo que nem tem o mapa.
+      function onlyInteraction() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["likesBy", "ratingsBy", "comments", "updatedAt"])
+          && request.resource.data.get("likesBy", {})
+            .diff(resource.data.get("likesBy", {}))
+            .affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.get("ratingsBy", {})
+            .diff(resource.data.get("ratingsBy", {}))
+            .affectedKeys().hasOnly([request.auth.uid]);
+      }
+
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if signedIn();
-      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow update: if isGoalOwner() || (signedIn() && onlyInteraction());
+      allow delete: if isGoalOwner();
+    }
+
+    // Denúncias: qualquer pessoa logada abre uma, ninguém além da moderação lê
+    // ou mexe depois — inclusive quem denunciou não relê a própria denúncia.
+    match /reports/{reportId} {
+      allow read, update, delete: if isServiceAdmin();
+      allow create: if signedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.targetId is string
+        && request.resource.data.reason is string;
     }
 
     // Mensagens diretas: só quem está na conversa lê ou escreve.
