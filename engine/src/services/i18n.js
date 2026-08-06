@@ -6,6 +6,15 @@ import { supportedLngs } from "./languages";
 const resources = {
   "pt-BR": {
     translation: {
+      pwa: {
+        installTitle: "Deixe o Engine na tela de início",
+        installBody: "Abre direto, sem navegador, e continua funcionando offline.",
+        installAction: "Instalar",
+        iosStep1: "Toque em",
+        iosStep2: "e depois em “Adicionar à Tela de Início”.",
+        updateReady: "Nova versão disponível",
+        updateAction: "Atualizar",
+      },
       common: {
         appName: "Engine",
         save: "Salvar",
@@ -640,6 +649,15 @@ const resources = {
   },
   "en-US": {
     translation: {
+      pwa: {
+        installTitle: "Keep Engine on your home screen",
+        installBody: "Opens straight up, no browser, and works offline.",
+        installAction: "Install",
+        iosStep1: "Tap",
+        iosStep2: "then “Add to Home Screen”.",
+        updateReady: "New version available",
+        updateAction: "Update",
+      },
       common: {
         appName: "Engine",
         save: "Save",
@@ -1271,6 +1289,15 @@ const resources = {
   },
   "es-ES": {
     translation: {
+      pwa: {
+        installTitle: "Deja Engine en tu pantalla de inicio",
+        installBody: "Abre directo, sin navegador, y sigue funcionando sin conexión.",
+        installAction: "Instalar",
+        iosStep1: "Toca",
+        iosStep2: "y luego “Añadir a pantalla de inicio”.",
+        updateReady: "Nueva versión disponible",
+        updateAction: "Actualizar",
+      },
       common: {
         appName: "Engine",
         save: "Guardar",

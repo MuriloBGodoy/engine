@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Service worker gerado pelo vite-plugin-pwa quando devOptions está ligado.
+dev-dist
 *.local
 
 # Editor directories and files

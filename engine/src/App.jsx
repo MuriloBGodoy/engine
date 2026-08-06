@@ -6,6 +6,8 @@ import { auth } from "./services/firebase";
 import { engineDB } from "./services/db";
 import { useThemeMode } from "./hooks/useThemeMode";
 import { identifyUser, resetUser, trackPageView } from "./services/observability";
+import { InstallPrompt } from "./components/InstallPrompt";
+import { UpdateBanner } from "./components/UpdateBanner";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
@@ -176,6 +178,8 @@ function App() {
   return (
     <BrowserRouter>
       <RouteTracker />
+      <UpdateBanner />
+      <InstallPrompt />
       <Routes>
         {/* Páginas de autenticação: tela cheia, sem o shell do app. */}
         <Route path="/login" element={<Login />} />
