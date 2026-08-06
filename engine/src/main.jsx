@@ -4,8 +4,12 @@ import App from "./App";
 import { ConfirmProvider } from "./components/ConfirmProvider";
 import { ToastProvider } from "./components/ToastProvider";
 import { RegionProvider } from "./hooks/RegionProvider";
+import { initObservability } from "./services/observability";
 import "./index.css";
 import "./services/i18n";
+
+// Antes do render: erro que acontece na montagem também precisa ser visto.
+initObservability();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

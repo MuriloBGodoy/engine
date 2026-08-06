@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { auth } from "./services/firebase";
 import { engineDB } from "./services/db";
 import { useThemeMode } from "./hooks/useThemeMode";
+import { identifyUser, resetUser, trackPageView } from "./services/observability";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
@@ -32,6 +33,20 @@ import { Events } from "./pages/Events";
 import { EventDetails } from "./pages/EventDetails";
 import { UserProfile } from "./pages/UserProfile";
 
+/**
+ * Numa SPA a troca de tela não recarrega a página, então o pageview não sai
+ * de graça: precisa ser disparado a cada mudança de rota.
+ */
+function RouteTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+}
+
 function App() {
   const { i18n, t } = useTranslation();
   const confirm = useConfirm();
@@ -54,6 +69,8 @@ function App() {
       engineDB.setCurrentUser(currentUser?.uid);
       setUser(currentUser);
       setAuthLoading(false);
+      if (currentUser) identifyUser(currentUser);
+      else resetUser();
     });
 
     return () => unsubscribe();
@@ -158,6 +175,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <RouteTracker />
       <Routes>
         {/* Páginas de autenticação: tela cheia, sem o shell do app. */}
         <Route path="/login" element={<Login />} />
