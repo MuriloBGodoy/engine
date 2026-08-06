@@ -2025,8 +2025,20 @@ const servicesPt = {
     availability: "Disponibilidade",
     experience: "Experiência",
     tags: "Tags separadas por vírgula",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    videoUrl: "Vídeo do serviço",
+    website: "Site",
   },
+  hints: {
+    videoUrl:
+      "Cole o link de um vídeo já publicado. Do YouTube toca aqui dentro; do Instagram e TikTok abre em outra aba.",
+  },
+  watchVideo: "Ver vídeo",
   placeholders: {
+    instagram: "@seuperfil ou o link do perfil",
+    tiktok: "@seuperfil ou o link do perfil",
+    videoUrl: "https://youtube.com/... ou o link do seu Reels",
     title: "Limpeza premium de carros em domicílio",
     providerName: "Seu nome ou empresa",
     description:
@@ -2217,8 +2229,20 @@ const servicesEn = {
     availability: "Availability",
     experience: "Experience",
     tags: "Comma-separated tags",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    videoUrl: "Service video",
+    website: "Website",
   },
+  hints: {
+    videoUrl:
+      "Paste a link to a video you already published. YouTube plays right here; Instagram and TikTok open in a new tab.",
+  },
+  watchVideo: "Watch video",
   placeholders: {
+    instagram: "@yourhandle or the profile link",
+    tiktok: "@yourhandle or the profile link",
+    videoUrl: "https://youtube.com/... or your Reels link",
     title: "Premium mobile car cleaning",
     providerName: "Your name or company",
     description: "Explain what you do, your differentiators, materials, warranty, and important details.",
@@ -2287,8 +2311,20 @@ const servicesEs = {
     availability: "Disponibilidad",
     experience: "Experiencia",
     tags: "Etiquetas separadas por coma",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    videoUrl: "Video del servicio",
+    website: "Sitio web",
   },
+  hints: {
+    videoUrl:
+      "Pega el enlace de un video ya publicado. YouTube se reproduce aquí; Instagram y TikTok abren en otra pestaña.",
+  },
+  watchVideo: "Ver video",
   placeholders: {
+    instagram: "@tuperfil o el enlace del perfil",
+    tiktok: "@tuperfil o el enlace del perfil",
+    videoUrl: "https://youtube.com/... o el enlace de tu Reels",
     title: "Limpieza premium de autos a domicilio",
     providerName: "Tu nombre o empresa",
     description: "Explica qué haces, diferenciales, materiales, garantía y detalles importantes.",

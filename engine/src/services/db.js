@@ -512,6 +512,24 @@ const normalizeCommunityState = (state = {}) => ({
   savedVideos: Array.isArray(state.savedVideos) ? state.savedVideos : [],
 });
 
+/**
+ * Aceita "@fulano", "fulano", "instagram.com/fulano" ou a URL completa com
+ * query, e guarda sempre só o handle. Quem cola link do navegador não deveria
+ * ver o anúncio quebrado por isso.
+ */
+const normalizeSocialHandle = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const withoutUrl = raw
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/^(instagram|tiktok)\.com\//i, "")
+    .split(/[/?#]/)[0];
+
+  return withoutUrl.replace(/^@/, "").slice(0, 40);
+};
+
 const normalizeServiceListing = (listing = {}) => {
   const title = String(listing.title || "").trim().slice(0, 90);
   const providerName = String(listing.providerName || "").trim().slice(0, 80);
@@ -562,6 +580,14 @@ const normalizeServiceListing = (listing = {}) => {
     whatsapp,
     email,
     website: String(listing.website || "").trim().slice(0, 160),
+    // Portfólio do prestador. Para quem se divulga em rede social, o perfil é
+    // o site: guardamos o @ limpo (aceita colar a URL inteira) e montamos o
+    // link na hora de exibir.
+    instagram: normalizeSocialHandle(listing.instagram),
+    tiktok: normalizeSocialHandle(listing.tiktok),
+    // Vídeo entra por link, nunca hospedado: subir vídeo pro Storage queima
+    // banda e custo rápido, e o prestador já tem o vídeo publicado.
+    videoUrl: String(listing.videoUrl || "").trim().slice(0, 300),
     availability: String(listing.availability || "").trim().slice(0, 180),
     experience: String(listing.experience || "").trim().slice(0, 180),
     photos: Array.isArray(listing.photos)

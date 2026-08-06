@@ -43,7 +43,7 @@ import {
   ZoomOut,
 } from"lucide-react";
 import { getDownloadURL, ref, uploadBytes } from"firebase/storage";
-import { FaWhatsapp } from"react-icons/fa";
+import { FaInstagram, FaTiktok, FaWhatsapp } from"react-icons/fa";
 import { engineDB } from"../services/db";
 import { storage } from"../services/firebase";
 import {
@@ -63,6 +63,15 @@ import { useRegion } from"../hooks/RegionProvider";
 // (size/className) usada em todo o arquivo, inclusive como `icon={WhatsAppIcon}`.
 function WhatsAppIcon({ size = 18, className ="" }) {
   return <FaWhatsapp size={size} className={className} aria-hidden="true" />;
+}
+
+// Instagram e TikTok também com o ícone oficial, mesma assinatura.
+function InstagramIcon({ size = 18, className ="" }) {
+  return <FaInstagram size={size} className={className} aria-hidden="true" />;
+}
+
+function TikTokIcon({ size = 18, className ="" }) {
+  return <FaTiktok size={size} className={className} aria-hidden="true" />;
 }
 
 const SUBSCRIPTION_GATE_OPEN = true;
@@ -108,6 +117,9 @@ const emptyForm = {
   whatsapp:"",
   email:"",
   website:"",
+  instagram:"",
+  tiktok:"",
+  videoUrl:"",
   availability:"",
   experience:"",
   tags:"",
@@ -444,6 +456,93 @@ function StatusBadge({ status }) {
       <Icon size={13} />
       {t(statusLabelKeys[status] || statusLabelKeys.pending)}
     </span>
+  );
+}
+
+/**
+ * Devolve o id do vídeo quando o link é do YouTube.
+ *
+ * Só o YouTube é embutido: Instagram e TikTok exigem carregar script deles na
+ * página, o que traz rastreamento de terceiro e uma dependência externa que
+ * pode quebrar o anúncio. Para esses dois o link abre em aba nova.
+ */
+const youtubeId = (url = "") => {
+  const match = String(url).match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  return match?.[1] || "";
+};
+
+/** Portfólio do prestador: redes, site e vídeo do serviço. */
+function PortfolioLinks({ listing, t }) {
+  const videoId = youtubeId(listing.videoUrl);
+  const links = [
+    listing.instagram && {
+      key: "instagram",
+      icon: InstagramIcon,
+      label: `@${listing.instagram}`,
+      href: `https://instagram.com/${listing.instagram}`,
+    },
+    listing.tiktok && {
+      key: "tiktok",
+      icon: TikTokIcon,
+      label: `@${listing.tiktok}`,
+      href: `https://tiktok.com/@${listing.tiktok}`,
+    },
+    listing.website && {
+      key: "website",
+      icon: Globe,
+      label: t("services.fields.website"),
+      href: listing.website.startsWith("http")
+        ? listing.website
+        : `https://${listing.website}`,
+    },
+    listing.videoUrl &&
+      !videoId && {
+        key: "video",
+        icon: ExternalLink,
+        label: t("services.watchVideo"),
+        href: listing.videoUrl,
+      },
+  ].filter(Boolean);
+
+  if (!links.length && !videoId) return null;
+
+  return (
+    <div className="grid gap-3">
+      {videoId && (
+        <div className="overflow-hidden rounded-xl border border-[var(--engine-border)]">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+            title={t("services.watchVideo")}
+            allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+            className="aspect-video w-full"
+          />
+        </div>
+      )}
+
+      {links.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {links.map((link) => {
+            const Icon = link.icon;
+            return (
+              <a
+                key={link.key}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--engine-border)] px-3 text-xs font-bold text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+              >
+                <Icon size={15} className="shrink-0" />
+                <span className="max-w-40 truncate">{link.label}</span>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -900,6 +999,8 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
                 value={showMap ? t("services.googleRoute") : t("services.noAddress")}
               />
             </div>
+
+            <PortfolioLinks listing={listing} t={t} />
 
             {isMine && (
               <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
@@ -1424,6 +1525,33 @@ function ListingEditorModal({
               onChange={(event) => onChange("experience", event.target.value)}
               placeholder={t("services.placeholders.experience")}
             />
+          </Field>
+
+          {/* Portfólio: pra quem se divulga em rede social, o perfil é o site.
+              O campo aceita colar a URL inteira e guarda só o @. */}
+          <Field label={t("services.fields.instagram")}>
+            <TextInput
+              value={form.instagram}
+              onChange={(event) => onChange("instagram", event.target.value)}
+              placeholder={t("services.placeholders.instagram")}
+            />
+          </Field>
+          <Field label={t("services.fields.tiktok")}>
+            <TextInput
+              value={form.tiktok}
+              onChange={(event) => onChange("tiktok", event.target.value)}
+              placeholder={t("services.placeholders.tiktok")}
+            />
+          </Field>
+          <Field label={t("services.fields.videoUrl")} wide>
+            <TextInput
+              value={form.videoUrl}
+              onChange={(event) => onChange("videoUrl", event.target.value)}
+              placeholder={t("services.placeholders.videoUrl")}
+            />
+            <p className="mt-1.5 text-[11px] text-[var(--engine-text-muted)]">
+              {t("services.hints.videoUrl")}
+            </p>
           </Field>
           <Field label={t("services.fields.tags")} wide>
             <TextInput
