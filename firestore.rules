@@ -36,7 +36,9 @@ service cloud.firestore {
     }
 
     match /publicProfiles/{userId} {
-      allow read: if signedIn();
+      // Perfil público é vitrine: quem chega por link compartilhado precisa
+      // ver de quem é a garagem antes de decidir criar conta.
+      allow read: if true;
       allow create, update: if isOwner(userId) && request.resource.data.userId == request.auth.uid;
       allow delete: if isOwner(userId);
 
@@ -79,7 +81,10 @@ service cloud.firestore {
             .affectedKeys().hasOnly([request.auth.uid]);
       }
 
-      allow read: if signedIn();
+      // Meta publicada na comunidade é conteúdo público: quem abre o link
+      // compartilhado vê o feed antes de criar conta. Interagir (curtir,
+      // comentar, avaliar) continua exigindo login.
+      allow read: if true;
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if isGoalOwner() || (signedIn() && onlyInteraction());
       allow delete: if isGoalOwner();
@@ -130,16 +135,36 @@ service cloud.firestore {
     }
 
     match /serviceListings/{listingId} {
-      allow read: if signedIn()
-        && (
-          resource.data.moderationStatus == "approved"
-          || resource.data.ownerId == request.auth.uid
-          || isServiceAdmin()
-        );
+      // Anúncio aprovado é público de propósito: o prestador divulga o link do
+      // Engine na bio dele, e quem chega por ali ainda não tem conta. Exigir
+      // login aqui entregava tela vazia justamente pra quem ele trouxe.
+      // Rascunho e reprovado continuam restritos ao dono e à moderação.
+      allow read: if resource.data.moderationStatus == "approved"
+        || (signedIn() && resource.data.ownerId == request.auth.uid)
+        || isServiceAdmin();
+
+      // Métricas do anúncio: quem visita incrementa o contador no documento de
+      // outra pessoa, então update não pode ser só do dono. A trava é dupla —
+      // só estes três campos, e cada um só pode ficar igual ou subir de um em
+      // um, nunca cair nem pular. Não dá pra zerar a métrica alheia nem
+      // mascarar edição de conteúdo como se fosse visita.
+      function onlyMetricIncrement() {
+        let counters = ["viewCount", "detailCount", "whatsappCount"];
+        let before = resource.data;
+        let after = request.resource.data;
+        return after.diff(before).affectedKeys().hasOnly(counters)
+          && after.get("viewCount", 0) >= before.get("viewCount", 0)
+          && after.get("viewCount", 0) <= before.get("viewCount", 0) + 1
+          && after.get("detailCount", 0) >= before.get("detailCount", 0)
+          && after.get("detailCount", 0) <= before.get("detailCount", 0) + 1
+          && after.get("whatsappCount", 0) >= before.get("whatsappCount", 0)
+          && after.get("whatsappCount", 0) <= before.get("whatsappCount", 0) + 1;
+      }
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.moderationStatus == "pending";
       allow update: if isServiceAdmin()
+        || onlyMetricIncrement()
         || (
           signedIn()
           && resource.data.ownerId == request.auth.uid

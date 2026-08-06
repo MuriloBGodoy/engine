@@ -2035,6 +2035,12 @@ const servicesPt = {
       "Cole o link de um vídeo já publicado. Do YouTube toca aqui dentro; do Instagram e TikTok abre em outra aba.",
   },
   watchVideo: "Ver vídeo",
+  metrics: {
+    title: "Retorno do seu anúncio",
+    details: "Abriram seu anúncio",
+    contacts: "Chamaram no WhatsApp",
+    hint: "Contagem aproximada, desde a publicação. Só você vê estes números.",
+  },
   placeholders: {
     instagram: "@seuperfil ou o link do perfil",
     tiktok: "@seuperfil ou o link do perfil",
@@ -2239,6 +2245,12 @@ const servicesEn = {
       "Paste a link to a video you already published. YouTube plays right here; Instagram and TikTok open in a new tab.",
   },
   watchVideo: "Watch video",
+  metrics: {
+    title: "Your listing's results",
+    details: "Opened your listing",
+    contacts: "Reached out on WhatsApp",
+    hint: "Approximate count since publishing. Only you can see these numbers.",
+  },
   placeholders: {
     instagram: "@yourhandle or the profile link",
     tiktok: "@yourhandle or the profile link",
@@ -2321,6 +2333,12 @@ const servicesEs = {
       "Pega el enlace de un video ya publicado. YouTube se reproduce aquí; Instagram y TikTok abren en otra pestaña.",
   },
   watchVideo: "Ver video",
+  metrics: {
+    title: "Resultados de tu anuncio",
+    details: "Abrieron tu anuncio",
+    contacts: "Te escribieron por WhatsApp",
+    hint: "Conteo aproximado desde la publicación. Solo tú ves estos números.",
+  },
   placeholders: {
     instagram: "@tuperfil o el enlace del perfil",
     tiktok: "@tuperfil o el enlace del perfil",

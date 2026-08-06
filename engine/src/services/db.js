@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   limit,
   onSnapshot,
   orderBy,
@@ -588,6 +589,11 @@ const normalizeServiceListing = (listing = {}) => {
     // Vídeo entra por link, nunca hospedado: subir vídeo pro Storage queima
     // banda e custo rápido, e o prestador já tem o vídeo publicado.
     videoUrl: String(listing.videoUrl || "").trim().slice(0, 300),
+    // Retorno do anúncio, mostrado só pro dono. É o que responde "quantos
+    // clientes vieram daí?" — e é o que sustenta a renovação da assinatura.
+    viewCount: Number(listing.viewCount) || 0,
+    detailCount: Number(listing.detailCount) || 0,
+    whatsappCount: Number(listing.whatsappCount) || 0,
     availability: String(listing.availability || "").trim().slice(0, 180),
     experience: String(listing.experience || "").trim().slice(0, 180),
     photos: Array.isArray(listing.photos)
@@ -1516,6 +1522,42 @@ export const engineDB = {
       status: "pending",
       createdAt: serverTimestamp(),
     });
+  },
+
+  /**
+   * Conta uma visita, uma abertura de anúncio ou um clique no WhatsApp.
+   *
+   * O contador vive no próprio documento do anúncio, e as regras só deixam
+   * subir de um em um — não dá pra zerar nem inflar a métrica alheia. Aqui do
+   * lado do cliente a trava é o sessionStorage: recarregar a página não conta
+   * de novo. Não é auditoria, é ordem de grandeza — o que o prestador precisa
+   * pra saber se está valendo.
+   */
+  async trackServiceListingMetric(listingId, metric) {
+    const fields = {
+      view: "viewCount",
+      detail: "detailCount",
+      whatsapp: "whatsappCount",
+    };
+    const field = fields[metric];
+    if (!listingId || !field) return;
+
+    const onceKey = `engine_metric:${listingId}:${metric}`;
+    try {
+      if (window.sessionStorage.getItem(onceKey)) return;
+      window.sessionStorage.setItem(onceKey, "1");
+    } catch {
+      // Navegador com storage bloqueado: conta assim mesmo, sem a trava.
+    }
+
+    try {
+      await updateDoc(doc(firestore, SERVICE_LISTINGS_COLLECTION, String(listingId)), {
+        [field]: increment(1),
+      });
+    } catch (error) {
+      // Métrica nunca pode atrapalhar quem está usando o app.
+      warnFirestoreFallback("trackServiceListingMetric", error);
+    }
   },
 
   async getBlockedUsers(userId = currentUserId) {

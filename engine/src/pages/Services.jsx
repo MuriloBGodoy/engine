@@ -546,6 +546,54 @@ function PortfolioLinks({ listing, t }) {
   );
 }
 
+/**
+ * Retorno do anúncio, só pro dono.
+ *
+ * Existe por um motivo comercial, não decorativo: no segundo mês o prestador
+ * pergunta "quantos clientes vieram daí?" e, sem resposta, cancela. O número
+ * que importa é o de contatos — os outros dois dão o funil até ele.
+ */
+function ListingMetrics({ listing, t }) {
+  // Sem "apareceu na lista" de propósito: contar impressão daria uma escrita
+  // por card a cada rolagem, caro e ruidoso. Abertura e contato são o que
+  // sustentam a conversa sobre renovar a assinatura.
+  const opened = listing.detailCount || 0;
+  const contacts = listing.whatsappCount || 0;
+  const metrics = [
+    { key: "details", icon: Maximize2, value: opened },
+    { key: "contacts", icon: WhatsAppIcon, value: contacts },
+  ];
+
+  return (
+    <div className="rounded-xl border border-[var(--engine-border)] p-4">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
+        {t("services.metrics.title")}
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div key={metric.key} className="text-center">
+              <Icon size={15} className="mx-auto text-[var(--engine-accent)]" />
+              <p className="mt-1.5 text-lg font-black text-[var(--engine-text)]">
+                {metric.value}
+              </p>
+              <p className="text-[10px] font-bold uppercase leading-tight text-[var(--engine-text-muted)]">
+                {t(`services.metrics.${metric.key}`)}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-[11px] leading-relaxed text-[var(--engine-text-muted)]">
+        {t("services.metrics.hint")}
+      </p>
+    </div>
+  );
+}
+
 function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
   const { t } = useTranslation();
   const ModeIcon = modeIcons[listing.serviceMode] || BriefcaseBusiness;
@@ -983,6 +1031,11 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
                 icon={WhatsAppIcon}
                 label={t("services.whatsapp")}
                 value={listing.whatsapp || t("services.noPhone")}
+                onActivate={
+                  isMine
+                    ? undefined
+                    : () => engineDB.trackServiceListingMetric(listing.id, "whatsapp")
+                }
               />
               <ContactButton
                 disabled={!listing.email}
@@ -1001,6 +1054,8 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
             </div>
 
             <PortfolioLinks listing={listing} t={t} />
+
+            {isMine && <ListingMetrics listing={listing} t={t} />}
 
             {isMine && (
               <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
@@ -1190,7 +1245,7 @@ function InfoPill({ icon, label, value, tone }) {
   );
 }
 
-function ContactButton({ href, icon, label, value, disabled }) {
+function ContactButton({ href, icon, label, value, disabled, onActivate }) {
   const Icon = icon;
   const className = `flex min-h-14 items-center gap-3 rounded-xl px-4 transition ${
     disabled
@@ -1212,7 +1267,15 @@ function ContactButton({ href, icon, label, value, disabled }) {
   return disabled ? (
     <span className={className}>{content}</span>
   ) : (
-    <a href={href} target="_blank" rel="noreferrer" className={className}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={className}
+      // Sem preventDefault: contabilizar não pode atrasar nem atrapalhar quem
+      // está indo falar com o prestador.
+      onClick={onActivate}
+    >
       {content}
     </a>
   );
@@ -2204,6 +2267,17 @@ export function Services({ user, settings }) {
     setForm(makeInitialForm(settings, user));
   };
 
+  /**
+   * Abrir o anúncio conta como interesse — o dono não conta pra si mesmo,
+   * senão a métrica vira o próprio prestador conferindo o anúncio.
+   */
+  const openDetail = (listing) => {
+    setDetailListing(listing);
+    if (listing?.id && listing.ownerId !== user?.uid) {
+      engineDB.trackServiceListingMetric(listing.id, "detail");
+    }
+  };
+
   const openEditor = (listing = null) => {
     setDetailListing(null);
     if (listing) {
@@ -2714,7 +2788,7 @@ export function Services({ user, settings }) {
                 isMine={listing.ownerId === user?.uid}
                 onEdit={openEditor}
                 onDelete={deleteListing}
-                onOpen={setDetailListing}
+                onOpen={openDetail}
               />
               {/* Card patrocinado no meio da grade (padrão Webmotors):
                   ocupa uma célula como um serviço, rotulado como anúncio. */}
