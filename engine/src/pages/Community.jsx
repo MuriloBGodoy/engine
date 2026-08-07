@@ -34,13 +34,14 @@ import {
   X,
 } from "lucide-react";
 import { ClubsTab } from "../components/community/ClubsTab";
-import { engineDB } from "../services/db";
+import { engineDB, POST_KIND_POST } from "../services/db";
 import { InfoTip } from "../components/InfoTip";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useToast } from "../components/ToastProvider";
 import { ShareToChatModal } from "../components/ShareToChatModal";
 import { AdSlot } from "../components/AdSlot";
+import { CreateFeedPostModal } from "../components/CreateFeedPostModal";
 import { useRegion } from "../hooks/RegionProvider";
 import { applyRegionFilter } from "../services/region";
 import { profileCardFromSettings, startConversation } from "../services/chat";
@@ -326,6 +327,44 @@ function RatingControl({ value, onRate, label, size = 16 }) {
  * de uma vira carrossel: arrastar o dedo no celular, setas no desktop e
  * bolinhas indicando onde você está.
  */
+/**
+ * Vídeo do post. Só YouTube é embutido; Instagram e TikTok exigem carregar
+ * script deles na página, o que traz rastreamento de terceiro e uma
+ * dependência externa capaz de quebrar o post. Para esses, o link abre fora.
+ */
+function PostVideo({ url, t }) {
+  const match = String(url).match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+
+  if (match?.[1]) {
+    return (
+      <div className="bg-black">
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${match[1]}`}
+          title={t("community.watchVideo")}
+          allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+          className="aspect-video w-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mx-3 mb-1 flex items-center gap-2 rounded-xl border border-[var(--engine-border)] px-3 py-2.5 text-xs font-bold text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] sm:mx-4"
+    >
+      <Play size={14} className="shrink-0" />
+      <span className="truncate">{t("community.watchVideo")}</span>
+    </a>
+  );
+}
+
 function PostGallery({ images, alt, t, onOpen }) {
   const [index, setIndex] = useState(0);
   const dragStart = useRef(null);
@@ -525,7 +564,11 @@ function GoalCard({
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
   const isModal = variant === "modal";
-  const photos = goal.images?.length ? goal.images : (goal.image ? [goal.image] : [fallbackImage]);
+  const isFreePost = goal.kind === POST_KIND_POST;
+  // Post de texto fica sem galeria em vez de ganhar a imagem genérica de
+  // carro, que ali seria só ruído.
+  const gallery = goal.images?.length ? goal.images : (goal.image ? [goal.image] : []);
+  const photos = gallery.length ? gallery : isFreePost ? [] : [fallbackImage];
   // No modal de publicação (desktop) os comentários já estão ao lado: o balão
   // leva o foco para o compositor em vez de abrir outra folha.
   const showComments = onCommentClick || (() => setCommentsOpen(true));
@@ -647,12 +690,16 @@ function GoalCard({
         <PostMenu items={menuItems} label={t("community.postOptions")} />
       </header>
 
-      <PostGallery
-        images={photos}
-        alt={goal.title}
-        t={t}
-        onOpen={onOpenPost ? () => onOpenPost(goal.id) : undefined}
-      />
+      {photos.length > 0 && (
+        <PostGallery
+          images={photos}
+          alt={goal.title}
+          t={t}
+          onOpen={onOpenPost ? () => onOpenPost(goal.id) : undefined}
+        />
+      )}
+
+      {goal.videoUrl && <PostVideo url={goal.videoUrl} t={t} />}
 
       <div className="flex items-center gap-0.5 px-2 pt-1.5 sm:px-3">
         <ActionButton
@@ -674,11 +721,15 @@ function GoalCard({
           />
         )}
         <div className="ml-auto">
-          <RatingControl
-            value={rating}
-            label={t("community.rate")}
-            onRate={(value) => onRate(goal.id, value)}
-          />
+          {/* Avaliar por estrela é sobre a meta/veículo; num post de texto ou
+              foto solta não há o que pontuar. */}
+          {!isFreePost && (
+            <RatingControl
+              value={rating}
+              label={t("community.rate")}
+              onRate={(value) => onRate(goal.id, value)}
+            />
+          )}
         </div>
       </div>
 
@@ -694,8 +745,9 @@ function GoalCard({
         </p>
 
         {/* No modal o cabeçalho já anuncia o veículo — repetir aqui rouba o
-            lugar da descrição, que é o que a pessoa escreveu. */}
-        {!isModal && (
+            lugar da descrição, que é o que a pessoa escreveu. Post livre só
+            mostra o veículo quando foi publicado a partir de um carro. */}
+        {!isModal && (!isFreePost || goal.title) && (
           <p className="text-sm leading-6 text-[var(--engine-text)]">
             <span className="font-bold italic">{getVehicleTitle(goal)}</span>
             {goal.year && (
@@ -704,22 +756,24 @@ function GoalCard({
           </p>
         )}
 
-        {/* Progresso logo abaixo do veículo: barra fina + %. O aviso de
-            privacidade virou tooltip, em vez de um parágrafo por post. */}
-        <div className="flex items-center gap-2">
-          <span className="h-1 min-w-8 flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
-            <span
-              className="block h-full rounded-full bg-[var(--engine-accent)]"
-              style={{ width: `${progress}%` }}
-            />
-          </span>
-          <span className="shrink-0 text-[11px] font-black text-[var(--engine-accent)]">
-            {progress.toFixed(0)}%
-          </span>
-          <InfoTip text={t("community.privacyLine")} align="right" />
-        </div>
+        {/* Progresso é coisa de meta: post livre não tem o que preencher, e a
+            barra vazia só confundiria. */}
+        {!isFreePost && (
+          <div className="flex items-center gap-2">
+            <span className="h-1 min-w-8 flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
+              <span
+                className="block h-full rounded-full bg-[var(--engine-accent)]"
+                style={{ width: `${progress}%` }}
+              />
+            </span>
+            <span className="shrink-0 text-[11px] font-black text-[var(--engine-accent)]">
+              {progress.toFixed(0)}%
+            </span>
+            <InfoTip text={t("community.privacyLine")} align="right" />
+          </div>
+        )}
 
-        {isGoalCompleted(goal) && (
+        {!isFreePost && isGoalCompleted(goal) && (
           <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--engine-accent-soft)] px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
             <Trophy size={11} />
             {t("community.completed")}
@@ -1867,6 +1921,7 @@ export function Community({ cars = [], settings, user }) {
   const [loadingMoreGoals, setLoadingMoreGoals] = useState(false);
   const [publicProfiles, setPublicProfiles] = useState({});
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [postModalOpen, setPostModalOpen] = useState(false);
   const [peopleModalOpen, setPeopleModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState({
     open: false,
@@ -2067,8 +2122,10 @@ export function Community({ cars = [], settings, user }) {
 
   const flash = (message, tone) => toast(message, tone ? { tone } : undefined);
 
+  // A busca do feed alcança também o texto do post, que num post livre é o
+  // conteúdo — procurar só por autor e veículo deixaria ele inalcançável.
   const searchedGoals = goals.filter((goal) =>
-    `${goal.author} ${goal.title} ${goal.username}`
+    `${goal.author} ${goal.title} ${goal.username} ${goal.note}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
@@ -2081,7 +2138,10 @@ export function Community({ cars = [], settings, user }) {
     (goal) => ({ country: goal.country, state: goal.state, city: goal.city }),
   );
 
-  const ranking = [...goals]
+  // O ranking é de metas: post livre não tem progresso e entraria sempre no
+  // fim, empurrando meta de gente que está de fato poupando.
+  const ranking = goals
+    .filter((goal) => goal.kind !== POST_KIND_POST)
     .sort((a, b) => {
       const aInteractions = communityState.interactions[a.id] || emptyInteraction;
       const bInteractions = communityState.interactions[b.id] || emptyInteraction;
@@ -2680,13 +2740,21 @@ export function Community({ cars = [], settings, user }) {
               />
             </div>
 
-            <div className="engine-card p-4">
+            <div className="engine-card space-y-2 p-4">
               <button
                 type="button"
-                onClick={() => setShareModalOpen(true)}
+                onClick={() => setPostModalOpen(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
               >
                 <Plus size={15} />
+                {t("feedPost.action")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--engine-border)] px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+              >
+                <Car size={15} />
                 {t("community.shareNewGoal")}
               </button>
             </div>
@@ -2706,6 +2774,12 @@ export function Community({ cars = [], settings, user }) {
           </aside>
         )}
       </div>
+
+      <CreateFeedPostModal
+        open={postModalOpen}
+        cars={cars}
+        onClose={() => setPostModalOpen(false)}
+      />
 
       {shareModalOpen && (
         <ShareModal

@@ -483,6 +483,9 @@ const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
 
 const communityGoalId = (goal, userId = currentUserId) => {
   const goalId = String(goal?.id || "");
+  // Post livre já nasce com id próprio e não tem carro pra derivar: sem esta
+  // saída, apagar um post montava um id inexistente e não apagava nada.
+  if (goalId.startsWith("post-")) return goalId;
   if (goalId.startsWith("goal-")) return goalId;
 
   const carId = String(goal?.carId || goalId.replace(/^user-/, ""));
@@ -510,6 +513,17 @@ const communityCarPatch = (car) => ({
   updatedAt: serverTimestamp(),
 });
 
+/**
+ * Publicação de meta (o carro da garagem) ou post livre (foto, vídeo e texto).
+ *
+ * Os dois vivem na mesma coleção de propósito: o feed, o card, curtida,
+ * comentário, avaliação, denúncia, bloqueio e as regras de segurança já
+ * existem para `communityGoals`. Coleção separada significaria manter duas
+ * cópias disso tudo.
+ */
+export const POST_KIND_GOAL = "goal";
+export const POST_KIND_POST = "post";
+
 const normalizeCommunityGoal = (goal = {}) => {
   const ratings = Object.values(goal.ratingsBy || {}).map(Number).filter(Boolean);
   const rating = ratings.length
@@ -519,6 +533,9 @@ const normalizeCommunityGoal = (goal = {}) => {
 
   return {
     id: goal.id,
+    // Sem `kind` é publicação de meta: é o que existia antes dos posts.
+    kind: goal.kind === POST_KIND_POST ? POST_KIND_POST : POST_KIND_GOAL,
+    videoUrl: goal.videoUrl || "",
     author,
     username: goal.username || "@engine",
     avatar:
@@ -1409,6 +1426,64 @@ export const engineDB = {
     return payload.id;
   },
 
+  /**
+   * Publica um post livre no feed: texto, fotos e link de vídeo, podendo ou
+   * não estar amarrado a um carro da garagem.
+   *
+   * Vai para a mesma coleção das metas, marcado com `kind: "post"`, então
+   * herda curtida, comentário, denúncia, bloqueio e as regras de segurança
+   * que já existem — inclusive a que impede um visitante de editar conteúdo
+   * alheio.
+   */
+  async createCommunityPost({ text, images = [], videoUrl = "", car = null }) {
+    if (!currentUserId) throw new Error("Entre na sua conta para publicar.");
+
+    const content = String(text || "").trim().slice(0, 1000);
+    const photos = images.map((item) => String(item || "").trim()).filter(Boolean);
+    if (!content && !photos.length && !videoUrl) {
+      throw new Error("Escreva algo ou adicione uma foto.");
+    }
+
+    const settings = await this.getSettings();
+    const profile = getProfileSnapshot(settings, currentUserId);
+    const id = `post-${currentUserId}-${Date.now()}`;
+
+    const payload = {
+      id,
+      kind: POST_KIND_POST,
+      userId: currentUserId,
+      ownerId: currentUserId,
+      author: profile.author,
+      username: profile.username,
+      avatar: profile.avatar,
+      avatarInitials: profile.avatarInitials,
+      city: profile.city,
+      note: content,
+      images: photos.slice(0, MAX_CAR_PHOTOS),
+      image: photos[0] || "",
+      videoUrl: String(videoUrl || "").trim().slice(0, 300),
+      // Quando o post nasce de um carro da garagem, guarda a identificação
+      // dele: é o que deixa o perfil virar linha do tempo daquele veículo.
+      carId: car?.id ? String(car.id) : "",
+      title: car ? `${car.brand} ${car.model}`.trim() : "",
+      brand: car?.brand || "",
+      model: car?.model || "",
+      year: car?.year || "",
+      likesBy: {},
+      comments: [],
+      ratingsBy: {},
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    // Mesmo teto do carro: sem Storage, a foto vai em base64 dentro do
+    // documento e o Firestore recusa acima de 1 MiB.
+    assertCarFitsDocument(payload);
+
+    await setDoc(doc(firestore, COMMUNITY_COLLECTION, id), payload);
+    return id;
+  },
+
   /** Edita só a legenda de uma publicação já no ar. */
   async updateCommunityGoalNote(goalId, note, userId = currentUserId) {
     if (!userId || !goalId) return;
@@ -1428,11 +1503,8 @@ export const engineDB = {
     if (!userId) return;
     const goalId = communityGoalId(goal, userId);
 
-    if (apiEnabled()) {
-      await apiRequest(`/community/goals/${goalId}`, { method: "DELETE" });
-      return;
-    }
-
+    // Sem branch de API: é o mesmo caminho de escrita das outras publicações,
+    // e manter os dois já custou seis bugs entre ontem e hoje.
     await Promise.all([
       deleteDoc(doc(firestore, COMMUNITY_COLLECTION, goalId)),
       deleteDoc(doc(firestore, COMMUNITY_COLLECTION, legacyCommunityGoalId(goal, userId))),

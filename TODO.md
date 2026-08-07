@@ -67,7 +67,24 @@ se a atividade está na lista de ocupações permitidas do MEI.
 
 ---
 
-## Bugs para a próxima sessão (06/08/2026)
+## Bugs resolvidos em 07/08/2026
+
+Todos verificados no app. Ficou de pé só o que a causa raiz exige: **as fotos
+moram dentro do documento do Firestore**, então cada uma pesa no limite de
+1 MiB, na velocidade da gravação e no custo da leitura. O Blaze resolve os
+quatro de uma vez, sem código novo.
+
+| Bug | Commit |
+| --- | --- |
+| Salvar carro apagava a foto | `5bfc370` |
+| Miniaturas de moto no "Compartilhar meta" | `5bfc370` |
+| Legenda virava a bio do perfil | `5bfc370` |
+| Publicação levava uma foto só | `5bfc370` |
+| Perda silenciosa ao estourar 1 MiB | `4f8a11d` |
+| Garagem "sumindo" e foto não chegando ao servidor | `278e043` |
+
+<details>
+<summary>Diagnóstico original, para referência</summary>
 
 ### 1. CRÍTICO — salvar carro em dev apaga a foto
 
@@ -113,6 +130,8 @@ ponto entre o modal e o `note`.
 Compartilhar uma meta da garagem deveria puxar **todas** as fotos
 cadastradas naquele carro, e hoje não leva. Ajustar também o
 enquadramento para caber direito na tela.
+
+</details>
 
 ## Código
 

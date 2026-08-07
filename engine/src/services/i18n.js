@@ -6,6 +6,19 @@ import { supportedLngs } from "./languages";
 const resources = {
   "pt-BR": {
     translation: {
+      feedPost: {
+        action: "Publicar",
+        title: "Nova publicação",
+        placeholder: "Conte o que rolou com o carro hoje...",
+        nicheNotice:
+          "O feed do Engine é sobre carro: rolê, manutenção, projeto, conquista, dúvida. Publicação fora do tema pode ser removida.",
+        addPhoto: "Fotos ({{count}}/{{max}})",
+        noCar: "Sem carro vinculado",
+        videoPlaceholder: "Link de vídeo (YouTube, Reels, TikTok)",
+        publish: "Publicar",
+        notAnImage: "Esse arquivo não é uma imagem.",
+        tooBig: "Imagem maior que 6 MB.",
+      },
       contribution: {
         title: "Registrar aporte",
         cardAction: "Registrar aporte",
@@ -416,6 +429,7 @@ const resources = {
         captionTitle: "Descrição da publicação",
         captionSaved: "Descrição atualizada.",
         captionError: "Não foi possível salvar a descrição.",
+        watchVideo: "Assistir ao vídeo",
         report: "Denunciar publicação",
         reportTitle: "Denunciar esta publicação?",
         reportMessage:
@@ -683,6 +697,19 @@ const resources = {
   },
   "en-US": {
     translation: {
+      feedPost: {
+        action: "Post",
+        title: "New post",
+        placeholder: "Tell us what happened with the car today...",
+        nicheNotice:
+          "The Engine feed is about cars: drives, maintenance, projects, wins, questions. Off-topic posts may be removed.",
+        addPhoto: "Photos ({{count}}/{{max}})",
+        noCar: "No car attached",
+        videoPlaceholder: "Video link (YouTube, Reels, TikTok)",
+        publish: "Post",
+        notAnImage: "That file is not an image.",
+        tooBig: "Image larger than 6 MB.",
+      },
       contribution: {
         title: "Log a deposit",
         cardAction: "Log a deposit",
@@ -1093,6 +1120,7 @@ const resources = {
         captionTitle: "Post description",
         captionSaved: "Description updated.",
         captionError: "Could not save the description.",
+        watchVideo: "Watch the video",
         report: "Report post",
         reportTitle: "Report this post?",
         reportMessage:
@@ -1357,6 +1385,19 @@ const resources = {
   },
   "es-ES": {
     translation: {
+      feedPost: {
+        action: "Publicar",
+        title: "Nueva publicación",
+        placeholder: "Cuenta qué pasó hoy con el auto...",
+        nicheNotice:
+          "El feed de Engine es sobre autos: paseos, mantenimiento, proyectos, logros, dudas. Las publicaciones fuera del tema pueden ser eliminadas.",
+        addPhoto: "Fotos ({{count}}/{{max}})",
+        noCar: "Sin auto vinculado",
+        videoPlaceholder: "Enlace de video (YouTube, Reels, TikTok)",
+        publish: "Publicar",
+        notAnImage: "Ese archivo no es una imagen.",
+        tooBig: "Imagen mayor que 6 MB.",
+      },
       contribution: {
         title: "Registrar aporte",
         cardAction: "Registrar aporte",
@@ -1768,6 +1809,7 @@ const resources = {
         captionTitle: "Descripción de la publicación",
         captionSaved: "Descripción actualizada.",
         captionError: "No se pudo guardar la descripción.",
+        watchVideo: "Ver el video",
         report: "Denunciar publicación",
         reportTitle: "¿Denunciar esta publicación?",
         reportMessage:
