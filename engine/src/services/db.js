@@ -83,6 +83,9 @@ const SERVICE_STATUS_PENDING = "pending";
 const SERVICE_STATUS_CHANGES_REQUESTED = "changes_requested";
 const SERVICE_STATUS_REJECTED = "rejected";
 const FIRESTORE_TIMEOUT_MS = 7000;
+// A garagem carrega as fotos junto (base64 dentro do documento), então baixar
+// alguns megabytes é normal enquanto o Storage não estiver ligado.
+const CARS_TIMEOUT_MS = 20000;
 const ENGINE_API_URL = import.meta.env.VITE_API_URL || "";
 const COMMUNITY_GOALS_PAGE_SIZE = 20;
 const defaultCommunityState = {
@@ -243,6 +246,8 @@ const FIRESTORE_DOC_LIMIT = 1048576;
 const DOC_SAFE_BUDGET = Math.floor(FIRESTORE_DOC_LIMIT * 0.85);
 const CAR_TOO_LARGE_MESSAGE =
   "As fotos deste carro passaram do limite de armazenamento. Remova alguma foto ou use imagens menores.";
+const CAR_NOT_SYNCED_MESSAGE =
+  "O carro foi salvo neste aparelho, mas não chegou ao servidor. Verifique a conexão e salve de novo — se tiver foto, tente com uma imagem menor.";
 
 const approximateDocSize = (value) => {
   try {
@@ -314,13 +319,13 @@ const normalizeCar = (car) => ({
 
 const serializeForFirestore = (value) => JSON.parse(JSON.stringify(value));
 
-const withTimeout = (promise, label) =>
+const withTimeout = (promise, label, timeoutMs = FIRESTORE_TIMEOUT_MS) =>
   Promise.race([
     promise,
     new Promise((_, reject) => {
       window.setTimeout(
         () => reject(new Error(`${label} demorou demais para responder.`)),
-        FIRESTORE_TIMEOUT_MS,
+        timeoutMs,
       );
     }),
   ]);
@@ -764,10 +769,22 @@ export const engineDB = {
     if (!currentUserId) return getLocalCars();
 
     try {
-      const snapshot = await withTimeout(getDocs(userCarsCollection()), "buscar carros");
-      return snapshot.docs
+      const snapshot = await withTimeout(
+        getDocs(userCarsCollection()),
+        "buscar carros",
+        // Documento com foto em base64 é pesado: 7s derrubava a leitura da
+        // garagem inteira e jogava a tela no cache, que vinha incompleto.
+        CARS_TIMEOUT_MS,
+      );
+      const cars = snapshot.docs
         .map((item) => normalizeCar({ id: item.id, ...item.data() }))
         .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+
+      // O cache precisa refletir o que o servidor tem. Sem isto ele só
+      // guardava os carros salvos NESTE aparelho, e qualquer falha de leitura
+      // fazia os outros sumirem da garagem — como se tivessem sido apagados.
+      await setLocalCars(cars).catch(() => {});
+      return cars;
     } catch (error) {
       warnFirestoreFallback("getCars", error);
       return getLocalCars();
@@ -854,6 +871,7 @@ export const engineDB = {
     // Sem branch de API pelo mesmo motivo do getCars: POST /cars responde sem
     // os campos que o backend Java não conhece, e esse retorno virava o estado
     // do app — a galeria e o tipo do carro sumiam da tela logo após salvar.
+    let savedToServer = true;
     try {
       await withTimeout(
         setDoc(
@@ -862,6 +880,11 @@ export const engineDB = {
           { merge: true },
         ),
         "salvar carro",
+        // Subir a foto em base64 dentro do documento passa fácil de 7s. Com o
+        // limite antigo o Promise.race desistia, o erro morria num warn, e o
+        // carro ficava salvo só neste aparelho — foi o que fez a foto voltar a
+        // sumir depois do refresh.
+        CARS_TIMEOUT_MS,
       );
       await this.syncCommunityCar(normalizedCar).catch((error) =>
         warnFirestoreFallback("syncCommunityCar", error),
@@ -873,6 +896,7 @@ export const engineDB = {
         throw new Error(CAR_TOO_LARGE_MESSAGE);
       }
       warnFirestoreFallback("saveCar", error);
+      savedToServer = false;
     }
 
     const localCars = await getLocalCars();
@@ -883,6 +907,12 @@ export const engineDB = {
       localCars.push(normalizedCar);
     }
     await setLocalCars(localCars);
+
+    // Salvou aqui mas não no servidor: sem avisar, a pessoa vê o carro certo
+    // na tela e descobre a perda no próximo refresh, sem entender o motivo.
+    if (!savedToServer) {
+      throw new Error(CAR_NOT_SYNCED_MESSAGE);
+    }
 
     return normalizedCar;
   },
