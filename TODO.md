@@ -3,7 +3,7 @@
 Lista acionável do que ficou pendente. O **porquê** de cada decisão está no
 `ROADMAP.md`; aqui é só o que fazer.
 
-Última atualização: 5 de agosto de 2026.
+Última atualização: 6 de agosto de 2026.
 
 ---
 
@@ -169,7 +169,7 @@ adicionou o app à tela de início.
 
 ---
 
-## Já feito nesta sessão (05/08/2026)
+## Já feito nesta sessão (06/08/2026)
 
 | Entrega | Commit |
 | --- | --- |

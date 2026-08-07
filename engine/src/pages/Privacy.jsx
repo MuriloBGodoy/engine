@@ -9,7 +9,7 @@ import { LegalPage, LegalSection } from "../components/LegalPage";
  */
 export function Privacy() {
   return (
-    <LegalPage title="Política de Privacidade" updatedAt="5 de agosto de 2026">
+    <LegalPage title="Política de Privacidade" updatedAt="6 de agosto de 2026">
       <p>
         Esta página explica quais dados o Engine coleta, por que coleta e o que
         você pode fazer a respeito. A linguagem é direta de propósito.

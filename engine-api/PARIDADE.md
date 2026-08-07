@@ -1,6 +1,6 @@
 # Paridade backend Java × frontend
 
-Levantado em 05/08/2026 chamando cada endpoint com um ID token real e
+Levantado em 06/08/2026 chamando cada endpoint com um ID token real e
 comparando os campos devolvidos com os normalizadores do `engine/src/services/db.js`.
 
 Isto é a lista de tarefas para quando a API virar o caminho único (troca de

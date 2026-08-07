@@ -1,6 +1,6 @@
 # Engine — decisões e roadmap
 
-Consolidado da sessão de 05/08/2026. Este arquivo é a fonte de verdade das
+Consolidado da sessão de 06/08/2026. Este arquivo é a fonte de verdade das
 decisões de produto e técnicas: o **porquê** de cada escolha, não só o que fazer.
 
 ---
@@ -18,7 +18,7 @@ referência de interface, não de modelo de negócio.
 
 ---
 
-## 2. Modelo de negócio (decidido em 05/08/2026)
+## 2. Modelo de negócio (decidido em 06/08/2026)
 
 **Quem paga é o prestador de serviço, não o dono do carro.**
 
@@ -100,7 +100,7 @@ social grátis, ferramenta paga.
 
 ## 4. Antes de abrir o link ao público
 
-### Feito em 05/08/2026
+### Feito em 06/08/2026
 
 - [x] **Brecha de segurança em `communityGoals`**: a regra era
       `allow update: if signedIn()`, sem checar dono nem campos — qualquer
@@ -239,7 +239,7 @@ em um dia. Ver `engine-api/PARIDADE.md` para o inventário completo.
 
 ---
 
-## 10. Onde paramos (05/08/2026)
+## 10. Onde paramos (06/08/2026)
 
 ### Entregue
 

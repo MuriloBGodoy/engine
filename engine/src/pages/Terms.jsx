@@ -10,7 +10,7 @@ import { LegalPage, LegalSection } from "../components/LegalPage";
  */
 export function Terms() {
   return (
-    <LegalPage title="Termos de Uso" updatedAt="5 de agosto de 2026">
+    <LegalPage title="Termos de Uso" updatedAt="6 de agosto de 2026">
       <p>
         Ao usar o Engine você concorda com estes termos. Se não concordar, não
         use a plataforma.
