@@ -3,7 +3,7 @@ import { X, Save, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { auth } from "../services/firebase";
-import { MAX_CAR_PHOTOS } from "../services/db";
+import { CAR_TYPE_GOAL, CAR_TYPE_OWNED, MAX_CAR_PHOTOS } from "../services/db";
 import { isFileTooBig, isImageFile, uploadUserPhoto } from "../services/photos";
 import { ImageCropper } from "./ImageCropper";
 
@@ -22,6 +22,8 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const [selectedYear, setSelectedYear] = useState("");
   const [targetValue, setTargetValue] = useState(0);
   const [savedValue, setSavedValue] = useState(0);
+  const [carType, setCarType] = useState(carToEdit?.type || CAR_TYPE_GOAL);
+  const isOwned = carType === CAR_TYPE_OWNED;
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState(() =>
     Array.isArray(carToEdit?.images) && carToEdit.images.length
@@ -222,8 +224,11 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
         years.find((y) => String(y.codigo) === String(selectedYear))?.nome ||
         carToEdit?.year ||
         "",
+      type: carType,
       targetValue: targetValue,
-      savedValue: savedValue,
+      // Carro que a pessoa já tem não está sendo poupado: o progresso é total,
+      // e é isso que faz o card mostrar custo em vez de barra.
+      savedValue: isOwned ? targetValue : savedValue,
       images: photos,
       image: photos[0],
     };
@@ -329,6 +334,42 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
           </div>
 
           <div className="space-y-4">
+            {/* Primeira decisão do cadastro, porque muda o resto do formulário
+                e o significado do carro no app: meta é o que a pessoa quer,
+                owned é o que ela já tem — e só o owned aceita registro de
+                gasto. */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: CAR_TYPE_GOAL, label: t("modalCar.typeGoal"), hint: t("modalCar.typeGoalHint") },
+                { value: CAR_TYPE_OWNED, label: t("modalCar.typeOwned"), hint: t("modalCar.typeOwnedHint") },
+              ].map((option) => {
+                const active = carType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCarType(option.value)}
+                    className={`rounded-xl border p-3 text-left transition ${
+                      active
+                        ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)]"
+                        : "border-[var(--engine-border)] hover:border-[var(--engine-accent)]/50"
+                    }`}
+                  >
+                    <span
+                      className={`block text-sm font-black ${
+                        active ? "text-[var(--engine-accent)]" : "text-[var(--engine-text)]"
+                      }`}
+                    >
+                      {option.label}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] leading-snug text-[var(--engine-text-muted)]">
+                      {option.hint}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="space-y-4">
               <select
                 onChange={(e) => handleBrandChange(e.target.value)}
@@ -390,7 +431,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className={`${fieldLabelClass} text-[var(--engine-accent)]`}>
-                  {t("modalCar.fipePrice")}
+                  {isOwned ? t("modalCar.fipePriceOwned") : t("modalCar.fipePrice")}
                 </label>
                 <input
                   value={formatDisplayValue(targetValue)}
@@ -398,17 +439,21 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
                   className="w-full cursor-not-allowed rounded-xl border border-[var(--engine-accent)]/20 bg-[var(--engine-accent-soft)] px-4 py-3 font-bold text-[var(--engine-text)] outline-none"
                 />
               </div>
-              <div className="space-y-1">
-                <label className={`${fieldLabelClass} text-[var(--engine-text-subtle)]`}>
-                  {t("modalCar.savedValue")}
-                </label>
-                <input
-                  type="text"
-                  value={formatDisplayValue(savedValue)}
-                  onChange={handleMoneyChange}
-                  className={fieldClass}
-                />
-              </div>
+              {/* Quanto já guardou só faz sentido pra carro que ainda é meta:
+                  quem já tem o carro não está juntando pra comprá-lo. */}
+              {!isOwned && (
+                <div className="space-y-1">
+                  <label className={`${fieldLabelClass} text-[var(--engine-text-subtle)]`}>
+                    {t("modalCar.savedValue")}
+                  </label>
+                  <input
+                    type="text"
+                    value={formatDisplayValue(savedValue)}
+                    onChange={handleMoneyChange}
+                    className={fieldClass}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

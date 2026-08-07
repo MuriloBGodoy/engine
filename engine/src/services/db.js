@@ -233,8 +233,15 @@ const normalizeCarImages = (car = {}) => {
   return Array.from(new Set(all)).slice(0, MAX_CAR_PHOTOS);
 };
 
+/** Meta é o carro que a pessoa quer; owned é o que ela já tem na garagem. */
+export const CAR_TYPE_GOAL = "goal";
+export const CAR_TYPE_OWNED = "owned";
+
 const normalizeCar = (car) => ({
   id: String(car.id || crypto.randomUUID()),
+  // Default `goal` mantém retrocompatibilidade: todo carro cadastrado antes
+  // desta mudança é meta, porque era a única coisa que existia.
+  type: car.type === CAR_TYPE_OWNED ? CAR_TYPE_OWNED : CAR_TYPE_GOAL,
   brand: String(car.brand || "").trim().slice(0, 80),
   model: String(car.model || "").trim().slice(0, 120),
   year: String(car.year || "").trim().slice(0, 40),

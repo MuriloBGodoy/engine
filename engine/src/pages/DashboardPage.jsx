@@ -6,6 +6,7 @@ import { PageHeader } from "../components/PageHeader";
 import { useIsDark } from "../hooks/useIsDark";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { estimateOwnership } from "../services/ownership";
+import { CAR_TYPE_OWNED } from "../services/db";
 
 export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
   const { i18n, t } = useTranslation();
@@ -53,9 +54,13 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
           maximumFractionDigits: 0,
         }).format(value || 0);
 
+  // Só metas: carro que a pessoa já tem entraria sempre em 100% e encheria o
+  // gráfico de barras cheias que não dizem nada. No comparador de custo acima
+  // ele continua, porque comparar o que se tem com o que se quer é o ponto.
   const chartData = useMemo(
     () =>
       cars
+        .filter((car) => car.type !== CAR_TYPE_OWNED)
         .map((car) => ({
           name: `${car.brand} ${car.model}`,
           value: car.targetValue

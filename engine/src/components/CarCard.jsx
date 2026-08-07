@@ -1,7 +1,8 @@
-import { Calculator, PiggyBank, Trash2 } from "lucide-react";
+import { Calculator, Key, PiggyBank, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { estimateOwnership } from "../services/ownership";
 import { forecastCompletion } from "../services/forecast";
+import { CAR_TYPE_OWNED } from "../services/db";
 
 export function CarCard({
   car,
@@ -14,6 +15,7 @@ export function CarCard({
   const ownershipTotal = car.ownership
     ? estimateOwnership(car, car.ownership, car.ownership).totals.monthlyTotal
     : null;
+  const isOwned = car.type === CAR_TYPE_OWNED;
   // Data prevista no ritmo dos aportes; some quando ainda não há ritmo.
   const forecast = forecastCompletion(car);
   const percentage = Math.min(
@@ -62,36 +64,52 @@ export function CarCard({
         </div>
 
         <div className="space-y-3 pt-2">
-          <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
-            <span className="text-[var(--engine-text-subtle)]">
-              {t("car.progress")}
-            </span>
-            <span className="tabular-nums text-[var(--engine-accent)]">
-              {percentage}%
-            </span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
-            <div
-              className="h-full rounded-full bg-[var(--engine-accent)] transition-all duration-700"
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
+          {/* Carro que a pessoa já tem não tem progresso a exibir: no lugar da
+              barra entra o selo de garagem. */}
+          {isOwned ? (
+            <div className="flex items-center justify-between border-t border-[var(--engine-border)] pt-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--engine-accent-soft)] px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
+                <Key size={11} />
+                {t("car.owned")}
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+                {car.year}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
+                <span className="text-[var(--engine-text-subtle)]">
+                  {t("car.progress")}
+                </span>
+                <span className="tabular-nums text-[var(--engine-accent)]">
+                  {percentage}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
+                <div
+                  className="h-full rounded-full bg-[var(--engine-accent)] transition-all duration-700"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
 
-          <div className="flex items-end justify-between border-t border-[var(--engine-border)] pt-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
-              {t("car.remaining")}
-            </p>
-            <p className="text-lg font-extrabold tabular-nums text-[var(--engine-text)]">
-              {hideValues
-                ? "R$ --"
-                : new Intl.NumberFormat(i18n.language, {
-                    style: "currency",
-                    currency: "BRL",
-                  }).format(car.targetValue - car.savedValue)}
-            </p>
-          </div>
+              <div className="flex items-end justify-between border-t border-[var(--engine-border)] pt-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+                  {t("car.remaining")}
+                </p>
+                <p className="text-lg font-extrabold tabular-nums text-[var(--engine-text)]">
+                  {hideValues
+                    ? "R$ --"
+                    : new Intl.NumberFormat(i18n.language, {
+                        style: "currency",
+                        currency: "BRL",
+                      }).format(car.targetValue - car.savedValue)}
+                </p>
+              </div>
+            </>
+          )}
 
-          {onAddContribution && (
+          {!isOwned && onAddContribution && (
             <button
               onClick={(event) => {
                 event.stopPropagation();

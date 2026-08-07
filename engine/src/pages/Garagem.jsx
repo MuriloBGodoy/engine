@@ -1,6 +1,7 @@
 import { Plus, Target } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CarCard } from "../components/CarCard";
+import { CAR_TYPE_OWNED } from "../services/db";
 import { PageHeader } from "../components/PageHeader";
 import { Button } from "../components/Button";
 
@@ -36,6 +37,8 @@ export function Garagem({
 }) {
   const { t } = useTranslation();
   const sortedCars = sortCars(cars, defaultSort);
+  const goalCars = sortedCars.filter((car) => car.type !== CAR_TYPE_OWNED);
+  const ownedCars = sortedCars.filter((car) => car.type === CAR_TYPE_OWNED);
 
   return (
     <section>
@@ -50,8 +53,17 @@ export function Garagem({
         }
       />
 
+      {/* Duas listas quando os dois tipos existem: sonho e realidade não se
+          comparam lado a lado, e misturar deixa a garagem confusa. Com um tipo
+          só, a seção some e vira grade simples. */}
+      {ownedCars.length > 0 && goalCars.length > 0 && (
+        <h2 className="mb-3 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+          {t("garage.sectionGoals")}
+        </h2>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {sortedCars.map((car) => (
+        {goalCars.map((car) => (
           <div
             key={car.id}
             onClick={() => onOpenModal(car)}
@@ -79,6 +91,33 @@ export function Garagem({
           </div>
         )}
       </div>
+
+      {ownedCars.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-8 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+            {t("garage.sectionOwned")}
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {ownedCars.map((car) => (
+              <div
+                key={car.id}
+                onClick={() => onOpenModal(car)}
+                className="cursor-pointer transition-transform active:scale-95"
+              >
+                <CarCard
+                  car={car}
+                  hideValues={hideValues}
+                  onOpenOwnership={onOpenOwnership}
+                  onDelete={(event) => {
+                    event.stopPropagation();
+                    onOpenDelete(car);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
