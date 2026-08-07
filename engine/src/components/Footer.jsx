@@ -28,8 +28,8 @@ const LINKS = {
     careers: "#", // TODO: trabalhe com a gente / vagas
   },
   legal: {
-    terms: "#", // TODO: termos de uso
-    privacy: "#", // TODO: política de privacidade
+    terms: "/termos",
+    privacy: "/privacidade",
   },
   social: {
     linkedin: "#",

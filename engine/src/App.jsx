@@ -9,6 +9,8 @@ import { identifyUser, resetUser, trackPageView } from "./services/observability
 import { InstallPrompt } from "./components/InstallPrompt";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { ContributionModal } from "./components/ContributionModal";
+import { Terms } from "./pages/Terms";
+import { Privacy } from "./pages/Privacy";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
@@ -200,6 +202,11 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Páginas legais ficam fora do shell e sem exigir login: precisam
+            abrir pra visitante, pro Google e pra revisão das lojas. */}
+        <Route path="/termos" element={<Terms />} />
+        <Route path="/privacidade" element={<Privacy />} />
 
         {/* O Engine abre sem login. Início, comunidade e serviços são
             livres para visitantes; as rotas pessoais ficam protegidas por
