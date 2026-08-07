@@ -8,6 +8,7 @@ import { useThemeMode } from "./hooks/useThemeMode";
 import { identifyUser, resetUser, trackPageView } from "./services/observability";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { ContributionModal } from "./components/ContributionModal";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
@@ -60,6 +61,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [carToEdit, setCarToEdit] = useState(null);
   const [ownershipCar, setOwnershipCar] = useState(null);
+  const [contributionCar, setContributionCar] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const userId = user?.uid;
   const isTopNav = settings.preferences.navLayout === "topnav";
@@ -149,6 +151,19 @@ function App() {
     }
   };
 
+  /**
+   * Depois de lançar um aporte, a lista e o próprio modal precisam do carro
+   * novo — senão o histórico só aparece no próximo carregamento e a previsão
+   * fica desatualizada na cara de quem acabou de registrar.
+   */
+  const handleContributionSaved = (updatedCar) => {
+    if (!updatedCar) return;
+    setCars((current) =>
+      current.map((item) => (item.id === updatedCar.id ? updatedCar : item)),
+    );
+    setContributionCar(updatedCar);
+  };
+
   const openDeleteConfirmation = async (car) => {
     const percentage = car.targetValue
       ? (car.savedValue / car.targetValue) * 100
@@ -206,6 +221,9 @@ function App() {
               ownershipCar={ownershipCar}
               onCloseOwnership={() => setOwnershipCar(null)}
               onSaveOwnership={saveOwnershipAction}
+              contributionCar={contributionCar}
+              onCloseContribution={() => setContributionCar(null)}
+              onContributionSaved={handleContributionSaved}
             />
           }
         >
@@ -219,6 +237,7 @@ function App() {
                   onOpenModal={handleOpenModal}
                   onOpenDelete={openDeleteConfirmation}
                   onOpenOwnership={setOwnershipCar}
+                  onAddContribution={setContributionCar}
                   defaultSort={settings.preferences.defaultGarageSort}
                   hideValues={settings.privacy.lockSensitiveValues}
                 />
@@ -321,6 +340,9 @@ function AppLayout({
   ownershipCar,
   onCloseOwnership,
   onSaveOwnership,
+  contributionCar,
+  onCloseContribution,
+  onContributionSaved,
 }) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -414,6 +436,14 @@ function AppLayout({
         onClose={onCloseOwnership}
         onSave={onSaveOwnership}
       />
+
+      {contributionCar && (
+        <ContributionModal
+          car={contributionCar}
+          onClose={onCloseContribution}
+          onSaved={onContributionSaved}
+        />
+      )}
     </div>
   );
 }

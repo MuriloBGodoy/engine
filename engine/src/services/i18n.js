@@ -6,6 +6,18 @@ import { supportedLngs } from "./languages";
 const resources = {
   "pt-BR": {
     translation: {
+      contribution: {
+        title: "Registrar aporte",
+        cardAction: "Registrar aporte",
+        amount: "Quanto guardou",
+        date: "Quando",
+        save: "Registrar",
+        invalidAmount: "Informe um valor maior que zero.",
+        historyTitle: "Histórico",
+        historyEmpty: "Nenhum aporte registrado ainda.",
+        forecastTitle: "No seu ritmo",
+        forecastBody: "Você chega lá em {{date}}, guardando {{pace}} por mês.",
+      },
       premium: {
         tag: "Engine Premium",
         title: "Assine e libere tudo",
@@ -657,6 +669,18 @@ const resources = {
   },
   "en-US": {
     translation: {
+      contribution: {
+        title: "Log a deposit",
+        cardAction: "Log a deposit",
+        amount: "How much you saved",
+        date: "When",
+        save: "Log it",
+        invalidAmount: "Enter an amount greater than zero.",
+        historyTitle: "History",
+        historyEmpty: "No deposits logged yet.",
+        forecastTitle: "At your pace",
+        forecastBody: "You get there in {{date}}, saving {{pace}} a month.",
+      },
       premium: {
         tag: "Engine Premium",
         title: "Subscribe and unlock everything",
@@ -1305,6 +1329,18 @@ const resources = {
   },
   "es-ES": {
     translation: {
+      contribution: {
+        title: "Registrar aporte",
+        cardAction: "Registrar aporte",
+        amount: "Cuánto ahorraste",
+        date: "Cuándo",
+        save: "Registrar",
+        invalidAmount: "Ingresa un valor mayor que cero.",
+        historyTitle: "Historial",
+        historyEmpty: "Todavía no hay aportes registrados.",
+        forecastTitle: "A tu ritmo",
+        forecastBody: "Llegas en {{date}}, ahorrando {{pace}} por mes.",
+      },
       premium: {
         tag: "Engine Premium",
         title: "Suscríbete y desbloquea todo",

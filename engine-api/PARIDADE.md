@@ -29,7 +29,7 @@ Rota existir não significa payload certo — veja abaixo.
 
 | Endpoint | Falta devolver | Impacto |
 | --- | --- | --- |
-| `GET /cars` | `images`, `ownership` | galeria de fotos some (fica só a capa) e o simulador de custo de posse (TCO) desaparece da UI |
+| `GET /cars` | `images`, `ownership`, `contributions` | galeria de fotos some (fica só a capa), o simulador de custo de posse (TCO) desaparece e o histórico de aportes não volta |
 | `GET /community/goals` | `image`, `images`, `verified`, `note`, `userId` | post sem foto, sem legenda e sem selo; monta `noteKey` em vez de `note` |
 | `GET /settings` | — | ok (devolve `security` a mais, ignorado) |
 | `GET /community/state` | — | ok |

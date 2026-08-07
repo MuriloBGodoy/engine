@@ -243,6 +243,21 @@ const normalizeCar = (car) => ({
   images: normalizeCarImages(car),
   // `image` continua sendo a capa, para tudo que já lê esse campo.
   image: normalizeCarImages(car)[0] || "",
+  // Histórico de aportes. Fica no próprio doc do carro, e não numa
+  // subcoleção, porque o volume é pequeno (quem guarda dinheiro guarda uma vez
+  // por mês) e assim o histórico vem junto do carro — inclusive no modo local,
+  // sem login, sem código separado.
+  contributions: Array.isArray(car.contributions)
+    ? car.contributions
+        .map((entry) => ({
+          id: String(entry?.id || crypto.randomUUID()),
+          amount: Math.max(Number(entry?.amount) || 0, 0),
+          date: String(entry?.date || "").slice(0, 10),
+          createdAt: entry?.createdAt || new Date().toISOString(),
+        }))
+        .filter((entry) => entry.amount > 0 && entry.date)
+        .sort((a, b) => b.date.localeCompare(a.date))
+    : [],
   // Simulação de custo real de posse (inputs do usuário), quando existir.
   ownership: car.ownership
     ? {
@@ -716,6 +731,61 @@ export const engineDB = {
       warnFirestoreFallback("getCars", error);
       return getLocalCars();
     }
+  },
+
+  /**
+   * Registra um aporte na meta.
+   *
+   * Aporte é evento, não edição de campo: guarda valor e data, e soma ao
+   * `savedValue`. A soma é incremental de propósito — recalcular a partir do
+   * histórico apagaria o que a pessoa já tinha guardado antes de começar a
+   * registrar.
+   */
+  async addCarContribution(carId, { amount, date }) {
+    const value = Math.max(Number(amount) || 0, 0);
+    if (!carId || !value) return null;
+
+    const cars = await this.getCars();
+    const car = cars.find((item) => String(item.id) === String(carId));
+    if (!car) return null;
+
+    const contribution = {
+      id: crypto.randomUUID(),
+      amount: value,
+      date: String(date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = normalizeCar({
+      ...car,
+      savedValue: (Number(car.savedValue) || 0) + value,
+      contributions: [contribution, ...(car.contributions || [])],
+    });
+
+    await this.saveCar(updated);
+    // Devolve o carro montado aqui, e não o retorno de saveCar: em dev o
+    // backend Java responde sem os campos que ele não conhece, e o histórico
+    // sumiria da tela logo depois de ser registrado.
+    return updated;
+  },
+
+  /** Remove um aporte lançado errado e desfaz a soma. */
+  async removeCarContribution(carId, contributionId) {
+    const cars = await this.getCars();
+    const car = cars.find((item) => String(item.id) === String(carId));
+    if (!car) return null;
+
+    const target = (car.contributions || []).find((item) => item.id === contributionId);
+    if (!target) return car;
+
+    const updated = normalizeCar({
+      ...car,
+      savedValue: Math.max((Number(car.savedValue) || 0) - target.amount, 0),
+      contributions: car.contributions.filter((item) => item.id !== contributionId),
+    });
+
+    await this.saveCar(updated);
+    return updated;
   },
 
   async saveCar(car) {

@@ -30,6 +30,7 @@ export function Garagem({
   onOpenModal,
   onOpenDelete,
   onOpenOwnership,
+  onAddContribution,
   defaultSort = "progress-desc",
   hideValues = false,
 }) {
@@ -60,6 +61,7 @@ export function Garagem({
               car={car}
               hideValues={hideValues}
               onOpenOwnership={onOpenOwnership}
+              onAddContribution={onAddContribution}
               onDelete={(event) => {
                 event.stopPropagation();
                 onOpenDelete(car);

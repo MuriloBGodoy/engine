@@ -1,12 +1,21 @@
-import { Calculator, Trash2 } from "lucide-react";
+import { Calculator, PiggyBank, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { estimateOwnership } from "../services/ownership";
+import { forecastCompletion } from "../services/forecast";
 
-export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) {
+export function CarCard({
+  car,
+  onDelete,
+  onOpenOwnership,
+  onAddContribution,
+  hideValues = false,
+}) {
   const { i18n, t } = useTranslation();
   const ownershipTotal = car.ownership
     ? estimateOwnership(car, car.ownership, car.ownership).totals.monthlyTotal
     : null;
+  // Data prevista no ritmo dos aportes; some quando ainda não há ritmo.
+  const forecast = forecastCompletion(car);
   const percentage = Math.min(
     car.targetValue ? (car.savedValue / car.targetValue) * 100 : 0,
     100,
@@ -81,6 +90,29 @@ export function CarCard({ car, onDelete, onOpenOwnership, hideValues = false }) 
                   }).format(car.targetValue - car.savedValue)}
             </p>
           </div>
+
+          {onAddContribution && (
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddContribution(car);
+              }}
+              className="flex w-full items-center justify-between rounded-xl border border-[var(--engine-accent)]/30 bg-[var(--engine-accent-soft)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
+            >
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-accent)]">
+                <PiggyBank size={14} />
+                {t("contribution.cardAction")}
+              </span>
+              {forecast && (
+                <span className="text-[11px] font-bold tabular-nums text-[var(--engine-text-muted)]">
+                  {forecast.date.toLocaleDateString(i18n.language, {
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              )}
+            </button>
+          )}
 
           {onOpenOwnership && (
             <button
