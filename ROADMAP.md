@@ -239,7 +239,43 @@ em um dia. Ver `engine-api/PARIDADE.md` para o inventário completo.
 
 ---
 
-## 10. Ordem de execução
+## 10. Onde paramos (05/08/2026)
+
+### Entregue
+
+| Item | Commit | Observação |
+| --- | --- | --- |
+| Brecha de edição em `communityGoals` | `6651f29` | testada contra produção com token real |
+| Denúncia e bloqueio | `6651f29` | com lista de bloqueados em Configurações |
+| Sentry + PostHog | `b13eec2` | **falta colar as chaves** |
+| PWA instalável | `6afe1d3` | manifest, service worker, convite e aviso de atualização |
+| Portfólio do prestador | `b0aeb6f` | Instagram, TikTok e vídeo por link |
+| Métricas do anúncio | `eb8d663` | aberturas e contatos, só pro dono |
+| Leitura pública sem login | `eb8d663` | **era bloqueador**: link na bio caía em tela vazia |
+| Assinatura Premium | `a28021b` | **falta criar as contas** — ver `SETUP-PAGAMENTOS.md` |
+
+### Falta
+
+1. **Frequência de uso** — aporte como evento (em andamento), depois custo do
+   carro que a pessoa já tem, e só então lembrete por notificação.
+2. **Configurar os gateways** — checklist completo em `SETUP-PAGAMENTOS.md`.
+   Combinado para algumas semanas à frente, mais perto de divulgar.
+3. **Fechar o portão** (`SUBSCRIPTION_GATE_OPEN`) — só depois de dar cortesia
+   aos primeiros prestadores e de conseguir mostrar retorno a eles.
+4. **Domínio próprio, política de privacidade e termos.**
+5. **Firebase Blaze** — adiado por decisão; enquanto isso a foto vai em base64
+   dentro do documento do Firestore.
+
+### Dívida conhecida, não urgente
+
+- `Services.jsx` tem 5 erros de lint anteriores a esta sessão: dois `setState`
+  dentro de efeito e três funções de moderação declaradas e nunca usadas
+  (`approveListing`, `openReturnListing`, `openRejectListing`) — cheiram a
+  funcionalidade que ficou pela metade.
+- Backend Java só roda em dev e não tem paridade de payload; ver
+  `engine-api/PARIDADE.md`.
+
+## 11. Ordem de execução
 
 1. **Observabilidade** — Sentry + PostHog. Independe de tudo, e sem isso as
    próximas decisões continuam no escuro.
