@@ -67,6 +67,53 @@ se a atividade está na lista de ocupações permitidas do MEI.
 
 ---
 
+## Bugs para a próxima sessão (06/08/2026)
+
+### 1. CRÍTICO — salvar carro em dev apaga a foto
+
+Reproduzido: clicar em "Consegui, é meu!" no Corsa apagou a imagem e não
+gravou o tipo. Confirmado no Firestore: `image` vazio, `images: 0`,
+`type` ausente.
+
+**Causa raiz** (duas somadas):
+
+- `normalizeCarImages` (`db.js:227`) só lê `car.images` e **ignora
+  `car.image`**. Como deriva a capa de `images[0] || ""`, um carro que só
+  tem capa vira carro sem foto nenhuma.
+- Em dev, `getCars()` chama o backend Java, que devolve `image` mas
+  **não** `images` — e no `saveCar` descarta os campos que não conhece
+  (`type`, `images`, `ownership`, `contributions`).
+
+Ou seja: **qualquer save de carro em dev apaga a foto**, não só o botão
+novo. Em produção não acontece, porque lá o caminho é o Firestore direto.
+
+**Correção:** fazer `normalizeCarImages` cair em `car.image` quando
+`images` estiver vazio (para a sangria imediata) e tirar o branch de API
+de `getCars`/`saveCar`, como já foi feito em `setFollow`,
+`updateCommunityGoalNote` e `subscribeCommunityGoals`.
+
+**Dado perdido:** a foto do Corsa precisa ser enviada de novo.
+
+### 2. Miniaturas erradas no "Compartilhar meta"
+
+Todos os carros aparecem com a mesma foto de moto no modal de
+compartilhar. Provavelmente um fallback sendo usado porque a imagem real
+não chega — possivelmente o mesmo problema do item 1.
+
+### 3. Legenda da publicação não é usada
+
+Ao compartilhar a meta, a descrição escrita na hora é ignorada e o que
+aparece é a **bio do perfil**. O comentário em `buildCommunityGoal` diz
+justamente o contrário ("Legenda escrita na hora de publicar — não é mais
+a bio do perfil"), então a intenção existe e a ligação quebrou em algum
+ponto entre o modal e o `note`.
+
+### 4. Publicação não leva as fotos do veículo
+
+Compartilhar uma meta da garagem deveria puxar **todas** as fotos
+cadastradas naquele carro, e hoje não leva. Ajustar também o
+enquadramento para caber direito na tela.
+
 ## Código
 
 ### Fechar o portão de cobrança
