@@ -226,7 +226,10 @@ export const MAX_CAR_PHOTOS = 4;
 /** Galeria do carro: aceita o campo antigo (`image`) e o novo (`images`). */
 const normalizeCarImages = (car = {}) => {
   const list = Array.isArray(car.images) ? car.images : [];
-  const all = list
+  // A capa entra na lista: sem isso, carro que só tem `image` (o que vem de
+  // qualquer origem que não devolva a galeria) era normalizado para zero foto,
+  // e como `image` é derivado de `images[0]`, salvar apagava a imagem no banco.
+  const all = [...list, car.image]
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
@@ -720,14 +723,12 @@ export const engineDB = {
     await set(migratedKey, true);
   },
 
+  // Sem branch de API: GET /cars devolve o carro sem `images`, `ownership`,
+  // `contributions` nem `type`, e o front deriva a capa de `images[0]` — o
+  // carro voltava sem galeria e o save seguinte apagava a foto no banco. Foi
+  // assim que a imagem do Corsa se perdeu.
   async getCars() {
     if (!currentUserId) return getLocalCars();
-
-    if (apiEnabled()) {
-      const cars = await apiRequest("/cars");
-      await setLocalCars(cars);
-      return cars;
-    }
 
     try {
       const snapshot = await withTimeout(getDocs(userCarsCollection()), "buscar carros");
@@ -810,19 +811,9 @@ export const engineDB = {
       return normalizedCar;
     }
 
-    if (apiEnabled()) {
-      const savedCar = await apiJson("POST", "/cars", normalizedCar);
-      const localCars = await getLocalCars();
-      const index = localCars.findIndex((c) => c.id === savedCar.id);
-      if (index !== -1) {
-        localCars[index] = savedCar;
-      } else {
-        localCars.push(savedCar);
-      }
-      await setLocalCars(localCars);
-      return savedCar;
-    }
-
+    // Sem branch de API pelo mesmo motivo do getCars: POST /cars responde sem
+    // os campos que o backend Java não conhece, e esse retorno virava o estado
+    // do app — a galeria e o tipo do carro sumiam da tela logo após salvar.
     try {
       await withTimeout(
         setDoc(
@@ -1316,11 +1307,12 @@ export const engineDB = {
   async shareCommunityGoal(goal, settings, userId = currentUserId, note = "") {
     if (!userId) throw new Error("Usuário não identificado.");
 
-    if (apiEnabled()) {
-      const response = await apiJson("POST", "/community/goals", { ...goal, note });
-      return response.id;
-    }
-
+    // Sem branch de API por dois motivos concretos, os dois verificados no
+    // EngineFirestoreService.shareCommunityGoal:
+    //  - ele descarta a legenda recebida e grava `profile.note`, que é a BIO
+    //    do perfil — por isso a descrição escrita na hora nunca aparecia;
+    //  - ele grava só `image`, sem `images`, então a publicação saía com uma
+    //    foto só, em vez da galeria do carro.
     const payload = buildCommunityGoal(goal, userId, settings, note);
     const goalRef = doc(firestore, COMMUNITY_COLLECTION, payload.id);
     const existing = await getDoc(goalRef);

@@ -1200,8 +1200,11 @@ function ShareModal({
                     onClick={() => startComposing(goal, publishedNote)}
                     className="flex min-w-0 flex-1 items-center gap-4 text-left"
                   >
+                    {/* A capa entra no fallback: carro com foto única não tem
+                        `images`, e sem isso a lista inteira caía na imagem
+                        genérica. */}
                     <img
-                      src={goal.images?.[0] || fallbackImage}
+                      src={goal.images?.[0] || goal.image || fallbackImage}
                       alt={goal.title}
                       className="h-16 w-20 rounded-lg object-cover"
                     />
