@@ -148,6 +148,15 @@ h5 {
   select {
     font: inherit;
   }
+
+  /* O dropdown nativo do select não herda o tema do app: o navegador pinta a
+     lista com o branco do sistema, enquanto as opções ficam com a cor de
+     texto clara do tema escuro — branco no branco, ilegível. Definir as duas
+     cores aqui vale para todos os selects de uma vez. */
+  select option {
+    background-color: var(--engine-surface);
+    color: var(--engine-text);
+  }
 }
 
 @media (max-width: 640px) {
