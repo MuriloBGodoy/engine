@@ -446,10 +446,6 @@ const resources = {
         copyLink: "Copiar link",
         commentsAction: "Comentários",
         beFirstToComment: "Seja o primeiro a comentar",
-        likesCount_one: "{{count}} curtida",
-        likesCount_other: "{{count}} curtidas",
-        viewAllComments_one: "Ver 1 comentário",
-        viewAllComments_other: "Ver todos os {{count}} comentários",
         title: "A garagem agora também é uma rede.",
         subtitle:
           "Veja metas de amigos, acompanhe progresso, curta, comente, avalie e compartilhe sem expor valores privados.",
@@ -1137,10 +1133,6 @@ const resources = {
         copyLink: "Copy link",
         commentsAction: "Comments",
         beFirstToComment: "Be the first to comment",
-        likesCount_one: "{{count}} like",
-        likesCount_other: "{{count}} likes",
-        viewAllComments_one: "View 1 comment",
-        viewAllComments_other: "View all {{count}} comments",
         title: "The garage is a network now.",
         subtitle:
           "See friends' goals, follow progress, like, comment, rate, and share without exposing private amounts.",
@@ -1826,10 +1818,6 @@ const resources = {
         copyLink: "Copiar enlace",
         commentsAction: "Comentarios",
         beFirstToComment: "Sé el primero en comentar",
-        likesCount_one: "{{count}} me gusta",
-        likesCount_other: "{{count}} me gusta",
-        viewAllComments_one: "Ver 1 comentario",
-        viewAllComments_other: "Ver los {{count}} comentarios",
         title: "El garaje ahora también es una red.",
         subtitle:
           "Mira metas de amigos, sigue el progreso, da like, comenta, evalúa y comparte sin exponer valores privados.",

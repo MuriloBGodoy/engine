@@ -557,9 +557,11 @@ function GoalCard({
   const [commentsOpen, setCommentsOpen] = useState(initialCommentsOpen);
   const [commentMenuId, setCommentMenuId] = useState("");
 
+  const { i18n } = useTranslation();
   const progress = getProgress(goal);
   const comments = [...goal.comments, ...interactions.comments];
   const liked = interactions.liked;
+  const likeCount = Number(goal.likes) || 0;
   const rating = interactions.rating || goal.rating;
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
@@ -721,11 +723,15 @@ function GoalCard({
           title={t("community.like")}
           onClick={() => onLike(goal.id)}
           icon={<Heart size={20} fill={liked ? "currentColor" : "none"} />}
+          count={likeCount}
+          language={i18n.language}
         />
         <ActionButton
           title={t("community.commentsAction")}
           onClick={showComments}
           icon={<MessageCircle size={20} />}
+          count={comments.length}
+          language={i18n.language}
         />
         {onSendToChat && (
           <ActionButton
@@ -748,15 +754,13 @@ function GoalCard({
       </div>
 
       <div className="space-y-1.5 px-3 pb-3.5 pt-1 sm:px-4 sm:pb-4">
-        <p className="text-[13px] font-bold text-[var(--engine-text)]">
-          {t("community.likesCount", { count: Number(goal.likes) || 0 })}
-          {rating > 0 && (
-            <span className="font-semibold text-[var(--engine-text-subtle)]">
-              {" · "}
-              {rating.toFixed(1)} ★
-            </span>
-          )}
-        </p>
+        {/* A contagem de curtidas agora vive ao lado do coração; aqui sobra só
+            a nota média, que não tem ícone próprio na barra. */}
+        {rating > 0 && (
+          <p className="text-[13px] font-bold text-[var(--engine-text-subtle)]">
+            {rating.toFixed(1)} ★
+          </p>
+        )}
 
         {/* No modal o cabeçalho já anuncia o veículo — repetir aqui rouba o
             lugar da descrição, que é o que a pessoa escreveu. Post livre só
@@ -804,17 +808,6 @@ function GoalCard({
           </p>
         )}
 
-        {/* Só a contagem: os comentários em si abrem no balão ou no post.
-            Quando eles já estão ao lado (modal no desktop), a linha some. */}
-        {comments.length > 0 && !onCommentClick && (
-          <button
-            type="button"
-            onClick={showComments}
-            className="pt-0.5 text-[13px] font-medium text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
-          >
-            {t("community.viewAllComments", { count: comments.length })}
-          </button>
-        )}
       </div>
 
       {commentsOpen && (
@@ -1132,12 +1125,25 @@ function Metric({ icon, value, label }) {
   );
 }
 
-function ActionButton({ active = false, title, icon, onClick }) {
+/**
+ * Contagem ao lado do ícone, encurtada em números grandes (1,2 mil / 1.2K
+ * conforme o idioma) para o botão não esticar e quebrar a linha de ações.
+ */
+const formatCount = (value, language) => {
+  const count = Number(value) || 0;
+  if (count < 1000) return String(count);
+  return new Intl.NumberFormat(language, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(count);
+};
+
+function ActionButton({ active = false, title, icon, onClick, count = 0, language }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+      className={`flex h-9 items-center gap-1.5 rounded-full px-2 transition-colors ${
         active
           ? "text-[var(--engine-accent)]"
           : "text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
@@ -1146,6 +1152,11 @@ function ActionButton({ active = false, title, icon, onClick }) {
       aria-label={title}
     >
       {icon}
+      {count > 0 && (
+        <span className="text-[13px] font-bold tabular-nums">
+          {formatCount(count, language)}
+        </span>
+      )}
     </button>
   );
 }
