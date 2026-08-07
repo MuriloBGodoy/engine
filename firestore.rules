@@ -16,6 +16,19 @@ service cloud.firestore {
       ];
     }
 
+    // O doc do usuário guarda o plano da assinatura. Faltava regra aqui: sem
+    // ela o Firestore negava a leitura por padrão, o useIsPremium caía no erro
+    // e tratava todo mundo como gratuito — premium nunca ligaria, mesmo com o
+    // pagamento confirmado.
+    //
+    // `plan` é escrito SÓ pelo webhook, via Admin SDK, que ignora estas regras.
+    // Nenhum caminho do cliente pode escrever aqui: senão bastava abrir o
+    // console do navegador pra virar premium de graça.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isServiceAdmin();
+      allow write: if false;
+    }
+
     match /users/{userId}/cars/{carId} {
       allow read, write: if isOwner(userId);
     }

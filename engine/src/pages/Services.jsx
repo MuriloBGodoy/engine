@@ -57,7 +57,9 @@ import {
 import { useConfirm } from"../components/ConfirmProvider";
 import { useToast } from"../components/ToastProvider";
 import { AdSlot } from"../components/AdSlot";
+import { PaywallModal } from"../components/PaywallModal";
 import { useRegion } from"../hooks/RegionProvider";
+import { useIsPremium } from"../hooks/useIsPremium";
 
 // Ícone oficial do WhatsApp (react-icons). Mantém a mesma assinatura
 // (size/className) usada em todo o arquivo, inclusive como `icon={WhatsAppIcon}`.
@@ -74,6 +76,10 @@ function TikTokIcon({ size = 18, className ="" }) {
   return <FaTiktok size={size} className={className} aria-hidden="true" />;
 }
 
+// Portão de cobrança. Ver e buscar serviço é livre pra qualquer um, com ou sem
+// conta; publicar é o que exige Premium. Enquanto isto for `true`, publicar
+// segue liberado pra todo mundo — é assim que os primeiros prestadores entram,
+// antes de existir base pra justificar a mensalidade.
 const SUBSCRIPTION_GATE_OPEN = true;
 const MAX_PHOTOS = 6;
 const PHOTO_UPLOAD_TIMEOUT_MS = 15000;
@@ -2115,6 +2121,8 @@ export function Services({ user, settings }) {
   const [detailListing, setDetailListing] = useState(null);
   const [sellerProfileOpen, setSellerProfileOpen] = useState(false);
   const [sellerListingsOpen, setSellerListingsOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const { isPremium } = useIsPremium(user?.uid);
   const isAdmin = SERVICE_ADMIN_EMAILS.includes(String(user?.email ||"").toLowerCase());
   const sellerProfile = useMemo(
     () => getSellerProfile(settings, user),
@@ -2376,8 +2384,10 @@ export function Services({ user, settings }) {
 
   const submitListing = async (event) => {
     event.preventDefault();
-    if (!SUBSCRIPTION_GATE_OPEN) {
-      flash(t("services.flash.subscriptionRequired"));
+    // Com o portão fechado, só assinante publica — e o admin, que precisa
+    // conseguir mexer em anúncio pra moderar.
+    if (!SUBSCRIPTION_GATE_OPEN && !isPremium && !isAdmin) {
+      setPaywallOpen(true);
       return;
     }
     if (!form.title.trim() || !form.description.trim()) {
@@ -2823,6 +2833,12 @@ export function Services({ user, settings }) {
           onCancel={closeEditor}
         />
       )}
+
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        country={sellerProfile.country || region.country}
+      />
 
       {sellerProfileOpen && (
         <SellerProfileModal

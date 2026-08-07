@@ -6,6 +6,14 @@ import { supportedLngs } from "./languages";
 const resources = {
   "pt-BR": {
     translation: {
+      premium: {
+        tag: "Engine Premium",
+        title: "Assine e libere tudo",
+        benefitNoAds: "Navegue sem anúncio nenhum",
+        benefitPublish: "Divulgue seus serviços para quem procura na sua região",
+        subscribe: "Assinar",
+        disclaimer: "Cancele quando quiser, direto nas configurações.",
+      },
       pwa: {
         installTitle: "Deixe o Engine na tela de início",
         installBody: "Abre direto, sem navegador, e continua funcionando offline.",
@@ -649,6 +657,14 @@ const resources = {
   },
   "en-US": {
     translation: {
+      premium: {
+        tag: "Engine Premium",
+        title: "Subscribe and unlock everything",
+        benefitNoAds: "Browse with no ads at all",
+        benefitPublish: "Promote your services to people searching in your area",
+        subscribe: "Subscribe",
+        disclaimer: "Cancel anytime, right from settings.",
+      },
       pwa: {
         installTitle: "Keep Engine on your home screen",
         installBody: "Opens straight up, no browser, and works offline.",
@@ -1289,6 +1305,14 @@ const resources = {
   },
   "es-ES": {
     translation: {
+      premium: {
+        tag: "Engine Premium",
+        title: "Suscríbete y desbloquea todo",
+        benefitNoAds: "Navega sin ningún anuncio",
+        benefitPublish: "Promociona tus servicios a quien busca en tu zona",
+        subscribe: "Suscribirme",
+        disclaimer: "Cancela cuando quieras, desde ajustes.",
+      },
       pwa: {
         installTitle: "Deja Engine en tu pantalla de inicio",
         installBody: "Abre directo, sin navegador, y sigue funcionando sin conexión.",
