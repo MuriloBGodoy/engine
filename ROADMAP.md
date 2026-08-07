@@ -262,7 +262,21 @@ em um dia. Ver `engine-api/PARIDADE.md` para o inventário completo.
    Combinado para algumas semanas à frente, mais perto de divulgar.
 3. **Fechar o portão** (`SUBSCRIPTION_GATE_OPEN`) — só depois de dar cortesia
    aos primeiros prestadores e de conseguir mostrar retorno a eles.
-4. **Domínio próprio, política de privacidade e termos.**
+4. **Domínio próprio** — comprar no registro.br (~R$ 40/ano) e apontar no
+   Netlify. Depois disso, revisar: `start_url` do manifest, as URLs de retorno
+   do checkout (`subscription-create`) e os endereços cadastrados de webhook nos
+   dois gateways, que hoje apontam para o domínio do Netlify.
+
+5. **Legal — o que falta além das páginas** (as páginas em si já estão no ar):
+   - **Revisão por advogado.** O texto foi escrito a partir do que o sistema
+     realmente faz, mas não substitui revisão jurídica.
+   - **Tradução.** Os documentos estão só em português enquanto o produto
+     suporta 12 países. Para operar na Europa, o GDPR exige aviso em linguagem
+     acessível ao titular — e provavelmente base legal, consentimento de cookie
+     e canal de exercício de direitos, que hoje não existem.
+   - **Preencher o responsável.** Hoje consta pessoa física; muda quando abrir
+     MEI ou empresa, e o CNPJ passa a ser obrigatório nos documentos.
+   - **Consentimento de cookies** para quando o AdSense entrar.
 5. **Firebase Blaze** — adiado por decisão; enquanto isso a foto vai em base64
    dentro do documento do Firestore.
 
