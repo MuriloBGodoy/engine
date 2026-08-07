@@ -236,6 +236,39 @@ const normalizeCarImages = (car = {}) => {
   return Array.from(new Set(all)).slice(0, MAX_CAR_PHOTOS);
 };
 
+// Teto real do Firestore por documento. A margem cobre o que o SDK acrescenta
+// (nome dos campos, timestamps, overhead de serialização) e o que o
+// JSON.stringify não mede com precisão.
+const FIRESTORE_DOC_LIMIT = 1048576;
+const DOC_SAFE_BUDGET = Math.floor(FIRESTORE_DOC_LIMIT * 0.85);
+const CAR_TOO_LARGE_MESSAGE =
+  "As fotos deste carro passaram do limite de armazenamento. Remova alguma foto ou use imagens menores.";
+
+const approximateDocSize = (value) => {
+  try {
+    return new Blob([JSON.stringify(value)]).size;
+  } catch {
+    return JSON.stringify(value).length;
+  }
+};
+
+const isDocumentTooLarge = (error) => {
+  const code = String(error?.code || "");
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    code === "invalid-argument" ||
+    message.includes("longer than") ||
+    message.includes("maximum") ||
+    message.includes("1048576")
+  );
+};
+
+/** Barra o save antes de tentar, quando o carro não cabe no documento. */
+const assertCarFitsDocument = (car) => {
+  if (approximateDocSize(car) <= DOC_SAFE_BUDGET) return;
+  throw new Error(CAR_TOO_LARGE_MESSAGE);
+};
+
 /** Meta é o carro que a pessoa quer; owned é o que ela já tem na garagem. */
 export const CAR_TYPE_GOAL = "goal";
 export const CAR_TYPE_OWNED = "owned";
@@ -811,6 +844,13 @@ export const engineDB = {
       return normalizedCar;
     }
 
+    // Enquanto o Storage estiver desligado, a foto vai em base64 DENTRO do
+    // documento, e o Firestore corta em 1 MiB. Passar disso fazia a gravação
+    // ser recusada e o erro morria num console.warn: a tela dizia que salvou e
+    // a foto sumia no refresh. Melhor barrar antes, com um motivo que a pessoa
+    // entenda.
+    assertCarFitsDocument(normalizedCar);
+
     // Sem branch de API pelo mesmo motivo do getCars: POST /cars responde sem
     // os campos que o backend Java não conhece, e esse retorno virava o estado
     // do app — a galeria e o tipo do carro sumiam da tela logo após salvar.
@@ -827,6 +867,11 @@ export const engineDB = {
         warnFirestoreFallback("syncCommunityCar", error),
       );
     } catch (error) {
+      // Recusa por tamanho não é queda de rede: não dá pra tratar como
+      // offline e seguir, senão a foto some de novo sem ninguém saber.
+      if (isDocumentTooLarge(error)) {
+        throw new Error(CAR_TOO_LARGE_MESSAGE);
+      }
       warnFirestoreFallback("saveCar", error);
     }
 

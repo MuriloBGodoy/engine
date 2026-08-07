@@ -236,11 +236,14 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
     const saved = await onSave(carData);
     setLoading(false);
 
-    if (saved) {
+    if (saved === true) {
       onClose();
-    } else {
-      setError(t("modalCar.saveError"));
+      return;
     }
+
+    // O motivo vem de quem salvou quando existe (limite de tamanho, por
+    // exemplo); a mensagem genérica só cobre o resto.
+    setError(saved?.message || t("modalCar.saveError"));
   };
 
   if (!isOpen) return null;

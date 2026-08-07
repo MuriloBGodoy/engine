@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { auth } from "./services/firebase";
 import { CAR_TYPE_OWNED, engineDB } from "./services/db";
 import { useThemeMode } from "./hooks/useThemeMode";
-import { identifyUser, resetUser, trackPageView } from "./services/observability";
+import { captureError, identifyUser, resetUser, trackPageView } from "./services/observability";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { ContributionModal } from "./components/ContributionModal";
@@ -136,8 +136,10 @@ function App() {
       handleCloseModal();
       return true;
     } catch (error) {
-      console.error(error);
-      return false;
+      captureError(error, { action: "saveCar", carId: carData?.id });
+      // Devolve o motivo pra quem chamou: "não foi possível salvar" sem dizer
+      // por quê fez a foto sumir sem explicação.
+      return { ok: false, message: error.message };
     }
   };
 
