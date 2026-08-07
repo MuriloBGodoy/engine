@@ -569,6 +569,8 @@ function GoalCard({
   // carro, que ali seria só ruído.
   const gallery = goal.images?.length ? goal.images : (goal.image ? [goal.image] : []);
   const photos = gallery.length ? gallery : isFreePost ? [] : [fallbackImage];
+  // Post só de texto inverte a ordem: conteúdo antes dos botões de ação.
+  const textFirst = isFreePost && !photos.length && !goal.videoUrl && Boolean(goal.note);
   // No modal de publicação (desktop) os comentários já estão ao lado: o balão
   // leva o foco para o compositor em vez de abrir outra folha.
   const showComments = onCommentClick || (() => setCommentsOpen(true));
@@ -671,11 +673,14 @@ function GoalCard({
           </p>
         </div>
 
-        {isOwner ? (
+        {/* "Compartilhada / Privada" diz se o carro da GARAGEM está publicado.
+            Num post livre não significa nada: ele nasce no feed, e o selo só
+            aparecia como "privada" porque post nenhum entra em sharedGoalIds. */}
+        {isOwner && !isFreePost ? (
           <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
             {shared ? t("community.shared") : t("community.privateDraft")}
           </span>
-        ) : (
+        ) : isOwner ? null : (
           !isFollowing && (
             <button
               type="button"
@@ -700,6 +705,15 @@ function GoalCard({
       )}
 
       {goal.videoUrl && <PostVideo url={goal.videoUrl} t={t} />}
+
+      {/* Post sem foto nem vídeo: o texto É o conteúdo, então vem antes dos
+          botões. Deixar curtir e comentar acima de um card vazio fazia a ação
+          aparecer antes de existir o que curtir. */}
+      {textFirst && (
+        <p className="whitespace-pre-line px-3 pt-1 text-sm leading-6 text-[var(--engine-text)] sm:px-4">
+          {goal.note}
+        </p>
+      )}
 
       <div className="flex items-center gap-0.5 px-2 pt-1.5 sm:px-3">
         <ActionButton
@@ -780,7 +794,7 @@ function GoalCard({
           </span>
         )}
 
-        {goal.note && (
+        {goal.note && !textFirst && (
           <p
             className={`text-sm font-medium leading-6 text-[var(--engine-text-muted)] ${
               isModal ? "whitespace-pre-line" : "line-clamp-2"
