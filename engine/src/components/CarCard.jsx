@@ -1,4 +1,4 @@
-import { Calculator, Key, PiggyBank, Trash2 } from "lucide-react";
+import { Calculator, Key, PiggyBank, Trash2, Trophy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { estimateOwnership } from "../services/ownership";
 import { forecastCompletion } from "../services/forecast";
@@ -9,6 +9,7 @@ export function CarCard({
   onDelete,
   onOpenOwnership,
   onAddContribution,
+  onMarkAchieved,
   hideValues = false,
 }) {
   const { i18n, t } = useTranslation();
@@ -16,6 +17,10 @@ export function CarCard({
     ? estimateOwnership(car, car.ownership, car.ownership).totals.monthlyTotal
     : null;
   const isOwned = car.type === CAR_TYPE_OWNED;
+  // Meta batida mas ainda não confirmada: não faz sentido anunciar "falta
+  // R$ 0,00". Vira convite pra pessoa declarar a conquista.
+  const reachedGoal =
+    !isOwned && car.targetValue > 0 && car.savedValue >= car.targetValue;
   // Data prevista no ritmo dos aportes; some quando ainda não há ritmo.
   const forecast = forecastCompletion(car);
   const percentage = Math.min(
@@ -93,23 +98,37 @@ export function CarCard({
                 />
               </div>
 
-              <div className="flex items-end justify-between border-t border-[var(--engine-border)] pt-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
-                  {t("car.remaining")}
-                </p>
-                <p className="text-lg font-extrabold tabular-nums text-[var(--engine-text)]">
-                  {hideValues
-                    ? "R$ --"
-                    : new Intl.NumberFormat(i18n.language, {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(car.targetValue - car.savedValue)}
-                </p>
-              </div>
+              {reachedGoal ? (
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onMarkAchieved?.(car);
+                  }}
+                  disabled={!onMarkAchieved}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--engine-accent)] bg-[var(--engine-accent)] px-3.5 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition hover:brightness-95 disabled:opacity-60"
+                >
+                  <Trophy size={14} />
+                  {t("car.markAchieved")}
+                </button>
+              ) : (
+                <div className="flex items-end justify-between border-t border-[var(--engine-border)] pt-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+                    {t("car.remaining")}
+                  </p>
+                  <p className="text-lg font-extrabold tabular-nums text-[var(--engine-text)]">
+                    {hideValues
+                      ? "R$ --"
+                      : new Intl.NumberFormat(i18n.language, {
+                          style: "currency",
+                          currency: "BRL",
+                        }).format(car.targetValue - car.savedValue)}
+                  </p>
+                </div>
+              )}
             </>
           )}
 
-          {!isOwned && onAddContribution && (
+          {!isOwned && !reachedGoal && onAddContribution && (
             <button
               onClick={(event) => {
                 event.stopPropagation();

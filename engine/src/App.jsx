@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "rea
 import { onAuthStateChanged } from "firebase/auth";
 import { useTranslation } from "react-i18next";
 import { auth } from "./services/firebase";
-import { engineDB } from "./services/db";
+import { CAR_TYPE_OWNED, engineDB } from "./services/db";
 import { useThemeMode } from "./hooks/useThemeMode";
 import { identifyUser, resetUser, trackPageView } from "./services/observability";
 import { InstallPrompt } from "./components/InstallPrompt";
@@ -154,6 +154,31 @@ function App() {
   };
 
   /**
+   * "Consegui, o carro é meu": a meta vira carro da garagem.
+   *
+   * É a conversão natural entre os dois tipos — bater a meta significa passar
+   * a ter o carro. Fica atrás de confirmação porque muda o significado do
+   * registro: some a barra de progresso e o carro para de aceitar aporte.
+   */
+  const markCarAchieved = async (car) => {
+    const ok = await confirm({
+      title: t("car.markAchievedTitle"),
+      message: t("car.markAchievedMessage", {
+        carName: `${car.brand} ${car.model}`,
+      }),
+      confirmLabel: t("car.markAchievedConfirm"),
+      cancelLabel: t("common.cancel"),
+    });
+    if (!ok) return;
+
+    await saveCarAction({
+      ...car,
+      type: CAR_TYPE_OWNED,
+      savedValue: car.targetValue || car.savedValue,
+    });
+  };
+
+  /**
    * Depois de lançar um aporte, a lista e o próprio modal precisam do carro
    * novo — senão o histórico só aparece no próximo carregamento e a previsão
    * fica desatualizada na cara de quem acabou de registrar.
@@ -245,6 +270,7 @@ function App() {
                   onOpenDelete={openDeleteConfirmation}
                   onOpenOwnership={setOwnershipCar}
                   onAddContribution={setContributionCar}
+                  onMarkAchieved={markCarAchieved}
                   defaultSort={settings.preferences.defaultGarageSort}
                   hideValues={settings.privacy.lockSensitiveValues}
                 />

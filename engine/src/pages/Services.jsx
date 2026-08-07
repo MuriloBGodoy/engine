@@ -752,7 +752,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
         <div className="space-y-2.5 border-t border-[var(--engine-border)] pt-2.5">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
-              {t("services.price")}
+              {t("services.priceLabel")}
             </span>
             <p className="text-sm font-black italic text-[var(--engine-accent)]">
               {listing.price || t("services.priceFallback")}
@@ -762,7 +762,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           {isMine && listing.moderationStatus && (
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
-                {t("services.status")}
+                {t("services.statusLabel")}
               </span>
               <StatusBadge status={listing.moderationStatus} />
             </div>

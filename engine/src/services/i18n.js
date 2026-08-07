@@ -146,6 +146,11 @@ const resources = {
         progress: "Progresso",
         remaining: "Falta",
         owned: "Na garagem",
+        markAchieved: "Consegui, é meu!",
+        markAchievedTitle: "Conquistou o carro?",
+        markAchievedMessage:
+          "O {{carName}} sai das metas e vai para os seus carros. A barra de progresso some e ele deixa de aceitar aporte.",
+        markAchievedConfirm: "Sim, é meu",
       },
       ownership: {
         kicker: "simulador engine",
@@ -321,6 +326,7 @@ const resources = {
         rotate: "Rotação",
         reset: "Redefinir",
         save: "Salvar",
+        emptyError: "Imagem vazia. Tente novamente.",
       },
       deleteModal: {
         title: "Espere um segundo",
@@ -817,6 +823,11 @@ const resources = {
         progress: "Progress",
         remaining: "Remaining",
         owned: "In the garage",
+        markAchieved: "Got it, it's mine!",
+        markAchievedTitle: "Did you get the car?",
+        markAchievedMessage:
+          "The {{carName}} leaves your goals and joins your cars. The progress bar goes away and it stops taking deposits.",
+        markAchievedConfirm: "Yes, it's mine",
       },
       ownership: {
         kicker: "engine simulator",
@@ -992,6 +1003,7 @@ const resources = {
         rotate: "Rotate",
         reset: "Reset",
         save: "Save",
+        emptyError: "Empty image. Please try again.",
       },
       deleteModal: {
         title: "Wait a second",
@@ -1486,6 +1498,11 @@ const resources = {
         progress: "Progreso",
         remaining: "Falta",
         owned: "En el garaje",
+        markAchieved: "¡Lo logré, es mío!",
+        markAchievedTitle: "¿Conseguiste el auto?",
+        markAchievedMessage:
+          "El {{carName}} sale de tus metas y pasa a tus autos. La barra de progreso desaparece y deja de aceptar aportes.",
+        markAchievedConfirm: "Sí, es mío",
       },
       ownership: {
         kicker: "simulador engine",
@@ -1661,6 +1678,7 @@ const resources = {
         rotate: "Girar",
         reset: "Restablecer",
         save: "Guardar",
+        emptyError: "Imagen vacía. Inténtalo de nuevo.",
       },
       deleteModal: {
         title: "Espera un segundo",
@@ -2158,6 +2176,7 @@ const servicesPt = {
   engineProfessional: "Profissional Engine",
   locationFallback: "Atendimento a combinar",
   scheduleFallback: "Agenda a combinar",
+  priceLabel: "Preço",
   priceFallback: "Sob consulta",
   quoteFallback: "Orçamento sob consulta",
   online: "Online",
@@ -2387,6 +2406,8 @@ const servicesEs = {
   },
   filtersTitle: "Filtros",
   clearFilters: "Limpiar filtros",
+  priceLabel: "Precio",
+  statusLabel: "Estado",
   filters: { all: "Todos", allCountries: "Todos los países", allStates: "Todos los estados", allCities: "Todas las ciudades", hybrid: "Local y externo", mobile: "Va hasta ti", place: "Local físico" },
   status: { approved: "Aprobado", pending: "En revisión", changesRequested: "Ajustes necesarios", rejected: "Rechazado" },
   stats: { active: "servicios activos", mobile: "van hasta ti", cities: "ciudades" },
@@ -2458,6 +2479,7 @@ const sharedServiceFallback = {
   engineProfessional: "Engine professional",
   locationFallback: "Service to be arranged",
   scheduleFallback: "Schedule to be arranged",
+  priceLabel: "Price",
   priceFallback: "Quote only",
   quoteFallback: "Quote on request",
   online: "Online",
