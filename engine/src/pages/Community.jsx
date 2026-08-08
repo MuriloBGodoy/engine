@@ -165,10 +165,12 @@ const legacyCommunityGoalId = (goal, userId = "") => {
   return `goal-${userId || goal?.ownerId || ""}-user-${String(goal?.carId || goalId).replace(/^user-/, "")}`;
 };
 
+// Link compartilhável aponta para a página da publicação, e não mais para o
+// feed com `?goal=`: quem recebe cai direto no conteúdo, e a URL diz o que é.
 const buildShareUrl = (goal) => {
   const url = new URL(window.location.href);
-  url.pathname = "/community";
-  url.searchParams.set("goal", goal.id);
+  url.search = "";
+  url.pathname = `/post/${goal.id}`;
   return url.toString();
 };
 
@@ -526,7 +528,9 @@ function PostMenu({ items, label }) {
  * métricas, aviso de privacidade repetido, formulário de comentário sempre
  * aberto) saiu ou virou uma linha só — comentar abre o modal.
  */
-function GoalCard({
+// Exportado para a página do post (/post/:id) reaproveitar exatamente o mesmo
+// card do feed — duas versões do card divergiriam na primeira mudança.
+export function GoalCard({
   goal,
   interactions,
   following,

@@ -11,6 +11,7 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { ContributionModal } from "./components/ContributionModal";
 import { Terms } from "./pages/Terms";
 import { Privacy } from "./pages/Privacy";
+import { PostPage } from "./pages/PostPage";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
@@ -234,6 +235,10 @@ function App() {
             abrir pra visitante, pro Google e pra revisão das lojas. */}
         <Route path="/termos" element={<Terms />} />
         <Route path="/privacidade" element={<Privacy />} />
+
+        {/* Publicação por link direto, fora do shell: quem chega por um link
+            compartilhado cai no conteúdo, não no feed com um modal por cima. */}
+        <Route path="/post/:postId" element={<PostPage user={user} />} />
 
         {/* O Engine abre sem login. Início, comunidade e serviços são
             livres para visitantes; as rotas pessoais ficam protegidas por
