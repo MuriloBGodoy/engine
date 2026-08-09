@@ -646,12 +646,37 @@ export function GoalCard({
       : []),
   ];
 
+  // Card inteiro abre a publicação, como em qualquer feed — antes só a foto
+  // abria, então post de texto não tinha onde clicar. Os controles internos
+  // (curtir, comentar, menu, avatar, links) continuam mandando no próprio
+  // clique; por isso o guarda do `closest`.
+  const openable = Boolean(onOpenPost) && !isModal;
+  const handleCardClick = (event) => {
+    if (!openable) return;
+    if (event.target.closest("button, a, input, textarea, select, iframe, [role='button']")) {
+      return;
+    }
+    onOpenPost(goal.id);
+  };
+
   return (
     <article
+      onClick={handleCardClick}
+      onKeyDown={(event) => {
+        if (!openable || event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenPost(goal.id);
+        }
+      }}
+      role={openable ? "link" : undefined}
+      tabIndex={openable ? 0 : undefined}
       className={
         isModal
           ? "bg-[var(--engine-elevated)]"
-          : "border-b border-[var(--engine-border)] bg-[var(--engine-surface)] last:border-b-0 sm:rounded-2xl sm:border"
+          : `border-b border-[var(--engine-border)] bg-[var(--engine-surface)] transition-colors last:border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--engine-accent)]/40 sm:rounded-2xl sm:border ${
+              openable ? "cursor-pointer hover:bg-[var(--engine-surface-2)]/40" : ""
+            }`
       }
     >
       <header className="flex items-center gap-2.5 px-3 py-2.5 sm:px-4">
@@ -2141,6 +2166,22 @@ export function Community({ cars = [], settings, user }) {
     setSearchParams(next);
   };
 
+  /**
+   * Abrir publicação: modal no desktop, onde o feed continua atrás e a volta é
+   * imediata; página no celular, onde modal empilhado atrapalha e o botão
+   * "voltar" do aparelho precisa funcionar.
+   *
+   * Antes o mobile não abria de jeito nenhum — `onOpenPost` só era passado no
+   * desktop, então tocar num post não fazia nada.
+   */
+  const openPostAnywhere = (goalId) => {
+    if (isDesktop) {
+      openPost(goalId);
+      return;
+    }
+    navigate(`/post/${goalId}`);
+  };
+
   const persistState = async (updater) => {
     setCommunityState((current) => {
       const next = updater(current);
@@ -2682,7 +2723,7 @@ export function Community({ cars = [], settings, user }) {
                             onOpenProfile={handleOpenProfile}
                             onEditComment={handleEditComment}
                             onDeleteComment={handleDeleteComment}
-                            onOpenPost={isDesktop ? openPost : undefined}
+                            onOpenPost={openPostAnywhere}
                             onSendToChat={setPostToShare}
                             onEditCaption={setCaptionGoal}
                             onReport={handleReportGoal}
