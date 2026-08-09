@@ -891,10 +891,19 @@ function CommentsPanel({
   onCancelEdit,
   onDeleteComment,
   onCommentMenuChange,
+  inline = false,
 }) {
   return (
     <>
-      <div className="engine-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+      {/* Inline, a lista entra no fluxo da coluna que já rola: manter o
+          overflow próprio criaria scroll dentro de scroll. */}
+      <div
+        className={
+          inline
+            ? "border-t border-[var(--engine-border)] px-4 py-4 sm:px-5"
+            : "engine-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5"
+        }
+      >
         {comments.length ? (
           <div className="space-y-4">
             {comments.map((comment, index) => (
@@ -918,7 +927,11 @@ function CommentsPanel({
             ))}
           </div>
         ) : (
-          <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+          <div
+            className={`flex flex-col items-center justify-center text-center ${
+              inline ? "py-6" : "h-full min-h-48"
+            }`}
+          >
             <MessageCircle className="mb-3 text-[var(--engine-text-subtle)]" size={30} />
             <p className="text-sm font-bold text-[var(--engine-text)]">
               {t("community.noComments")}
@@ -1850,6 +1863,14 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
 
   const comments = goal?.comments || [];
 
+  // Quem chega por notificação de comentário (`?comments=1`) cai no compositor
+  // já focado. Antes esse parâmetro abria a folha de comentários; agora a
+  // lista está sempre visível, então o que resta é levar a pessoa até ela.
+  useEffect(() => {
+    if (!openComments || !goal) return;
+    composerRef.current?.focus({ preventScroll: false });
+  }, [openComments, goal]);
+
   const submitComment = (event) => {
     event.preventDefault();
     const cleanDraft = draft.trim().slice(0, 180);
@@ -1921,11 +1942,38 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
                 goal={goal}
                 t={t}
                 variant="modal"
-                initialCommentsOpen={openComments && !sideBySide}
-                onCommentClick={
-                  sideBySide ? () => composerRef.current?.focus() : undefined
-                }
+                // O balão nunca abre outra folha por cima: a lista já está
+                // logo abaixo (coluna única) ou ao lado (desktop com mídia).
+                initialCommentsOpen={false}
+                onCommentClick={() => composerRef.current?.focus()}
               />
+
+              {/* Comentários abrem junto com a publicação, no fluxo da mesma
+                  rolagem — antes era preciso tocar no balão e abrir um segundo
+                  modal empilhado sobre o primeiro. */}
+              {!sideBySide && (
+                <CommentsPanel
+                  inline
+                  goal={goal}
+                  comments={comments}
+                  draft={draft}
+                  editingCommentId={editingCommentId}
+                  editingDraft={editingDraft}
+                  commentMenuId={commentMenuId}
+                  currentUserId={cardProps.currentUserId}
+                  composerRef={composerRef}
+                  t={t}
+                  onDraftChange={setDraft}
+                  onSubmitComment={submitComment}
+                  onOpenProfile={cardProps.onOpenProfile}
+                  onStartEditComment={startEditComment}
+                  onEditingDraftChange={setEditingDraft}
+                  onSubmitEditComment={submitEditComment}
+                  onCancelEdit={cancelEdit}
+                  onDeleteComment={cardProps.onDeleteComment}
+                  onCommentMenuChange={setCommentMenuId}
+                />
+              )}
             </div>
 
             {sideBySide && (
