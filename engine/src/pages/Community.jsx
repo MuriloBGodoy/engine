@@ -769,74 +769,75 @@ export function GoalCard({
             icon={<Send size={19} />}
           />
         )}
-        <div className="ml-auto">
-          {/* Avaliar por estrela é sobre a meta/veículo; num post de texto ou
-              foto solta não há o que pontuar. */}
-          {!isFreePost && (
+        {/* Avaliar por estrela é sobre a meta/veículo; num post de texto ou
+            foto solta não há o que pontuar. A nota fica colada no controle,
+            em vez de numa linha própria embaixo. */}
+        {!isFreePost && (
+          <div className="ml-auto flex items-center gap-1.5">
+            {rating > 0 && (
+              <span className="text-[13px] font-bold tabular-nums text-[var(--engine-text-muted)]">
+                {rating.toFixed(1)}
+              </span>
+            )}
             <RatingControl
               value={rating}
               label={t("community.rate")}
               onRate={(value) => onRate(goal.id, value)}
             />
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-1.5 px-3 pb-3.5 pt-1 sm:px-4 sm:pb-4">
-        {/* A contagem de curtidas agora vive ao lado do coração; aqui sobra só
-            a nota média, que não tem ícone próprio na barra. */}
-        {rating > 0 && (
-          <p className="text-[13px] font-bold text-[var(--engine-text-subtle)]">
-            {rating.toFixed(1)} ★
-          </p>
-        )}
-
-        {/* No modal o cabeçalho já anuncia o veículo — repetir aqui rouba o
-            lugar da descrição, que é o que a pessoa escreveu. Post livre só
-            mostra o veículo quando foi publicado a partir de um carro. */}
-        {!isModal && (!isFreePost || goal.title) && (
-          <p className="text-sm leading-6 text-[var(--engine-text)]">
-            <span className="font-bold italic">{getVehicleTitle(goal)}</span>
-            {goal.year && (
-              <span className="text-[var(--engine-text-subtle)]">{` · ${goal.year}`}</span>
-            )}
-          </p>
-        )}
-
-        {/* Progresso é coisa de meta: post livre não tem o que preencher, e a
-            barra vazia só confundiria. */}
-        {!isFreePost && (
-          <div className="flex items-center gap-2">
-            <span className="h-1 min-w-8 flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
-              <span
-                className="block h-full rounded-full bg-[var(--engine-accent)]"
-                style={{ width: `${progress}%` }}
-              />
-            </span>
-            <span className="shrink-0 text-[11px] font-black text-[var(--engine-accent)]">
-              {progress.toFixed(0)}%
-            </span>
-            <InfoTip text={t("community.privacyLine")} align="right" />
           </div>
         )}
+      </div>
 
-        {!isFreePost && isGoalCompleted(goal) && (
-          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--engine-accent-soft)] px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
-            <Trophy size={11} />
-            {t("community.completed")}
-          </span>
-        )}
-
+      {/* Ordem de leitura: primeiro o que a pessoa escreveu, depois o que o
+          sistema sabe sobre o carro. Antes a legenda vinha por último, atrás
+          de título, barra e selo — o conteúdo do autor era a última coisa. */}
+      <div className="space-y-2 px-3 pb-3.5 pt-1.5 sm:px-4 sm:pb-4">
         {goal.note && !textFirst && (
           <p
-            className={`text-sm font-medium leading-6 text-[var(--engine-text-muted)] ${
-              isModal ? "whitespace-pre-line" : "line-clamp-2"
+            className={`text-sm leading-6 text-[var(--engine-text)] ${
+              isModal ? "whitespace-pre-line" : "line-clamp-3"
             }`}
           >
             {goal.note}
           </p>
         )}
 
+        {/* No modal o cabeçalho já anuncia o veículo. Post livre só mostra
+            quando foi publicado a partir de um carro. */}
+        {!isModal && (!isFreePost || goal.title) && (
+          <p className="text-[13px] leading-5 text-[var(--engine-text-muted)]">
+            <span className="font-bold italic text-[var(--engine-text)]">
+              {getVehicleTitle(goal)}
+            </span>
+            {goal.year && <span>{` · ${goal.year}`}</span>}
+          </p>
+        )}
+
+        {!isFreePost &&
+          (isGoalCompleted(goal) ? (
+            /* Meta batida: barra cheia, "100%" e selo diziam a mesma coisa
+               três vezes. Fica só o selo. */
+            <div className="flex items-center gap-2">
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--engine-accent-soft)] px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
+                <Trophy size={11} />
+                {t("community.completed")}
+              </span>
+              <InfoTip text={t("community.privacyLine")} align="right" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 max-w-[220px] flex-1 overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
+                <span
+                  className="block h-full rounded-full bg-[var(--engine-accent)] transition-[width] duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </span>
+              <span className="shrink-0 text-[11px] font-black tabular-nums text-[var(--engine-accent)]">
+                {progress.toFixed(0)}%
+              </span>
+              <InfoTip text={t("community.privacyLine")} align="right" />
+            </div>
+          ))}
       </div>
 
       {commentsOpen && (
