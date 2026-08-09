@@ -161,7 +161,7 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
             />
 
             {cars.length > 0 && (
-              <label className="relative flex min-h-11 items-center gap-2 rounded-xl border border-[var(--engine-border)] px-3">
+              <label className="engine-field relative flex min-h-11 items-center gap-2 rounded-xl border border-[var(--engine-border)] px-3">
                 <Car size={15} className="shrink-0 text-[var(--engine-text-muted)]" />
                 <select
                   value={carId}
@@ -179,7 +179,7 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
             )}
           </div>
 
-          <label className="flex items-center gap-2 rounded-xl border border-[var(--engine-border)] px-3">
+          <label className="engine-field flex items-center gap-2 rounded-xl border border-[var(--engine-border)] px-3">
             <Video size={15} className="shrink-0 text-[var(--engine-text-muted)]" />
             <input
               value={videoUrl}

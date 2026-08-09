@@ -117,6 +117,25 @@ h5 {
   border-radius: 6px;
 }
 
+/* Campo composto (ícone + input + botão dentro de uma mesma moldura): quem
+   mostra o foco é a moldura, via .engine-field:focus-within. O controle
+   interno não desenha anel próprio, senão ficam dois aninhados.
+   Precisa estar aqui fora de @layer, porque a regra acima também está — e
+   estilo sem layer vence utilitária do Tailwind por mais específica que seja,
+   o que fazia `outline-none` no input não ter efeito nenhum. */
+.engine-field {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.engine-field:focus-within {
+  border-color: var(--engine-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--engine-accent) 22%, transparent);
+}
+
+.engine-field :where(input, textarea):focus-visible {
+  outline: none;
+}
+
 /* Estes resets ficam em @layer base de propósito: fora de uma layer eles
    venceriam QUALQUER utilitária do Tailwind — era o caso do `min-width: 0`,
    que anulava silenciosamente todo `min-w-*` do projeto (cards de estatística

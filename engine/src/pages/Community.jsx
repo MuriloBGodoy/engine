@@ -2751,23 +2751,25 @@ export function Community({ cars = [], settings, user }) {
                   {/* O campo só ocupa espaço quando a pessoa quer buscar; do
                       contrário fica atrás do ícone na barra. */}
                   {searchOpen && (
-                    <label className="mb-4 flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-accent)] bg-[var(--engine-surface)] px-4">
+                    <label className="engine-field mb-4 flex h-11 w-full items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] pl-4 pr-1.5">
                       <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
                       <input
                         autoFocus
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder={t("community.search")}
-                        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
+                        className="h-full min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
                       />
+                      {/* Botão dentro da moldura, com área de toque de 32px e
+                          padding-right menor pra compensar. */}
                       {query && (
                         <button
                           type="button"
                           onClick={() => setQuery("")}
                           aria-label={t("community.clearSearch")}
-                          className="shrink-0 text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
                         >
-                          <X size={16} />
+                          <X size={15} />
                         </button>
                       )}
                     </label>
