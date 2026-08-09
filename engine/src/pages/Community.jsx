@@ -935,7 +935,11 @@ function CommentsPanel({
           ref={composerRef}
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
-          placeholder={t("community.commentPlaceholder")}
+          placeholder={t(
+            goal?.kind === POST_KIND_POST
+              ? "community.commentPlaceholderPost"
+              : "community.commentPlaceholder",
+          )}
           className="min-w-0 flex-1 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-3 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)] sm:px-4"
         />
         <button
@@ -1833,6 +1837,11 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
   // lightbox das redes). No celular não há espaço "ao lado", então o balão
   // continua abrindo a folha de comentários.
   const isWide = useMediaQuery("(min-width: 1024px)");
+  // A coluna lateral de comentários só se justifica quando há mídia ocupando a
+  // esquerda. Num post de texto ela deixava metade do modal vazia, com um
+  // "sem comentários" gigante ao lado de duas linhas de conteúdo.
+  const hasMedia = Boolean(goal?.images?.length || goal?.image || goal?.videoUrl);
+  const sideBySide = isWide && hasMedia;
   const [draft, setDraft] = useState("");
   const [editingCommentId, setEditingCommentId] = useState("");
   const [editingDraft, setEditingDraft] = useState("");
@@ -1874,7 +1883,7 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
         role="dialog"
         aria-modal="true"
         aria-label={t("community.postTitle")}
-        className={`engine-modal-panel engine-pop ${isWide ? "sm:max-w-5xl" : "sm:max-w-2xl"}`}
+        className={`engine-modal-panel engine-pop ${sideBySide ? "sm:max-w-5xl" : "sm:max-w-2xl"}`}
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] px-4 py-3.5">
@@ -1882,8 +1891,15 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--engine-accent)]">
               {t("community.postTitle")}
             </p>
+            {/* Post sem carro não tem veículo pra anunciar: getVehicleTitle
+                caía no rótulo genérico "Meta", que é justamente o que ele não
+                é. Nesse caso o cabeçalho identifica pelo autor. */}
             <h2 className="mt-1 truncate text-base font-extrabold italic text-[var(--engine-text)] dark:text-white">
-              {goal ? getVehicleTitle(goal) : t("common.loading")}
+              {!goal
+                ? t("common.loading")
+                : goal.kind === POST_KIND_POST && !goal.title
+                  ? goal.author
+                  : getVehicleTitle(goal)}
             </h2>
           </div>
           <button
@@ -1905,14 +1921,14 @@ function PostModal({ goal, loading, openComments, t, onClose, cardProps }) {
                 goal={goal}
                 t={t}
                 variant="modal"
-                initialCommentsOpen={openComments && !isWide}
+                initialCommentsOpen={openComments && !sideBySide}
                 onCommentClick={
-                  isWide ? () => composerRef.current?.focus() : undefined
+                  sideBySide ? () => composerRef.current?.focus() : undefined
                 }
               />
             </div>
 
-            {isWide && (
+            {sideBySide && (
               <div className="flex min-h-0 w-[360px] shrink-0 flex-col">
                 <CommentsPanel
                   goal={goal}
