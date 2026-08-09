@@ -450,7 +450,9 @@ const resources = {
         title: "A garagem agora também é uma rede.",
         subtitle:
           "Veja metas de amigos, acompanhe progresso, curta, comente, avalie e compartilhe sem expor valores privados.",
-        tabs: { feed: "Feed", videos: "Vídeos", ranking: "Ranking" },
+        tabs: { feed: "Feed", videos: "Vídeos", ranking: "Ranking", clubs: "Clubes" },
+        discoverPeople: "Descobrir pessoas",
+        clearSearch: "Limpar busca",
         stats: {
           goals: "metas no feed",
           interactions: "interações",
@@ -1139,7 +1141,9 @@ const resources = {
         title: "The garage is a network now.",
         subtitle:
           "See friends' goals, follow progress, like, comment, rate, and share without exposing private amounts.",
-        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking" },
+        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking", clubs: "Clubs" },
+        discoverPeople: "Discover people",
+        clearSearch: "Clear search",
         stats: {
           goals: "goals in feed",
           interactions: "interactions",
@@ -1826,7 +1830,9 @@ const resources = {
         title: "El garaje ahora también es una red.",
         subtitle:
           "Mira metas de amigos, sigue el progreso, da like, comenta, evalúa y comparte sin exponer valores privados.",
-        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking" },
+        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking", clubs: "Clubes" },
+        discoverPeople: "Descubrir personas",
+        clearSearch: "Limpiar búsqueda",
         stats: {
           goals: "metas en el feed",
           interactions: "interacciones",

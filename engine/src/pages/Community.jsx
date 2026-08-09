@@ -2021,6 +2021,9 @@ export function Community({ cars = [], settings, user }) {
   // cima é redundante. A publicação em tela cheia fica reservada ao
   // redirecionamento (perfil, notificação, link) — que vale nos dois casos.
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  // Casa com o `xl:` da grade: é a partir daí que o trilho lateral entra na
+  // tela, e com ele o "Top da semana".
+  const hasRail = useMediaQuery("(min-width: 1280px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const topLevelTab = searchParams.get("tab") || "goals";
   const [activeSubTab, setActiveSubTab] = useState("feed");
@@ -2040,6 +2043,7 @@ export function Community({ cars = [], settings, user }) {
   const [publicProfiles, setPublicProfiles] = useState({});
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [peopleModalOpen, setPeopleModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState({
     open: false,
@@ -2645,24 +2649,35 @@ export function Community({ cars = [], settings, user }) {
     }));
   };
 
-  const setTopLevelTab = (tabId) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("tab", tabId);
-    params.delete("club"); // Close any open club modal
-    setSearchParams(params);
-    setActiveSubTab("feed"); // Reset sub-tab to default
-  };
-
-  const subTabs = [
+  /**
+   * Navegação da comunidade numa barra só.
+   *
+   * Antes eram dois níveis empilhados — METAS|CLUBES em cima e
+   * FEED|VÍDEOS|RANKING embaixo — com larguras diferentes e um campo de busca
+   * ocupando uma terceira linha. "Metas" e "Feed" também diziam a mesma coisa:
+   * o feed É o conteúdo das metas. Clubes não é um nível acima do feed, é uma
+   * seção irmã.
+   *
+   * O ranking só entra aqui quando o trilho lateral não está na tela: no
+   * desktop ele já aparece como "Top da semana" ao lado, e repetir seria
+   * ocupar espaço à toa.
+   */
+  const sections = [
     { id: "feed", label: t("community.tabs.feed"), icon: Users },
     { id: "videos", label: t("community.tabs.videos"), icon: Clapperboard },
-    { id: "ranking", label: t("community.tabs.ranking"), icon: Trophy },
+    ...(hasRail ? [] : [{ id: "ranking", label: t("community.tabs.ranking"), icon: Trophy }]),
+    { id: "clubes", label: t("community.tabs.clubs"), icon: Building },
   ];
 
-  const mainTabs = [
-    { id: "goals", label: "Metas", icon: Car },
-    { id: "clubes", label: "Clubes", icon: Building },
-  ];
+  const activeSection = topLevelTab === "clubes" ? "clubes" : activeSubTab;
+
+  const selectSection = (id) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", id === "clubes" ? "clubes" : "goals");
+    params.delete("club");
+    setSearchParams(params);
+    if (id !== "clubes") setActiveSubTab(id);
+  };
 
 
   return (
@@ -2674,39 +2689,56 @@ export function Community({ cars = [], settings, user }) {
           botão de publicar aqui em cima. */}
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full min-w-0 max-w-[620px]">
-          {/* Main Tabs (Goals, Users, Clubes) */}
-          <div className="mb-4 flex w-full items-center gap-3">
+          {/* Uma barra só: seções à esquerda, ações à direita. */}
+          <div className="mb-4 flex w-full items-center gap-2">
             <div className="flex min-w-0 flex-1 rounded-full bg-[var(--engine-surface-2)] p-1">
-              {mainTabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = topLevelTab === tab.id;
+              {sections.map((section) => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.id;
                 return (
                   <button
-                    key={tab.id}
+                    key={section.id}
                     type="button"
-                    onClick={() => setTopLevelTab(tab.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
+                    onClick={() => selectSection(section.id)}
+                    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2.5 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
                       isActive
                         ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
                         : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
                     }`}
                   >
-                    <Icon size={16} className="shrink-0" />
-                    <span className="truncate">{tab.label}</span>
+                    <Icon size={15} className="shrink-0" />
+                    <span className="truncate">{section.label}</span>
                   </button>
                 );
               })}
             </div>
 
+            {activeSection === "feed" && (
+              <button
+                type="button"
+                onClick={() => setSearchOpen((open) => !open)}
+                title={t("community.search")}
+                aria-label={t("community.search")}
+                aria-expanded={searchOpen}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
+                  searchOpen || query
+                    ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
+                    : "border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                }`}
+              >
+                <Search size={18} />
+              </button>
+            )}
+
             {topLevelTab === "goals" && (
               <button
                 type="button"
                 onClick={() => setPeopleModalOpen(true)}
-                title="Descobrir e seguir pessoas"
-                aria-label="Descobrir e seguir pessoas"
+                title={t("community.discoverPeople")}
+                aria-label={t("community.discoverPeople")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
               >
-                <Plus size={20} />
+                <UserPlus size={18} />
               </button>
             )}
           </div>
@@ -2714,40 +2746,32 @@ export function Community({ cars = [], settings, user }) {
           {/* Goals Tab */}
           {topLevelTab === "goals" && (
             <>
-              {/* Sub-tabs for Goals */}
-              <div className="mb-4 flex items-center gap-2 rounded-full bg-[var(--engine-surface-2)] p-1 w-fit">
-                {subTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeSubTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveSubTab(tab.id)}
-                      className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
-                        isActive
-                          ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
-                          : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-                      }`}
-                    >
-                      <Icon size={14} className="shrink-0" />
-                      <span className="truncate">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
               {activeSubTab === "feed" && (
                 <>
-                  <label className="mb-4 flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4">
-                    <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
-                    <input
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder={t("community.search")}
-                      className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
-                    />
-                  </label>
+                  {/* O campo só ocupa espaço quando a pessoa quer buscar; do
+                      contrário fica atrás do ícone na barra. */}
+                  {searchOpen && (
+                    <label className="mb-4 flex h-11 items-center gap-2.5 rounded-full border border-[var(--engine-accent)] bg-[var(--engine-surface)] px-4">
+                      <Search size={16} className="shrink-0 text-[var(--engine-text-subtle)]" />
+                      <input
+                        autoFocus
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder={t("community.search")}
+                        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--engine-text)] outline-none"
+                      />
+                      {query && (
+                        <button
+                          type="button"
+                          onClick={() => setQuery("")}
+                          aria-label={t("community.clearSearch")}
+                          className="shrink-0 text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)]"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </label>
+                  )}
 
                   {regionWidened && (
                     <div className="region-widened">
