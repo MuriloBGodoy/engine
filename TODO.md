@@ -147,6 +147,33 @@ Está tudo pronto; falta só a decisão de negócio.
 métricas do anúncio já existe justamente para isso — sem número para mostrar, o
 cancelamento vem no segundo mês.
 
+### Simulador — puxar dado real das fontes mapeadas
+
+Inventário completo, com endpoints verificados, em **`SIMULADOR-FONTES.md`**.
+Na ordem de retorno:
+
+- [ ] **ANP semanal → Firestore.** Substitui `FUEL_PRICE_BR` e `FUEL_FACTOR_BR`.
+      A média nacional do código está certa; os fatores por UF erram até 9,3
+      p.p. CSV público, sem autenticação, ~8 MB por semana
+- [ ] **BCB SGS 25471 mensal → Firestore.** Cinco linhas. Hoje o ganho é nulo
+      (1,97% contra 1,99%), mas a série já marcou 1,63% e vai divergir de novo
+- [ ] **IPVA do Amazonas está 2× errado** — LC 280/2025 cortou pela metade
+      (1,5% e 2,0%); o código tem 3%. Conferir também PR e CE
+- [ ] **Job mensal de amostragem FIPE histórica** para calibrar a depreciação,
+      que é o maior erro numérico do modelo. Precisa de amostra ampla: um ano
+      só de preço nominal pode ser efeito de período, não a curva
+- [ ] **AUTOSEG 2020** (535 MB, congelado desde então) para extrair os fatores
+      relativos de faixa etária e região. É a única melhoria disponível para
+      seguro, e enquanto não vier a curva atual precisa ficar rotulada na tela
+      como a estimativa menos confiável do simulador
+- [ ] **Franquia via Open Insurance** — API pública sem autenticação, chaveada
+      por CEP + FIPE + ano. Não traz prêmio, mas traz franquia, que hoje o
+      simulador ignora
+
+Não fazer: pipeline de PDF do INMETRO, pipeline por país para seguro
+internacional, e procurar API de cotação — está bloqueada por registro de
+corretora na SUSEP, é decisão de parceria e não de engenharia.
+
 ### Notificação de lembrete
 
 Agora destravada: o registro de gastos existe, então há conteúdo para lembrar
