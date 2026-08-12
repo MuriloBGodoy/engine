@@ -856,6 +856,39 @@ export const engineDB = {
   },
 
   /**
+   * Um carro só, pelo id.
+   *
+   * Existe porque lançar um aporte ou um gasto não justifica ler a garagem
+   * inteira: com as fotos em base64 dentro do documento, cada leitura dessas
+   * arrasta megabytes por um carro que já se sabe qual é. Foi assim que a cota
+   * diária do Firestore virou um teto alcançável.
+   */
+  async getCar(carId) {
+    if (!carId) return null;
+
+    if (!currentUserId) {
+      const cars = await getLocalCars();
+      return cars.find((item) => String(item.id) === String(carId)) || null;
+    }
+
+    try {
+      const snapshot = await withTimeout(
+        getDoc(userCarDoc(carId)),
+        "buscar carro",
+        CARS_TIMEOUT_MS,
+      );
+      if (snapshot.exists()) {
+        return normalizeCar({ id: snapshot.id, ...snapshot.data() });
+      }
+    } catch (error) {
+      warnFirestoreFallback("getCar", error);
+    }
+
+    const cars = await getLocalCars();
+    return cars.find((item) => String(item.id) === String(carId)) || null;
+  },
+
+  /**
    * Registra um aporte na meta.
    *
    * Aporte é evento, não edição de campo: guarda valor e data, e soma ao
@@ -867,8 +900,7 @@ export const engineDB = {
     const value = Math.max(Number(amount) || 0, 0);
     if (!carId || !value) return null;
 
-    const cars = await this.getCars();
-    const car = cars.find((item) => String(item.id) === String(carId));
+    const car = await this.getCar(carId);
     if (!car) return null;
 
     const contribution = {
@@ -893,8 +925,7 @@ export const engineDB = {
 
   /** Remove um aporte lançado errado e desfaz a soma. */
   async removeCarContribution(carId, contributionId) {
-    const cars = await this.getCars();
-    const car = cars.find((item) => String(item.id) === String(carId));
+    const car = await this.getCar(carId);
     if (!car) return null;
 
     const target = (car.contributions || []).find((item) => item.id === contributionId);
@@ -921,8 +952,7 @@ export const engineDB = {
     const value = Math.max(Number(expense?.amount) || 0, 0);
     if (!carId || !value) return null;
 
-    const cars = await this.getCars();
-    const car = cars.find((item) => String(item.id) === String(carId));
+    const car = await this.getCar(carId);
     if (!car) return null;
 
     const entry = normalizeExpense({ ...expense, id: crypto.randomUUID() });
@@ -937,8 +967,7 @@ export const engineDB = {
 
   /** Remove um gasto lançado errado. */
   async removeCarExpense(carId, expenseId) {
-    const cars = await this.getCars();
-    const car = cars.find((item) => String(item.id) === String(carId));
+    const car = await this.getCar(carId);
     if (!car) return null;
 
     const updated = normalizeCar({

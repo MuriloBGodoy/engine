@@ -204,14 +204,19 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
       settings?.budget?.monthlyIncome || Number(car.ownership?.monthlyIncome) || 0,
   }));
 
+  // O veredito na tela reage a cada tecla, mas a GRAVAÇÃO não: escrever a cada
+  // caractere transformava digitar "4500" em quatro escritas no Firestore, e a
+  // cota diária do plano gratuito é contada em escritas. Persiste ao sair do
+  // campo, que é quando o valor está inteiro de qualquer forma.
   const updateBudget = (patch) => {
-    const next = { ...budget, ...patch, updatedAt: new Date().toISOString() };
-    setBudget(next);
-    // Grava em segundo plano: o veredito já mudou na tela, e travar a digitação
-    // esperando a rede seria pior do que perder o último caractere numa queda.
-    const merged = { ...settings, budget: next };
+    setBudget((prev) => ({ ...prev, ...patch }));
+  };
+
+  const persistBudget = () => {
+    if (JSON.stringify(budget) === JSON.stringify(settings?.budget || {})) return;
+    const next = { ...budget, updatedAt: new Date().toISOString() };
     engineDB
-      .saveSettings(merged)
+      .saveSettings({ ...settings, budget: next })
       .then((saved) => onSettingsUpdate?.(saved))
       .catch(() => {});
   };
@@ -778,6 +783,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
               budget={budget}
               currentCar={reference}
               onChange={updateBudget}
+              onCommit={persistBudget}
               lifeSituation={inputs.lifeSituation}
             />
 
@@ -1126,7 +1132,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
  * carro` uma vírgula — e transformaria isto num formulário de orçamento
  * doméstico que ninguém preenche.
  */
-function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, lifeSituation }) {
+function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, onCommit, lifeSituation }) {
   const income = Number(budget?.monthlyIncome) || 0;
   const expenses = Number(budget?.monthlyExpenses) || 0;
   const currentCarCost = currentCar?.insights?.monthlyAverage || 0;
@@ -1163,6 +1169,7 @@ function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, life
             value={income || ""}
             placeholder="0"
             onChange={(event) => onChange({ monthlyIncome: Number(event.target.value) || 0 })}
+            onBlur={onCommit}
             className={fieldClass}
           />
         </Field>
@@ -1177,6 +1184,7 @@ function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, life
             value={expenses || ""}
             placeholder="0"
             onChange={(event) => onChange({ monthlyExpenses: Number(event.target.value) || 0 })}
+            onBlur={onCommit}
             className={fieldClass}
           />
         </Field>
@@ -1203,12 +1211,15 @@ function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, life
               <button
                 key={option.key}
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   onChange({
                     replacedCarId:
                       option.key === "replace" ? String(currentCar.car.id) : "",
-                  })
-                }
+                  });
+                  // Um clique já é a decisão inteira, diferente de um número
+                  // sendo digitado: não há por que esperar o campo perder foco.
+                  window.setTimeout(onCommit, 0);
+                }}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition ${
                   option.active
                     ? "bg-[var(--engine-accent)] text-white"
