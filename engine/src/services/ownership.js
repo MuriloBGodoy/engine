@@ -127,9 +127,15 @@ const num = (value, fallback = 0) => {
 };
 
 // Extrai o ano-modelo do texto da FIPE ("2018 Gasolina", "32000" = zero km).
+//
+// As bordas de palavra são essenciais: sem elas o rótulo de zero km da FIPE,
+// "32000", casava o "2000" no meio e o carro novo virava um carro de 26 anos —
+// com depreciação quatro vezes menor, que é justamente o número que mais pesa
+// para quem compra zero km. Sem casamento, o ano é o corrente, que é o certo
+// tanto para o zero km quanto para um rótulo que não reconhecemos.
 const parseCarYear = (yearLabel) => {
   const current = new Date().getFullYear();
-  const match = String(yearLabel || "").match(/(19|20)\d{2}/);
+  const match = String(yearLabel || "").match(/\b(19|20)\d{2}\b/);
   if (!match) return current;
   const year = Number(match[0]);
   return year > current + 1 ? current : year;
@@ -207,9 +213,22 @@ const annualLicensing = (country, state) => {
 
 const annualInsurance = (value, carAge, inputs, country, state) => {
   if (inputs.coverage === "none") return 0;
+
+  const countryFactor = countryProfile(country).insuranceFactor;
+
   if (inputs.coverage === "thirdparty") {
-    // Cobertura só contra terceiros: pouco sensível ao valor do carro.
-    return clamp(value * 0.015, 700, 2200) * countryProfile(country).insuranceFactor;
+    // Cobertura só contra terceiros: pouco sensível ao valor do carro, mas
+    // muito sensível a quem dirige — responsabilidade civil é risco do
+    // condutor, não do veículo. Ignorar a idade fazia um motorista de 19 anos
+    // e um de 60 pagarem exatamente o mesmo.
+    //
+    // O fator sai da própria curva etária, normalizada pela faixa do meio,
+    // e é achatado pela raiz porque o prêmio de terceiros varia menos que o
+    // de casco. É um default grosseiro assumido: não conheço fonte que
+    // publique curva etária de RCF isolada.
+    const ageRatio = INSURANCE_AGE_RATES[inputs.driverAgeBand] / INSURANCE_AGE_RATES["36-55"];
+    const ageFactor = clamp(Math.sqrt(ageRatio), 0.85, 1.35);
+    return clamp(value * 0.015, 700, 2200) * ageFactor * countryFactor;
   }
 
   const ageRate = INSURANCE_AGE_RATES[inputs.driverAgeBand];
@@ -221,14 +240,23 @@ const annualInsurance = (value, carAge, inputs, country, state) => {
 
   const annual =
     value * ageRate * regionFactor * garageFactor * usageFactor * carAgeFactor *
-    countryProfile(country).insuranceFactor;
-  return clamp(annual, value * 0.025, value * 0.16);
+    countryFactor;
+  // Os limites são de mercado brasileiro e precisam acompanhar o fator do
+  // país: aplicados crus, o piso de 2,5% reintroduzia em Portugal e Espanha um
+  // seguro 15–26% mais caro do que o próprio modelo acabara de dizer que era.
+  return clamp(annual, value * 0.025 * countryFactor, value * 0.16 * countryFactor);
 };
 
 const monthlyFuel = (inputs, country, state) => {
   const prices = countryProfile(country).fuelPrice;
   const basePrice = prices[inputs.fuelType] || prices.gasoline;
-  const stateFactor = country === "BR" ? FUEL_FACTOR_BR[state] || 1 : 1;
+  // O fator por UF é de frete e ICMS de combustível líquido; energia elétrica
+  // tem outra formação de preço. Aplicá-lo ao elétrico cobrava 18% a mais de
+  // um carro no Acre por um motivo que não existe na conta de luz.
+  const stateFactor =
+    country === "BR" && inputs.fuelType !== "electric"
+      ? FUEL_FACTOR_BR[state] || 1
+      : 1;
 
   // Hierarquia: user informado > consumption > default
   let consumption = DEFAULT_CONSUMPTION[inputs.fuelType];

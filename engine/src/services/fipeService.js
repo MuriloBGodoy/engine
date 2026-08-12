@@ -1,7 +1,10 @@
 import axios from "axios";
 
 const FIPE_API_URL = "https://parallelum.com.br/fipe/api/v1/carros/marcas";
-const ENGINE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+// Sem variável definida, a base fica vazia — igual ao `db.js`. Caindo em
+// localhost, a chamada morria em produção, o consumo INMETRO voltava nulo e o
+// modal mostrava o consumo padrão sem nunca avisar que era chute.
+const ENGINE_API_URL = import.meta.env.VITE_API_URL || "";
 
 const engineApiUrl = (path) => `${ENGINE_API_URL}${path}`;
 
