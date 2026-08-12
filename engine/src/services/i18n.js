@@ -276,6 +276,14 @@ const resources = {
           perMonth: "por mês, tudo incluído",
           requiredIncome: "Renda necessária",
           requiredIncomeHint: "para o carro ocupar {{pct}}% da renda",
+          realTitle: "Comparando com o real",
+          realSelf:
+            "A estimativa dá {{estimate}} por mês. Pelos seus lançamentos, o gasto real é {{actual}}.",
+          realCompare:
+            "Você gasta {{actual}} por mês com o {{current}}. O {{target}} sairia por {{estimate}}.",
+          realMore: "{{value}} a mais por mês do que hoje",
+          realLess: "{{value}} a menos por mês do que hoje",
+          useMeasured: "Usar meus dados medidos",
           comfort: {
             comfortable: "Confortável para sua renda",
             warning: "Atenção: vai apertar o orçamento",
@@ -1004,6 +1012,14 @@ const resources = {
           perMonth: "per month, all included",
           requiredIncome: "Income needed",
           requiredIncomeHint: "for the car to take {{pct}}% of income",
+          realTitle: "Against the real thing",
+          realSelf:
+            "The estimate says {{estimate}} a month. Your logged expenses say {{actual}}.",
+          realCompare:
+            "You spend {{actual}} a month on the {{current}}. The {{target}} would run {{estimate}}.",
+          realMore: "{{value}} more per month than today",
+          realLess: "{{value}} less per month than today",
+          useMeasured: "Use my measured data",
           comfort: {
             comfortable: "Comfortable for your income",
             warning: "Careful: this will squeeze your budget",
@@ -1730,6 +1746,14 @@ const resources = {
           perMonth: "por mes, todo incluido",
           requiredIncome: "Ingreso necesario",
           requiredIncomeHint: "para que el auto ocupe {{pct}}% del ingreso",
+          realTitle: "Comparando con lo real",
+          realSelf:
+            "La estimación da {{estimate}} por mes. Según tus registros, el gasto real es {{actual}}.",
+          realCompare:
+            "Gastas {{actual}} por mes con el {{current}}. El {{target}} saldría por {{estimate}}.",
+          realMore: "{{value}} más por mes que hoy",
+          realLess: "{{value}} menos por mes que hoy",
+          useMeasured: "Usar mis datos medidos",
           comfort: {
             comfortable: "Cómodo para tu ingreso",
             warning: "Atención: apretará tu presupuesto",

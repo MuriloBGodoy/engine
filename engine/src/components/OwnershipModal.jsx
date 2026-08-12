@@ -11,6 +11,7 @@ import {
   Route,
   TrendingDown,
   PiggyBank,
+  Receipt,
   Save,
   Loader2,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
   LIFE_SITUATIONS,
   LIFE_SITUATION_TYPES,
 } from "../services/ownership";
+import { pickReferenceCar } from "../services/expenses";
 import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
 import { fipeService } from "../services/fipeService";
 
@@ -86,13 +88,14 @@ function BreakdownRow({ icon, label, value, tip = "", share = null, muted = fals
   );
 }
 
-export function OwnershipModal({ isOpen, car, settings, onClose, onSave }) {
+export function OwnershipModal({ isOpen, car, cars = [], settings, onClose, onSave }) {
   if (!isOpen || !car) return null;
   // key={car.id} garante estado limpo do formulário a cada carro aberto.
   return (
     <OwnershipDialog
       key={car.id}
       car={car}
+      cars={cars}
       settings={settings}
       onClose={onClose}
       onSave={onSave}
@@ -100,7 +103,7 @@ export function OwnershipModal({ isOpen, car, settings, onClose, onSave }) {
   );
 }
 
-function OwnershipDialog({ car, settings, onClose, onSave }) {
+function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
   const { i18n, t } = useTranslation();
   const [inputs, setInputs] = useState(() =>
     car.ownership
@@ -135,6 +138,28 @@ function OwnershipDialog({ car, settings, onClose, onSave }) {
     () => estimateOwnership(car, inputs, { country, state }),
     [car, inputs, country, state],
   );
+
+  // Carro da garagem com gasto lançado: serve de régua real contra a projeção.
+  const reference = useMemo(() => pickReferenceCar(cars, car.id), [cars, car.id]);
+  const measured = reference?.insights;
+  // Só oferece aplicar o que ainda não foi aplicado — botão que não muda nada
+  // é ruído.
+  const canApplyMeasured =
+    measured &&
+    ((measured.kmPerMonth && Math.round(measured.kmPerMonth) !== Math.round(inputs.kmPerMonth)) ||
+      (measured.consumption &&
+        measured.consumption.kmPerLiter.toFixed(1) !==
+          Number(inputs.userConsumption || 0).toFixed(1)));
+
+  const applyMeasured = () => {
+    setInputs((prev) => ({
+      ...prev,
+      kmPerMonth: measured.kmPerMonth ? Math.round(measured.kmPerMonth) : prev.kmPerMonth,
+      userConsumption: measured.consumption
+        ? Number(measured.consumption.kmPerLiter.toFixed(1))
+        : prev.userConsumption,
+    }));
+  };
 
   const money = (value) =>
     new Intl.NumberFormat(i18n.language, {
@@ -540,6 +565,54 @@ function OwnershipDialog({ car, settings, onClose, onSave }) {
                 </p>
               </div>
             </div>
+
+            {/* Régua real: a comparação usa `monthlyMaintain`, sem a parcela do
+                financiamento nem a depreciação, porque é o que sai do bolso
+                todo mês — que é o mesmo tipo de número que a pessoa lançou. */}
+            {measured && (
+              <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
+                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                  <Receipt size={12} className="text-[var(--engine-accent)]" />
+                  {t("ownership.results.realTitle")}
+                </p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--engine-text)]">
+                  {reference.isSelf
+                    ? t("ownership.results.realSelf", {
+                        estimate: money(result.totals.monthlyMaintain),
+                        actual: money(measured.monthlyAverage),
+                      })
+                    : t("ownership.results.realCompare", {
+                        current: `${reference.car.brand} ${reference.car.model}`,
+                        actual: money(measured.monthlyAverage),
+                        target: carName,
+                        estimate: money(result.totals.monthlyMaintain),
+                      })}
+                </p>
+                {!reference.isSelf && (
+                  <p className="mt-1 text-[13px] font-bold text-[var(--engine-accent)]">
+                    {t(
+                      result.totals.monthlyMaintain >= measured.monthlyAverage
+                        ? "ownership.results.realMore"
+                        : "ownership.results.realLess",
+                      {
+                        value: money(
+                          Math.abs(result.totals.monthlyMaintain - measured.monthlyAverage),
+                        ),
+                      },
+                    )}
+                  </p>
+                )}
+                {canApplyMeasured && (
+                  <button
+                    type="button"
+                    onClick={applyMeasured}
+                    className="mt-2.5 rounded-lg border border-[var(--engine-accent)]/40 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--engine-accent)] transition hover:bg-[var(--engine-accent-soft)]"
+                  >
+                    {t("ownership.results.useMeasured")}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Comprometimento da renda informada */}
             {rec.comfortLevel && (

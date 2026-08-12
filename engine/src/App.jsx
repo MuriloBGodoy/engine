@@ -268,6 +268,7 @@ function App() {
               carToEdit={carToEdit}
               onCloseModal={handleCloseModal}
               onSaveCar={saveCarAction}
+              cars={cars}
               ownershipCar={ownershipCar}
               onCloseOwnership={() => setOwnershipCar(null)}
               onSaveOwnership={saveOwnershipAction}
@@ -392,6 +393,7 @@ function AppLayout({
   carToEdit,
   onCloseModal,
   onSaveCar,
+  cars,
   ownershipCar,
   onCloseOwnership,
   onSaveOwnership,
@@ -490,6 +492,7 @@ function AppLayout({
       <OwnershipModal
         isOpen={Boolean(ownershipCar)}
         car={ownershipCar}
+        cars={cars}
         settings={settings}
         onClose={onCloseOwnership}
         onSave={onSaveOwnership}

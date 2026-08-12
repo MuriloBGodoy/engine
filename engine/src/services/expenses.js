@@ -176,3 +176,31 @@ export const expenseInsights = (car = {}) => {
 
   return { expenses, ...summary, consumption, kmPerMonth, costPerKm };
 };
+
+/**
+ * Escolhe o carro que serve de referência real para uma simulação.
+ *
+ * Simular o Golf sozinho responde "quanto custaria". Comparar com o Jetta que
+ * já está na garagem responde "quanto a mais que hoje" — que é a pergunta que
+ * a pessoa realmente tem.
+ *
+ * Prefere o próprio carro quando ele já tem histórico: aí a comparação é entre
+ * a estimativa e o extrato do mesmo veículo, e vale como aferição do modelo.
+ */
+export const pickReferenceCar = (cars = [], currentCarId = null) => {
+  const withData = cars
+    .map((car) => ({ car, insights: expenseInsights(car) }))
+    .filter((item) => item.insights.monthlyAverage);
+
+  if (!withData.length) return null;
+
+  const self = withData.find((item) => String(item.car.id) === String(currentCarId));
+  if (self) return { ...self, isSelf: true };
+
+  // Sem o próprio carro, vale o mais documentado: mais lançamentos significa
+  // média menos sujeita a um mês fora da curva.
+  const best = withData.sort(
+    (a, b) => b.insights.expenses.length - a.insights.expenses.length,
+  )[0];
+  return { ...best, isSelf: false };
+};
