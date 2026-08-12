@@ -3,7 +3,7 @@
 Lista acionável do que ficou pendente. O **porquê** de cada decisão está no
 `ROADMAP.md`; aqui é só o que fazer.
 
-Última atualização: 6 de agosto de 2026.
+Última atualização: 11 de agosto de 2026.
 
 ---
 
@@ -147,33 +147,12 @@ Está tudo pronto; falta só a decisão de negócio.
 métricas do anúncio já existe justamente para isso — sem número para mostrar, o
 cancelamento vem no segundo mês.
 
-### Custo do carro que a pessoa já tem (item 9)
-
-Segunda parte do problema de frequência, e projeto próprio.
-
-Hoje o `OwnershipModal` **simula** quanto custaria o carro que você quer — é
-projeção para decidir a compra, usada uma vez. Falta registrar o que a pessoa
-**realmente gasta** com o carro que já tem: abastecimento, manutenção, seguro,
-impostos.
-
-Por que vale: carro-meta é sonho de anos, carro atual gera gasto toda semana. E
-quem quer trocar de carro é quem já tem um.
-
-Três encaixes:
-- alimenta o simulador com dado real em vez de estimativa;
-- dá contexto à meta ("você gasta R$ 1.400 com o Jetta; o Golf custaria
-  R$ 1.700");
-- **liga frequência com receita** — registrar "troquei o óleo" é o momento
-  exato de mostrar um prestador da região.
-
-Escopo: modelar despesa (categoria, valor, data, odômetro), resumo por mês e
-por categoria, consumo real em km/l, e integração com o simulador existente.
-
 ### Notificação de lembrete
 
-Só depois do registro de gastos, e com parcimônia — notificação sem conteúdo
-bom vira desinstalação. Web push funciona no Android e, no iOS, para quem
-adicionou o app à tela de início.
+Agora destravada: o registro de gastos existe, então há conteúdo para lembrar
+("faz 40 dias do último abastecimento lançado"). Com parcimônia — notificação
+sem conteúdo bom vira desinstalação. Web push funciona no Android e, no iOS,
+para quem adicionou o app à tela de início.
 
 ### Dívida técnica conhecida
 
@@ -201,3 +180,19 @@ adicionou o app à tela de início.
 | Assinatura Premium (Mercado Pago + Stripe) | `a28021b` |
 | Aporte como evento + previsão da meta | `f88745c` |
 | Termos de uso e política de privacidade | `e792d55` |
+
+## Já feito em 11/08/2026
+
+| Entrega | Commit |
+| --- | --- |
+| Gasto real do carro que a pessoa já tem (item 9) | `02b5e9e` |
+| Simulador comparando com o gasto real | `68049ab` |
+
+O item 9 fechou os três encaixes que justificavam ele: o simulador agora bebe
+de dado medido em vez de estimativa, a meta ganha contexto ("você gasta X com o
+que tem; o que quer sairia por Y") e lançar lavagem, revisão ou pneu oferece um
+prestador na hora — que é onde frequência de uso encontra receita.
+
+Fica de pé uma tensão conhecida: cada lançamento lê a garagem inteira e
+reescreve o documento do carro, que hoje carrega as fotos em base64. Funciona,
+mas é mais um lugar em que o Blaze deixaria de ser opcional.
