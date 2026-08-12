@@ -9,6 +9,7 @@ import { captureError, identifyUser, resetUser, trackPageView } from "./services
 import { InstallPrompt } from "./components/InstallPrompt";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { ContributionModal } from "./components/ContributionModal";
+import { ExpensesModal } from "./components/ExpensesModal";
 import { Terms } from "./pages/Terms";
 import { Privacy } from "./pages/Privacy";
 import { PostPage } from "./pages/PostPage";
@@ -65,6 +66,7 @@ function App() {
   const [carToEdit, setCarToEdit] = useState(null);
   const [ownershipCar, setOwnershipCar] = useState(null);
   const [contributionCar, setContributionCar] = useState(null);
+  const [expenseCar, setExpenseCar] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const userId = user?.uid;
   const isTopNav = settings.preferences.navLayout === "topnav";
@@ -194,6 +196,15 @@ function App() {
     setContributionCar(updatedCar);
   };
 
+  /** Mesmo motivo do aporte: o resumo precisa refletir o lançamento na hora. */
+  const handleExpenseSaved = (updatedCar) => {
+    if (!updatedCar) return;
+    setCars((current) =>
+      current.map((item) => (item.id === updatedCar.id ? updatedCar : item)),
+    );
+    setExpenseCar(updatedCar);
+  };
+
   const openDeleteConfirmation = async (car) => {
     const percentage = car.targetValue
       ? (car.savedValue / car.targetValue) * 100
@@ -263,6 +274,9 @@ function App() {
               contributionCar={contributionCar}
               onCloseContribution={() => setContributionCar(null)}
               onContributionSaved={handleContributionSaved}
+              expenseCar={expenseCar}
+              onCloseExpense={() => setExpenseCar(null)}
+              onExpenseSaved={handleExpenseSaved}
             />
           }
         >
@@ -277,6 +291,7 @@ function App() {
                   onOpenDelete={openDeleteConfirmation}
                   onOpenOwnership={setOwnershipCar}
                   onAddContribution={setContributionCar}
+                  onAddExpense={setExpenseCar}
                   onMarkAchieved={markCarAchieved}
                   defaultSort={settings.preferences.defaultGarageSort}
                   hideValues={settings.privacy.lockSensitiveValues}
@@ -383,6 +398,9 @@ function AppLayout({
   contributionCar,
   onCloseContribution,
   onContributionSaved,
+  expenseCar,
+  onCloseExpense,
+  onExpenseSaved,
 }) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -482,6 +500,14 @@ function AppLayout({
           car={contributionCar}
           onClose={onCloseContribution}
           onSaved={onContributionSaved}
+        />
+      )}
+
+      {expenseCar && (
+        <ExpensesModal
+          car={expenseCar}
+          onClose={onCloseExpense}
+          onSaved={onExpenseSaved}
         />
       )}
     </div>

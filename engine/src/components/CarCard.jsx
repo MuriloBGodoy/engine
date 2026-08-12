@@ -1,7 +1,8 @@
-import { Calculator, Key, PiggyBank, Trash2, Trophy } from "lucide-react";
+import { Calculator, Key, PiggyBank, Receipt, Trash2, Trophy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { estimateOwnership } from "../services/ownership";
 import { forecastCompletion } from "../services/forecast";
+import { expenseInsights } from "../services/expenses";
 import { CAR_TYPE_OWNED } from "../services/db";
 
 export function CarCard({
@@ -9,6 +10,7 @@ export function CarCard({
   onDelete,
   onOpenOwnership,
   onAddContribution,
+  onAddExpense,
   onMarkAchieved,
   hideValues = false,
 }) {
@@ -23,6 +25,8 @@ export function CarCard({
     !isOwned && car.targetValue > 0 && car.savedValue >= car.targetValue;
   // Data prevista no ritmo dos aportes; some quando ainda não há ritmo.
   const forecast = forecastCompletion(car);
+  // Gasto real do mês, quando há histórico suficiente para a média valer.
+  const spending = isOwned ? expenseInsights(car) : null;
   const percentage = Math.min(
     car.targetValue ? (car.savedValue / car.targetValue) * 100 : 0,
     100,
@@ -146,6 +150,37 @@ export function CarCard({
                     month: "short",
                     year: "numeric",
                   })}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* O carro que já é seu não tem meta a alimentar — tem conta a pagar.
+              No lugar do aporte entra o gasto, e o número à direita é o que
+              esse carro está custando por mês de verdade. */}
+          {isOwned && onAddExpense && (
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddExpense(car);
+              }}
+              className="flex w-full items-center justify-between rounded-xl border border-[var(--engine-accent)]/30 bg-[var(--engine-accent-soft)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
+            >
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-accent)]">
+                <Receipt size={14} />
+                {t("expenses.cardAction")}
+              </span>
+              {spending?.monthlyAverage && (
+                <span className="text-[11px] font-bold tabular-nums text-[var(--engine-text-muted)]">
+                  {hideValues
+                    ? "R$ --"
+                    : t("expenses.perMonth", {
+                        value: new Intl.NumberFormat(i18n.language, {
+                          style: "currency",
+                          currency: "BRL",
+                          maximumFractionDigits: 0,
+                        }).format(spending.monthlyAverage),
+                      })}
                 </span>
               )}
             </button>

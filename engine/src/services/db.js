@@ -25,6 +25,7 @@ import {
 import { auth, firestore } from "./firebase";
 import { inferLocation } from "./locations";
 import { normalizeOwnershipInputs } from "./ownership";
+import { normalizeExpense, normalizeExpenses } from "./expenses";
 
 const defaultSettings = {
   profile: {
@@ -306,6 +307,11 @@ const normalizeCar = (car) => ({
         .filter((entry) => entry.amount > 0 && entry.date)
         .sort((a, b) => b.date.localeCompare(a.date))
     : [],
+  // Gastos reais do carro que a pessoa já tem. Fica no doc do carro pelo mesmo
+  // motivo dos aportes — e com teto, porque abastecimento é semanal, não
+  // mensal: sem limite o histórico cresceria para sempre dentro de um
+  // documento que já carrega as fotos em base64.
+  expenses: normalizeExpenses(car.expenses),
   // Simulação de custo real de posse (inputs do usuário), quando existir.
   ownership: car.ownership
     ? {
@@ -857,6 +863,46 @@ export const engineDB = {
       ...car,
       savedValue: Math.max((Number(car.savedValue) || 0) - target.amount, 0),
       contributions: car.contributions.filter((item) => item.id !== contributionId),
+    });
+
+    await this.saveCar(updated);
+    return updated;
+  },
+
+  /**
+   * Lança um gasto do carro.
+   *
+   * Diferente do aporte, não mexe em `savedValue`: aporte é dinheiro que se
+   * acumula rumo a um alvo, gasto é dinheiro que saiu. Somar os dois no mesmo
+   * campo misturaria as duas leituras da garagem.
+   */
+  async addCarExpense(carId, expense) {
+    const value = Math.max(Number(expense?.amount) || 0, 0);
+    if (!carId || !value) return null;
+
+    const cars = await this.getCars();
+    const car = cars.find((item) => String(item.id) === String(carId));
+    if (!car) return null;
+
+    const entry = normalizeExpense({ ...expense, id: crypto.randomUUID() });
+    const updated = normalizeCar({
+      ...car,
+      expenses: [entry, ...(car.expenses || [])],
+    });
+
+    await this.saveCar(updated);
+    return updated;
+  },
+
+  /** Remove um gasto lançado errado. */
+  async removeCarExpense(carId, expenseId) {
+    const cars = await this.getCars();
+    const car = cars.find((item) => String(item.id) === String(carId));
+    if (!car) return null;
+
+    const updated = normalizeCar({
+      ...car,
+      expenses: (car.expenses || []).filter((item) => item.id !== expenseId),
     });
 
     await this.saveCar(updated);
