@@ -276,6 +276,7 @@ const resources = {
           perMonth: "por mês, tudo incluído",
           requiredIncome: "Renda necessária",
           requiredIncomeHint: "para o carro ocupar {{pct}}% da renda",
+          rangeHint: "entre {{low}} e {{high}} — usamos o teto para a conta de renda",
           realTitle: "Comparando com o real",
           realSelf:
             "A estimativa dá {{estimate}} por mês. Pelos seus lançamentos, o gasto real é {{actual}}.",
@@ -316,6 +317,37 @@ const resources = {
           savePlanTitle: "Quanto guardar por mês para juntar {{amount}}",
           savePlanMonths: "em {{months}} meses",
           savePlanPerMonth: "por mês",
+        },
+        modes: {
+          standard: "Padrão",
+          advanced: "Avançada",
+          standardHint:
+            "Perguntamos só o que mais muda a conta. O resto a gente estima — e a faixa mostra o quanto ainda não sabemos. Local: {{location}}.",
+        },
+        kmBands: {
+          little: "Rodo pouco",
+          normal: "Normal",
+          much: "Rodo bastante",
+          work: "Rodo pra trabalhar",
+        },
+        budget: {
+          title: "Sobra ou não sobra",
+          income: "Sua renda por mês",
+          expenses: "Suas contas por mês",
+          expensesHint: "(sem o carro)",
+          empty: "Informe renda e contas para saber se cabe no seu bolso.",
+          math: "{{income}} de renda − {{expenses}} de contas − {{car}} do carro.",
+          currentCarNotice:
+            "Dos seus {{total}}, {{amount}} são do {{car}} — medido pelos seus lançamentos.",
+          replace: "Vou trocar de carro",
+          keepBoth: "Vou ter os dois",
+          verdict: {
+            comfortable: "Cabe com folga",
+            tight: "Cabe apertado",
+            no_fit: "Não cabe",
+          },
+          checkBudget:
+            "Pelas suas contas sobra dinheiro, mas o carro ficaria em {{pct}}% da sua renda, bem acima dos {{typical}}% típicos de quem está na sua situação. Faltou alguma despesa na lista?",
         },
         tips: {
           installment:
@@ -1012,6 +1044,7 @@ const resources = {
           perMonth: "per month, all included",
           requiredIncome: "Income needed",
           requiredIncomeHint: "for the car to take {{pct}}% of income",
+          rangeHint: "between {{low}} and {{high}} — we use the ceiling for the income math",
           realTitle: "Against the real thing",
           realSelf:
             "The estimate says {{estimate}} a month. Your logged expenses say {{actual}}.",
@@ -1052,6 +1085,37 @@ const resources = {
           savePlanTitle: "How much to save per month to reach {{amount}}",
           savePlanMonths: "in {{months}} months",
           savePlanPerMonth: "per month",
+        },
+        modes: {
+          standard: "Standard",
+          advanced: "Advanced",
+          standardHint:
+            "We only ask what moves the number most. The rest we estimate — and the range shows how much we still don't know. Location: {{location}}.",
+        },
+        kmBands: {
+          little: "I drive little",
+          normal: "Normal",
+          much: "I drive a lot",
+          work: "I drive for work",
+        },
+        budget: {
+          title: "Does it fit?",
+          income: "Your monthly income",
+          expenses: "Your monthly bills",
+          expensesHint: "(without the car)",
+          empty: "Enter income and bills to find out whether it fits.",
+          math: "{{income}} income − {{expenses}} bills − {{car}} car.",
+          currentCarNotice:
+            "Of your {{total}}, {{amount}} is the {{car}} — measured from your own logs.",
+          replace: "I'm replacing my car",
+          keepBoth: "I'll have both",
+          verdict: {
+            comfortable: "Fits comfortably",
+            tight: "Fits, but tight",
+            no_fit: "Does not fit",
+          },
+          checkBudget:
+            "Your numbers leave money over, but the car would take {{pct}}% of your income — well above the {{typical}}% typical for your situation. Did you miss a bill?",
         },
         tips: {
           installment:
@@ -1746,6 +1810,7 @@ const resources = {
           perMonth: "por mes, todo incluido",
           requiredIncome: "Ingreso necesario",
           requiredIncomeHint: "para que el auto ocupe {{pct}}% del ingreso",
+          rangeHint: "entre {{low}} y {{high}} — usamos el techo para la cuenta de ingreso",
           realTitle: "Comparando con lo real",
           realSelf:
             "La estimación da {{estimate}} por mes. Según tus registros, el gasto real es {{actual}}.",
@@ -1786,6 +1851,37 @@ const resources = {
           savePlanTitle: "Cuánto ahorrar por mes para juntar {{amount}}",
           savePlanMonths: "en {{months}} meses",
           savePlanPerMonth: "por mes",
+        },
+        modes: {
+          standard: "Estándar",
+          advanced: "Avanzada",
+          standardHint:
+            "Preguntamos solo lo que más mueve la cuenta. El resto lo estimamos — y el rango muestra cuánto todavía no sabemos. Ubicación: {{location}}.",
+        },
+        kmBands: {
+          little: "Manejo poco",
+          normal: "Normal",
+          much: "Manejo bastante",
+          work: "Manejo por trabajo",
+        },
+        budget: {
+          title: "¿Alcanza o no?",
+          income: "Tu ingreso mensual",
+          expenses: "Tus gastos mensuales",
+          expensesHint: "(sin el auto)",
+          empty: "Ingresa tu ingreso y tus gastos para saber si alcanza.",
+          math: "{{income}} de ingreso − {{expenses}} de gastos − {{car}} del auto.",
+          currentCarNotice:
+            "De tus {{total}}, {{amount}} son del {{car}} — medido por tus registros.",
+          replace: "Voy a cambiar de auto",
+          keepBoth: "Voy a tener los dos",
+          verdict: {
+            comfortable: "Alcanza con holgura",
+            tight: "Alcanza justo",
+            no_fit: "No alcanza",
+          },
+          checkBudget:
+            "Según tus cuentas sobra dinero, pero el auto quedaría en {{pct}}% de tu ingreso, bastante por encima del {{typical}}% típico de tu situación. ¿Faltó algún gasto?",
         },
         tips: {
           installment:

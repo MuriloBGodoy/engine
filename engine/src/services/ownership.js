@@ -302,6 +302,154 @@ const priceInstallment = (principal, monthlyRate, months) => {
 // Estimativa completa
 // ---------------------------------------------------------------------------
 
+/**
+ * Campos que o modo Padrão não pergunta, e o que cada um pode plausivelmente
+ * ser. É daqui que sai a largura da faixa: em vez de fingir que o valor
+ * assumido é o certo, o motor roda todos os cenários possíveis e mostra o
+ * intervalo em que a resposta cai.
+ *
+ * `usage: "app"` fica de fora de propósito. Quem roda de aplicativo sabe que
+ * roda, e incluir o cenário alargaria a faixa de todo mundo por causa de uma
+ * minoria — a faixa perde utilidade quando é larga demais para decidir.
+ */
+const UNKNOWN_VARIATIONS = {
+  driverAgeBand: AGE_BANDS,
+  hasGarage: [true, false],
+  usage: ["personal", "commute"],
+  coverage: ["full", "thirdparty"],
+  // Quem não escolheu uma faixa de rodagem não tem o padrão de 1.000 km tomado
+  // como verdade: km/mês é o que mais move o custo de quem já tem o carro.
+  kmPerMonth: [600, 1200, 2500],
+  monthlyRatePct: null, // tratado à parte: percentual sobre a taxa do país
+  userConsumption: null, // tratado à parte: percentual sobre o consumo base
+};
+
+const RATE_SPREAD = [0.75, 1, 1.35];
+const CONSUMPTION_SPREAD = [0.8, 1, 1.2];
+
+const variationsFor = (field, inputs, country) => {
+  if (UNKNOWN_VARIATIONS[field]) return UNKNOWN_VARIATIONS[field];
+
+  if (field === "monthlyRatePct") {
+    const base = countryProfile(country).monthlyRate * 100;
+    return RATE_SPREAD.map((factor) => base * factor);
+  }
+  if (field === "userConsumption") {
+    const base =
+      inputs.userConsumption ||
+      inputs.consumption ||
+      DEFAULT_CONSUMPTION[inputs.fuelType] ||
+      DEFAULT_CONSUMPTION.gasoline;
+    return CONSUMPTION_SPREAD.map((factor) => base * factor);
+  }
+  return [];
+};
+
+/**
+ * Custo mensal como FAIXA, não como número.
+ *
+ * O modo Padrão pergunta pouco, então boa parte do resultado é suposição. Um
+ * número único esconde isso; a faixa mostra. E ela estreita conforme a pessoa
+ * informa mais, o que é o incentivo honesto para preencher o modo Avançado.
+ *
+ * O `high` é o que deve ir para a conta de renda: subestimar coloca alguém num
+ * contrato que não paga, superestimar só custa um carro que caberia.
+ */
+export function estimateOwnershipRange(car, rawInputs = {}, location = {}, unknown = []) {
+  const inputs = normalizeOwnershipInputs(rawInputs);
+  const country = String(location.country || "BR").toUpperCase();
+  const fields = unknown.filter((field) => field in UNKNOWN_VARIATIONS);
+
+  const base = estimateOwnership(car, inputs, location);
+  if (!fields.length) {
+    return { low: base.totals.monthlyTotal, high: base.totals.monthlyTotal, base, spread: 0 };
+  }
+
+  // Produto cartesiano dos cenários. O teto de combinações existe porque a
+  // conta é barata mas não é de graça, e ela roda a cada tecla digitada.
+  let scenarios = [inputs];
+  for (const field of fields) {
+    const values = variationsFor(field, inputs, country);
+    if (!values.length) continue;
+    const next = [];
+    for (const scenario of scenarios) {
+      for (const value of values) {
+        next.push({ ...scenario, [field]: value });
+        if (next.length >= 512) break;
+      }
+    }
+    scenarios = next;
+  }
+
+  let low = Infinity;
+  let high = -Infinity;
+  for (const scenario of scenarios) {
+    const total = estimateOwnership(car, scenario, location).totals.monthlyTotal;
+    if (total < low) low = total;
+    if (total > high) high = total;
+  }
+
+  return {
+    low,
+    high,
+    base,
+    spread: base.totals.monthlyTotal > 0 ? (high - low) / base.totals.monthlyTotal : 0,
+  };
+}
+
+/**
+ * "Sobra ou não sobra" — a pergunta que a regra de % nunca respondeu direito.
+ *
+ * A regra de comprometimento de renda é um proxy: testada contra perfis reais,
+ * ela reprova quem tem renda modesta e contas baixas, que é justamente quem
+ * consegue pagar. Com a despesa real informada dá para responder pelo que
+ * sobra de fato.
+ *
+ * A regra não é jogada fora: ela vira detector de orçamento incompleto. Quando
+ * a folga aprova mas o carro come muito mais da renda do que o típico para a
+ * situação de vida, a tela pergunta em vez de reprovar — normalmente é despesa
+ * que a pessoa esqueceu de contar.
+ */
+export function assessAffordability({
+  monthlyCost = 0,
+  monthlyIncome = 0,
+  monthlyExpenses = 0,
+  currentCarCost = 0,
+  replacingCurrentCar = false,
+  lifeSituation = "shared",
+} = {}) {
+  if (!(monthlyIncome > 0) || !(monthlyExpenses > 0)) return null;
+
+  // A despesa declarada já contém o carro que a pessoa tem hoje. Somar o carro
+  // novo por cima contaria carro duas vezes — e o erro é grande o bastante
+  // para virar o veredito.
+  const freedByReplacing = replacingCurrentCar ? Math.min(currentCarCost, monthlyExpenses) : 0;
+  const ongoingExpenses = monthlyExpenses - freedByReplacing;
+
+  const disposable = monthlyIncome - ongoingExpenses;
+  const leftover = disposable - monthlyCost;
+  const committedPct = monthlyCost / monthlyIncome;
+
+  const level =
+    leftover <= 0 ? "no_fit" : leftover >= monthlyIncome * 0.2 ? "comfortable" : "tight";
+
+  // Só desconfia quando a folga aprovou: se já não coube, não há o que checar.
+  const situation = LIFE_SITUATIONS[lifeSituation] || LIFE_SITUATIONS.shared;
+  const suspectIncompleteBudget =
+    level !== "no_fit" && committedPct > situation.warning * 1.5;
+
+  return {
+    disposable,
+    leftover,
+    committedPct,
+    level,
+    ongoingExpenses,
+    freedByReplacing,
+    suspectIncompleteBudget,
+    typicalSharePct: situation.suggestedShare,
+  };
+}
+
 export function estimateOwnership(car, rawInputs = {}, location = {}) {
   const inputs = normalizeOwnershipInputs(rawInputs);
   const country = String(location.country || "BR").toUpperCase();

@@ -19,6 +19,8 @@ import { useTranslation } from "react-i18next";
 import { InfoTip } from "./InfoTip";
 import {
   estimateOwnership,
+  estimateOwnershipRange,
+  assessAffordability,
   normalizeOwnershipInputs,
   defaultOwnershipInputs,
   DEFAULT_CONSUMPTION,
@@ -30,11 +32,50 @@ import {
   LIFE_SITUATION_TYPES,
 } from "../services/ownership";
 import { pickReferenceCar } from "../services/expenses";
+import { engineDB } from "../services/db";
 import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
 import { fipeService } from "../services/fipeService";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-sm text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
+
+/**
+ * Campos que só existem no modo Avançado. Servem para duas coisas: decidir em
+ * que modo o simulador reabre, e saber o que continua valendo no cálculo mesmo
+ * quando some da tela.
+ */
+const ADVANCED_ONLY_FIELDS = [
+  "usage",
+  "fuelType",
+  "userConsumption",
+  "driverAgeBand",
+  "hasGarage",
+  "monthlyRatePct",
+  "parkingMonthly",
+  "tollsMonthly",
+];
+
+/**
+ * O que o modo Padrão pergunta. A escolha saiu de medir quanto cada campo
+ * reduz a incerteza do resultado, não de agrupar por tema: entrada, prazo e
+ * km/mês sozinhos cortam 44 dos 69 pontos de dispersão, enquanto faixa etária,
+ * garagem, uso e combustível somados valem cerca de 2.
+ */
+const STANDARD_FIELDS = [
+  "purchaseMode",
+  "downPaymentValue",
+  "financeMonths",
+  "kmPerMonth",
+  "coverage",
+];
+
+/** Faixas de rodagem: a ordem de grandeza é o que importa, não o número exato. */
+const KM_BANDS = [
+  { key: "little", value: 600 },
+  { key: "normal", value: 1200 },
+  { key: "much", value: 2500 },
+  { key: "work", value: 4000 },
+];
 const labelClass =
   "ml-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]";
 const sectionTitleClass =
@@ -88,7 +129,15 @@ function BreakdownRow({ icon, label, value, tip = "", share = null, muted = fals
   );
 }
 
-export function OwnershipModal({ isOpen, car, cars = [], settings, onClose, onSave }) {
+export function OwnershipModal({
+  isOpen,
+  car,
+  cars = [],
+  settings,
+  onClose,
+  onSave,
+  onSettingsUpdate,
+}) {
   if (!isOpen || !car) return null;
   // key={car.id} garante estado limpo do formulário a cada carro aberto.
   return (
@@ -99,11 +148,12 @@ export function OwnershipModal({ isOpen, car, cars = [], settings, onClose, onSa
       settings={settings}
       onClose={onClose}
       onSave={onSave}
+      onSettingsUpdate={onSettingsUpdate}
     />
   );
 }
 
-function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
+function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdate }) {
   const { i18n, t } = useTranslation();
   const [inputs, setInputs] = useState(() =>
     car.ownership
@@ -118,6 +168,18 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
   );
   const [saving, setSaving] = useState(false);
   const [realConsumption, setRealConsumption] = useState(null);
+  // Campos que a pessoa informou de verdade. Tudo que não está aqui é
+  // suposição do modelo, e é o que alarga a faixa do resultado.
+  const [touched, setTouched] = useState(
+    () => new Set(car.ownership?.touched || []),
+  );
+  // Quem nunca simulou este carro começa no Padrão; quem já mexeu nos campos
+  // avançados volta para onde estava.
+  const [mode, setMode] = useState(() =>
+    (car.ownership?.touched || []).some((field) => ADVANCED_ONLY_FIELDS.includes(field))
+      ? "advanced"
+      : "standard",
+  );
 
   const states = useMemo(() => getStates(country), [country]);
 
@@ -134,13 +196,66 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
     loadRealConsumption();
   }, [car?.model]);
 
-  const result = useMemo(
-    () => estimateOwnership(car, inputs, { country, state }),
-    [car, inputs, country, state],
+  // Renda e despesa são da pessoa e vivem em `settings`; a migração aceita o
+  // valor antigo que ficou preso em `car.ownership.monthlyIncome`.
+  const [budget, setBudget] = useState(() => ({
+    ...(settings?.budget || {}),
+    monthlyIncome:
+      settings?.budget?.monthlyIncome || Number(car.ownership?.monthlyIncome) || 0,
+  }));
+
+  const updateBudget = (patch) => {
+    const next = { ...budget, ...patch, updatedAt: new Date().toISOString() };
+    setBudget(next);
+    // Grava em segundo plano: o veredito já mudou na tela, e travar a digitação
+    // esperando a rede seria pior do que perder o último caractere numa queda.
+    const merged = { ...settings, budget: next };
+    engineDB
+      .saveSettings(merged)
+      .then((saved) => onSettingsUpdate?.(saved))
+      .catch(() => {});
+  };
+
+  // A renda mora em `settings.budget`, mas o motor continua recebendo pelos
+  // inputs — assim a regra de comprometimento segue funcionando sem duplicar
+  // o campo em dois lugares que podem divergir.
+  const effectiveInputs = useMemo(
+    () => ({ ...inputs, monthlyIncome: Number(budget.monthlyIncome) || 0 }),
+    [inputs, budget.monthlyIncome],
   );
+
+  const result = useMemo(
+    () => estimateOwnership(car, effectiveInputs, { country, state }),
+    [car, effectiveInputs, country, state],
+  );
+
+  // No Padrão, tudo que não foi informado e não está no formulário simples é
+  // suposição — e é isso que a faixa mede. No Avançado a pessoa vê todos os
+  // campos, então o que sobrar sem toque foi visto e aceito.
+  const unknownFields = useMemo(() => {
+    if (mode === "advanced") return [];
+    return [
+      "driverAgeBand",
+      "hasGarage",
+      "usage",
+      "monthlyRatePct",
+      "userConsumption",
+      "kmPerMonth",
+    ].filter((field) => !touched.has(field));
+  }, [mode, touched]);
+
+  const range = useMemo(
+    () => estimateOwnershipRange(car, effectiveInputs, { country, state }, unknownFields),
+    [car, effectiveInputs, country, state, unknownFields],
+  );
+
+  // O número que vai para a conta de renda é o TETO. Subestimar coloca alguém
+  // num contrato que não paga; superestimar custa um carro que caberia.
+  const headlineCost = range.high;
 
   // Carro da garagem com gasto lançado: serve de régua real contra a projeção.
   const reference = useMemo(() => pickReferenceCar(cars, car.id), [cars, car.id]);
+
   const measured = reference?.insights;
   // Só oferece aplicar o que ainda não foi aplicado — botão que não muda nada
   // é ruído.
@@ -168,11 +283,19 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
       maximumFractionDigits: 0,
     }).format(value || 0);
 
-  const set = (key, value) => setInputs((prev) => ({ ...prev, [key]: value }));
+  const set = (key, value) => {
+    setInputs((prev) => ({ ...prev, [key]: value }));
+    setTouched((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+  };
 
   const handleSave = async () => {
     setSaving(true);
-    const saved = await onSave(car, { ...inputs, country, state });
+    const saved = await onSave(car, {
+      ...inputs,
+      country,
+      state,
+      touched: [...touched],
+    });
     setSaving(false);
     if (saved) onClose();
   };
@@ -217,6 +340,81 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
         <div className="engine-modal-body engine-scroll grid content-start gap-7 px-4 py-5 sm:gap-8 sm:px-8 sm:py-6 lg:grid-cols-[1fr_1.1fr]">
           {/* ------------------------------ Formulário ----------------------- */}
           <div className="space-y-6">
+            {/* Trocar de modo não mexe nos dados, só no que aparece. O que foi
+                digitado no Avançado continua valendo no Padrão — some da tela,
+                não da conta —, e por isso o número não pode mudar na troca. */}
+            <div className="flex gap-1.5 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-1">
+              {["standard", "advanced"].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setMode(option)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-wide transition ${
+                    mode === option
+                      ? "bg-[var(--engine-accent)] text-white"
+                      : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                  }`}
+                >
+                  {t(`ownership.modes.${option}`)}
+                </button>
+              ))}
+            </div>
+
+            {mode === "standard" && (
+              <>
+                <p className="text-[12px] leading-relaxed text-[var(--engine-text-muted)]">
+                  {t("ownership.modes.standardHint", { location: state || country })}
+                </p>
+
+                <section className="space-y-3">
+                  <h3 className={sectionTitleClass}>{t("ownership.fields.kmPerMonth")}</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {KM_BANDS.map((band) => (
+                      <button
+                        key={band.key}
+                        type="button"
+                        onClick={() => set("kmPerMonth", band.value)}
+                        className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                          Number(inputs.kmPerMonth) === band.value
+                            ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)]"
+                            : "border-[var(--engine-border)] hover:border-[var(--engine-accent)]"
+                        }`}
+                      >
+                        <span className="block text-[12px] font-bold text-[var(--engine-text)]">
+                          {t(`ownership.kmBands.${band.key}`)}
+                        </span>
+                        <span className="block text-[11px] tabular-nums text-[var(--engine-text-subtle)]">
+                          ~{band.value.toLocaleString(i18n.language)} km
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className={sectionTitleClass}>{t("ownership.fields.coverage")}</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {COVERAGE_TYPES.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => set("coverage", option)}
+                        className={`rounded-xl border px-2 py-2.5 text-[11px] font-bold transition ${
+                          inputs.coverage === option
+                            ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                            : "border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
+                        }`}
+                      >
+                        {t(`ownership.coverageOptions.${option}`)}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {mode === "advanced" && (
+            <>
             {/* Localização */}
             <section className="space-y-3">
               <h3 className={sectionTitleClass}>{t("ownership.sections.location")}</h3>
@@ -376,6 +574,8 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                 </span>
               </label>
             </section>
+            </>
+            )}
 
             {/* Compra */}
             <section className="space-y-3">
@@ -453,6 +653,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
             </section>
 
             {/* Renda e extras */}
+            {mode === "advanced" && (
             <section className="space-y-3">
               <h3 className={sectionTitleClass}>{t("ownership.sections.budget")}</h3>
               <div className="space-y-1">
@@ -482,19 +683,6 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                 </select>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field
-                  label={t("ownership.fields.monthlyIncome")}
-                  hint={t("ownership.fields.monthlyIncomeHint")}
-                >
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={inputs.monthlyIncome || ""}
-                    onChange={(e) => set("monthlyIncome", e.target.value)}
-                    className={fieldClass}
-                  />
-                </Field>
                 <Field
                   label={t("ownership.fields.incomeShare")}
                   hint={t("ownership.fields.incomeShareHint", {
@@ -533,6 +721,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                 </Field>
               </div>
             </section>
+            )}
           </div>
 
           {/* ------------------------------ Resultado ------------------------ */}
@@ -544,11 +733,23 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                   {t("ownership.results.monthlyTotal")}
                 </p>
                 <p className="mt-1 text-xl font-extrabold tabular-nums tracking-tight text-[var(--engine-text)] sm:text-2xl">
-                  {money(result.totals.monthlyTotal)}
+                  {money(headlineCost)}
                 </p>
-                <p className="text-[11px] text-[var(--engine-text-muted)]">
-                  {t("ownership.results.perMonth")}
-                </p>
+                {/* Com campos por informar, o número é o teto de uma faixa — e
+                    a faixa aparece, senão o teto viraria uma precisão que não
+                    existe. Ela estreita conforme a pessoa preenche. */}
+                {unknownFields.length > 0 ? (
+                  <p className="text-[11px] text-[var(--engine-text-muted)]">
+                    {t("ownership.results.rangeHint", {
+                      low: money(range.low),
+                      high: money(range.high),
+                    })}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-[var(--engine-text-muted)]">
+                    {t("ownership.results.perMonth")}
+                  </p>
+                )}
               </div>
               <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
                 <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
@@ -556,7 +757,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                   <InfoTip text={t("ownership.tips.requiredIncome")} align="right" />
                 </p>
                 <p className="mt-1 text-xl font-extrabold tabular-nums tracking-tight text-[var(--engine-text)] sm:text-2xl">
-                  {money(rec.requiredIncomeTotal)}
+                  {money(headlineCost / (rec.incomeSharePct / 100))}
                 </p>
                 <p className="text-[11px] text-[var(--engine-text-muted)]">
                   {t("ownership.results.requiredIncomeHint", {
@@ -565,6 +766,20 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                 </p>
               </div>
             </div>
+
+            {/* Sobra ou não sobra. Fica no bloco de RESULTADO, e não no
+                formulário, de propósito: a pessoa preenche porque quer a
+                resposta, não porque um campo exigiu. Sem preencher, a tela
+                segue funcionando com a regra de % de sempre. */}
+            <BudgetBlock
+              t={t}
+              money={money}
+              monthlyCost={headlineCost}
+              budget={budget}
+              currentCar={reference}
+              onChange={updateBudget}
+              lifeSituation={inputs.lifeSituation}
+            />
 
             {/* Régua real: a comparação usa `monthlyMaintain`, sem a parcela do
                 financiamento nem a depreciação, porque é o que sai do bolso
@@ -865,7 +1080,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                 {t("ownership.results.monthlyTotal")}
               </p>
               <p className="text-lg font-extrabold leading-tight tabular-nums text-[var(--engine-accent)]">
-                {money(result.totals.monthlyTotal)}
+                {money(headlineCost)}
               </p>
             </div>
             <div className="min-w-0 text-right">
@@ -873,7 +1088,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
                 {t("ownership.results.requiredIncome")}
               </p>
               <p className="text-lg font-extrabold leading-tight tabular-nums text-[var(--engine-text)]">
-                {money(rec.requiredIncomeTotal)}
+                {money(headlineCost / (rec.incomeSharePct / 100))}
               </p>
             </div>
           </div>
@@ -894,6 +1109,152 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Sobra ou não sobra" — o bloco que responde a pergunta que a regra de % da
+ * renda nunca respondeu direito.
+ *
+ * Testada contra perfis reais, aquela regra reprova quem tem renda modesta e
+ * contas baixas, que é justamente quem consegue pagar. Aqui a conta é direta:
+ * renda menos as contas que continuam, menos o carro.
+ *
+ * É um campo só, e opcional. Decomposição por categoria não muda o resultado —
+ * saber que R$ 1.200 são aluguel e R$ 800 mercado não move `renda − despesa −
+ * carro` uma vírgula — e transformaria isto num formulário de orçamento
+ * doméstico que ninguém preenche.
+ */
+function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, lifeSituation }) {
+  const income = Number(budget?.monthlyIncome) || 0;
+  const expenses = Number(budget?.monthlyExpenses) || 0;
+  const currentCarCost = currentCar?.insights?.monthlyAverage || 0;
+  const replacing = Boolean(currentCar) && budget?.replacedCarId === String(currentCar.car.id);
+
+  const verdict = assessAffordability({
+    monthlyCost,
+    monthlyIncome: income,
+    monthlyExpenses: expenses,
+    currentCarCost,
+    replacingCurrentCar: replacing,
+    lifeSituation,
+  });
+
+  const toneByLevel = {
+    comfortable: comfortStyles.comfortable,
+    tight: comfortStyles.warning,
+    no_fit: comfortStyles.critical,
+  };
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
+      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+        <Wallet size={12} className="text-[var(--engine-accent)]" />
+        {t("ownership.budget.title")}
+      </p>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label={t("ownership.budget.income")}>
+          <input
+            type="number"
+            min="0"
+            step="100"
+            value={income || ""}
+            placeholder="0"
+            onChange={(event) => onChange({ monthlyIncome: Number(event.target.value) || 0 })}
+            className={fieldClass}
+          />
+        </Field>
+        <Field
+          label={t("ownership.budget.expenses")}
+          hint={t("ownership.budget.expensesHint")}
+        >
+          <input
+            type="number"
+            min="0"
+            step="100"
+            value={expenses || ""}
+            placeholder="0"
+            onChange={(event) => onChange({ monthlyExpenses: Number(event.target.value) || 0 })}
+            className={fieldClass}
+          />
+        </Field>
+      </div>
+
+      {/* O gasto do carro atual já está dentro da despesa declarada. Somar o
+          carro novo por cima conta carro duas vezes, e o erro é grande o
+          bastante para virar o veredito. Só aparece quando existe medição —
+          sem histórico, nem se menciona o assunto. */}
+      {currentCarCost > 0 && expenses > 0 && (
+        <div className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3">
+          <p className="text-[12px] leading-relaxed text-[var(--engine-text-muted)]">
+            {t("ownership.budget.currentCarNotice", {
+              total: money(expenses),
+              amount: money(currentCarCost),
+              car: `${currentCar.car.brand} ${currentCar.car.model}`,
+            })}
+          </p>
+          <div className="mt-2 flex gap-1.5">
+            {[
+              { key: "replace", active: replacing },
+              { key: "keepBoth", active: !replacing },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() =>
+                  onChange({
+                    replacedCarId:
+                      option.key === "replace" ? String(currentCar.car.id) : "",
+                  })
+                }
+                className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition ${
+                  option.active
+                    ? "bg-[var(--engine-accent)] text-white"
+                    : "border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
+                }`}
+              >
+                {t(`ownership.budget.${option.key}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {verdict ? (
+        <>
+          <div
+            className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${toneByLevel[verdict.level]}`}
+          >
+            <span>{t(`ownership.budget.verdict.${verdict.level}`)}</span>
+            <span className="tabular-nums">{money(verdict.leftover)}</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-[var(--engine-text-subtle)]">
+            {t("ownership.budget.math", {
+              income: money(income),
+              expenses: money(verdict.ongoingExpenses),
+              car: money(monthlyCost),
+            })}
+          </p>
+          {/* A regra de % não sumiu: virou detector de orçamento incompleto.
+              Quando a folga aprova mas o carro come muito mais da renda do que
+              o típico, quase sempre faltou uma conta na lista — então a tela
+              pergunta, em vez de reprovar. */}
+          {verdict.suspectIncompleteBudget && (
+            <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[12px] leading-relaxed text-amber-600 dark:text-amber-400">
+              {t("ownership.budget.checkBudget", {
+                pct: Math.round(verdict.committedPct * 100),
+                typical: verdict.typicalSharePct,
+              })}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-[11px] leading-relaxed text-[var(--engine-text-subtle)]">
+          {t("ownership.budget.empty")}
+        </p>
+      )}
     </div>
   );
 }

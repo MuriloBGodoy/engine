@@ -494,6 +494,7 @@ function AppLayout({
         car={ownershipCar}
         cars={cars}
         settings={settings}
+        onSettingsUpdate={onSettingsUpdate}
         onClose={onCloseOwnership}
         onSave={onSaveOwnership}
       />

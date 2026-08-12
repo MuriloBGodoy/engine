@@ -24,7 +24,7 @@ import {
 } from "firebase/firestore";
 import { auth, firestore } from "./firebase";
 import { inferLocation } from "./locations";
-import { normalizeOwnershipInputs } from "./ownership";
+import { normalizeOwnershipInputs, LIFE_SITUATION_TYPES } from "./ownership";
 import { normalizeExpense, normalizeExpenses } from "./expenses";
 
 const defaultSettings = {
@@ -67,6 +67,21 @@ const defaultSettings = {
     twoFactorReminder: true,
     sessionTimeout: "30",
     loginAlerts: true,
+  },
+  // Renda e despesa são da PESSOA, não do carro. Antes disso a renda morava em
+  // `car.ownership` e portanto estava duplicada no documento de cada carro:
+  // atualizar simulando o Golf deixava a simulação do Jetta com o valor velho.
+  // Vive em `users/{uid}/private/settings`, que não é copiado para o perfil
+  // público nem para a comunidade.
+  budget: {
+    monthlyIncome: 0,
+    monthlyExpenses: 0,
+    // Qual carro da garagem sai da conta quando a pessoa diz que vai trocar —
+    // o gasto dele já está dentro da despesa declarada.
+    replacedCarId: "",
+    lifeSituation: "shared",
+    incomeSharePct: 20,
+    updatedAt: "",
   },
 };
 
@@ -151,6 +166,7 @@ const mergeSettings = (settings = {}) => ({
   },
   privacy: { ...defaultSettings.privacy, ...(settings.privacy || {}) },
   security: { ...defaultSettings.security, ...(settings.security || {}) },
+  budget: { ...defaultSettings.budget, ...(settings.budget || {}) },
 });
 
 const normalizeUsername = (username = "") => {
@@ -171,6 +187,10 @@ const normalizePhone = (phone = "") =>
     .replace(/\s+/g, " ")
     .slice(0, 24);
 
+/** Valor em dinheiro vindo de campo livre: nunca negativo, nunca absurdo. */
+const clampMoney = (value) =>
+  Math.min(Math.max(Number(value) || 0, 0), 100000000);
+
 const normalizeSettings = (settings = {}) => {
   const merged = mergeSettings(settings);
   return {
@@ -184,6 +204,20 @@ const normalizeSettings = (settings = {}) => {
       state: String(merged.profile.state || "").trim().slice(0, 8).toUpperCase(),
       location: merged.profile.location.trim().slice(0, 80),
       bio: merged.profile.bio.trim().slice(0, 280),
+    },
+    budget: {
+      ...merged.budget,
+      monthlyIncome: clampMoney(merged.budget.monthlyIncome),
+      monthlyExpenses: clampMoney(merged.budget.monthlyExpenses),
+      replacedCarId: String(merged.budget.replacedCarId || "").slice(0, 64),
+      lifeSituation: LIFE_SITUATION_TYPES.includes(merged.budget.lifeSituation)
+        ? merged.budget.lifeSituation
+        : "shared",
+      incomeSharePct: Math.min(
+        Math.max(Math.round(Number(merged.budget.incomeSharePct) || 20), 5),
+        60,
+      ),
+      updatedAt: String(merged.budget.updatedAt || "").slice(0, 32),
     },
   };
 };
@@ -318,6 +352,13 @@ const normalizeCar = (car) => ({
         ...normalizeOwnershipInputs(car.ownership),
         country: String(car.ownership.country || "").trim().slice(0, 4).toUpperCase(),
         state: String(car.ownership.state || "").trim().slice(0, 8).toUpperCase(),
+        // Quais campos a PESSOA informou, em oposição aos que o modelo assumiu.
+        // Sem isso, ao reabrir o simulador não há como distinguir "escolheu
+        // 26-35" de "assumimos 26-35" — e a faixa de incerteza, que existe
+        // justamente para medir o que não se sabe, nasceria zerada e mentindo.
+        touched: Array.isArray(car.ownership.touched)
+          ? car.ownership.touched.map((key) => String(key).slice(0, 32)).slice(0, 24)
+          : [],
       }
     : null,
   updatedAt: car.updatedAt || new Date().toISOString(),
