@@ -20,13 +20,29 @@
 // ---------------------------------------------------------------------------
 
 // Alíquota de IPVA para automóveis de passeio (2026).
+//
+// Simplificação conhecida: a lei real é uma matriz UF × cilindrada ×
+// combustível, e aqui só cabe um escalar por UF. Onde o estado escalona por
+// cilindrada, fica a alíquota da faixa MAIOR — errar para cima é o lado que
+// não coloca ninguém num financiamento que não paga.
+//
+// AM: 2,0% acima de 1.000 cc e 1,5% até 1.000 cc / elétrico e híbrido
+// (LC estadual 280/2025, em vigor desde 2026; era 4% e 3%).
+// PR: 1,9% (Lei 22.645/2025) — conferido na Fazenda estadual, está correto.
 const IPVA_BR = {
-  AC: 0.02, AL: 0.0325, AP: 0.03, AM: 0.03, BA: 0.025, CE: 0.031, DF: 0.035,
+  AC: 0.02, AL: 0.0325, AP: 0.03, AM: 0.02, BA: 0.025, CE: 0.03, DF: 0.035,
   ES: 0.02, GO: 0.0375, MA: 0.025, MT: 0.0345, MS: 0.03, MG: 0.04, PA: 0.025,
   PB: 0.025, PR: 0.019, PE: 0.03, PI: 0.025, RJ: 0.04, RN: 0.03, RS: 0.03,
   RO: 0.03, RR: 0.03, SC: 0.02, SP: 0.04, SE: 0.025, TO: 0.02,
 };
 const IPVA_BR_DEFAULT = 0.03;
+
+// Alíquota reduzida para elétrico e híbrido, SÓ onde a redução foi confirmada
+// em fonte primária. Ausência aqui não significa que o estado não reduza —
+// significa que ainda não foi conferido, e o padrão fica na alíquota cheia.
+const IPVA_BR_ELECTRIC = {
+  AM: 0.015,
+};
 
 // Taxa anual de licenciamento (CRLV) aproximada por UF, em BRL.
 const LICENSING_BR = {
@@ -198,9 +214,12 @@ const countryProfile = (country) => COUNTRY_PROFILES[country] || COUNTRY_PROFILE
 // Blocos de cálculo
 // ---------------------------------------------------------------------------
 
-const annualVehicleTax = (value, country, state) => {
+const annualVehicleTax = (value, country, state, fuelType) => {
   if (country === "BR") {
-    return value * (IPVA_BR[state] || IPVA_BR_DEFAULT);
+    // Híbrido cai na alíquota cheia porque o simulador ainda não distingue
+    // híbrido de combustão — ver FUEL_TYPES.
+    const reduced = fuelType === "electric" ? IPVA_BR_ELECTRIC[state] : undefined;
+    return value * (reduced || IPVA_BR[state] || IPVA_BR_DEFAULT);
   }
   const profile = countryProfile(country);
   return value * (profile.taxPct || 0);
@@ -486,7 +505,7 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
   }
 
   // --- Custos mensais de manutenção da posse ----------------------------
-  const tax = annualVehicleTax(value, country, state);
+  const tax = annualVehicleTax(value, country, state, inputs.fuelType);
   const licensing = annualLicensing(country, state);
   const insurance = annualInsurance(value, carAge, inputs, country, state);
   const fuel = monthlyFuel(inputs, country, state);

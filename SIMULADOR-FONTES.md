@@ -83,16 +83,33 @@ verificada).
 Não há API, dataset ou CKAN. São 27 leis estaduais, revisão anual. Os
 agregadores existentes são conteúdo editorial de terceiros.
 
-**Erro confirmado:** o Amazonas reduziu as alíquotas pela metade a partir de
-2026 (LC estadual 280/2025): 1,5% até 1.000 cc e para elétricos/híbridos, 2,0%
-acima. O código tem 3%.
+### Conferência de 13/08/2026 — corrigido
 
-**Erro estrutural:** `IPVA_BR` é um escalar por UF, e a realidade é uma matriz
-UF × cilindrada × combustível. Vários estados isentam ou reduzem para elétrico,
-e o simulador já suporta `fuelType: "electric"`.
+| UF | era | virou | fonte |
+| --- | --- | --- | --- |
+| AM | 3,0% | **2,0%** (1,5% elétrico) | LC estadual 280/2025; SEFAZ/AM, Agência Amazonas, LegisWeb |
+| CE | 3,1% | **3,0%** | Diário do Nordeste e agregadores; secundária |
+| PR | 1,9% | 1,9%, **sem mudança** | Fazenda/PR e DETRAN/PR: Lei 22.645/2025 |
 
-Também sob suspeita, sem confirmação em fonte primária: `PR: 0.019` (a
-legislação aponta 3,5%) e `CE: 0.031` (publicado costuma ser 3%).
+O Amazonas escalona: 1,5% até 1.000 cc e para elétrico/híbrido, 2,0% acima
+(antes 3% e 4%). Como o simulador não conhece cilindrada, ficou na faixa maior
+— errar para cima é o lado que não empurra ninguém para uma parcela impagável.
+
+A suspeita sobre o PR estava errada: 1,9% é a alíquota vigente, confirmada em
+fonte primária, e o código já estava certo.
+
+**Ainda em aberto — `MT: 0.0345`.** Uma matéria da SEFAZ/AM que ranqueia os
+estados lista MT em 2%; a legislação do MT (Lei 7.301/2000, Decreto 1.977/2000)
+dá a faixa de 1% a 4% sem que a alíquota de passeio apareça em fonte primária
+acessível. Não mexer sem confirmar: 3,45% é um número específico demais para ter
+sido inventado, e pode ser média ponderada de faixas.
+
+**Erro estrutural que continua:** `IPVA_BR` é um escalar por UF, e a realidade é
+uma matriz UF × cilindrada × combustível. Existe agora um `IPVA_BR_ELECTRIC`,
+mas só com AM — a regra é que uma UF só entra ali depois de confirmada, e
+ausência significa "não conferido", não "não reduz". MT e CE aparecem em fontes
+secundárias com redução para elétrico (1,5% e metade da alíquota,
+respectivamente) e ficam de fora até conferir.
 
 Recomendação: aceitar que é manual, mover para o Firestore com `updatedAt` e
 `sourceUrl`, e mostrar a data na tela.

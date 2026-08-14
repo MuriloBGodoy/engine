@@ -157,8 +157,12 @@ Na ordem de retorno:
       p.p. CSV público, sem autenticação, ~8 MB por semana
 - [ ] **BCB SGS 25471 mensal → Firestore.** Cinco linhas. Hoje o ganho é nulo
       (1,97% contra 1,99%), mas a série já marcou 1,63% e vai divergir de novo
-- [ ] **IPVA do Amazonas está 2× errado** — LC 280/2025 cortou pela metade
-      (1,5% e 2,0%); o código tem 3%. Conferir também PR e CE
+- [x] ~~**IPVA do Amazonas está 2× errado**~~ — corrigido em 13/08/2026: AM foi
+      para 2,0% (1,5% elétrico), CE para 3,0%, e o PR já estava certo com 1,9%.
+      Sobrou **`MT: 0.0345` sem confirmação em fonte primária**
+- [ ] **Alíquota de elétrico por UF.** Existe `IPVA_BR_ELECTRIC`, mas só com o
+      AM. MT e CE aparecem com redução em fonte secundária; vários outros
+      estados também reduzem ou isentam
 - [ ] **Job mensal de amostragem FIPE histórica** para calibrar a depreciação,
       que é o maior erro numérico do modelo. Precisa de amostra ampla: um ano
       só de preço nominal pode ser efeito de período, não a curva
