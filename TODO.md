@@ -163,9 +163,14 @@ Na ordem de retorno:
 - [ ] **Alíquota de elétrico por UF.** Existe `IPVA_BR_ELECTRIC`, mas só com o
       AM. MT e CE aparecem com redução em fonte secundária; vários outros
       estados também reduzem ou isentam
-- [ ] **Job mensal de amostragem FIPE histórica** para calibrar a depreciação,
-      que é o maior erro numérico do modelo. Precisa de amostra ampla: um ano
-      só de preço nominal pode ser efeito de período, não a curva
+- [x] ~~**Job mensal de amostragem FIPE histórica**~~ — recalibrada em
+      13/08/2026 por corte transversal (90 pares, 21 modelos). Curva era o
+      padrão americano (16/12/10/8/6/4), virou 10/7/5,5/5/5,5. Falta a série
+      longitudinal para separar depreciação de efeito de safra
+- [ ] **Manutenção não distingue veículo nenhum.** É `valor × 4% × fator de km`,
+      então um Lancer 2.0 e um Onix 1.0 do mesmo preço custam igual para manter.
+      Sem fonte verificada de custo de peça e mão de obra por marca — não
+      inventar fator; procurar dado antes
 - [ ] **AUTOSEG 2020** (535 MB, congelado desde então) para extrair os fatores
       relativos de faixa etária e região. É a única melhoria disponível para
       seguro, e enquanto não vier a curva atual precisa ficar rotulada na tela

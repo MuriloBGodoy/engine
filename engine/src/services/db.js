@@ -214,8 +214,8 @@ const normalizeSettings = (settings = {}) => {
         ? merged.budget.lifeSituation
         : "shared",
       incomeSharePct: Math.min(
-        Math.max(Math.round(Number(merged.budget.incomeSharePct) || 20), 5),
-        60,
+        Math.max(Math.round(Number(merged.budget.incomeSharePct) || 20), 1),
+        100,
       ),
       updatedAt: String(merged.budget.updatedAt || "").slice(0, 32),
     },

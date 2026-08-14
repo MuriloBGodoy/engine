@@ -279,6 +279,8 @@ const resources = {
           requiredIncome: "Renda necessária",
           requiredIncomeHint: "para o carro ocupar {{pct}}% da renda",
           shareLabel: "Quanto da minha renda esse carro pode ocupar",
+          shareWarning:
+            "{{pct}}% da renda é acima do limite de conforto de {{limit}}% para a sua situação. A conta continua valendo — só saiba que aperta.",
           compareTitle: "Renda necessária conforme a forma de compra",
           compareHint:
             "A diferença é de {{times}}× entre as duas formas. Juros e prazo pesam mais do que qualquer outra escolha do simulador.",
@@ -1053,6 +1055,8 @@ const resources = {
           requiredIncome: "Income needed",
           requiredIncomeHint: "for the car to take {{pct}}% of income",
           shareLabel: "How much of my income this car can take",
+          shareWarning:
+            "{{pct}}% of income is above the {{limit}}% comfort limit for your situation. The math still holds — just know it will be tight.",
           compareTitle: "Required income by how you buy",
           compareHint:
             "A {{times}}× difference between the two. Interest and term weigh more than any other choice in the simulator.",
@@ -1825,6 +1829,8 @@ const resources = {
           requiredIncome: "Ingreso necesario",
           requiredIncomeHint: "para que el auto ocupe {{pct}}% del ingreso",
           shareLabel: "Cuánto de mi ingreso puede ocupar este auto",
+          shareWarning:
+            "{{pct}}% del ingreso está por encima del límite de confort de {{limit}}% para tu situación. La cuenta sigue valiendo — solo sabé que aprieta.",
           compareTitle: "Ingreso necesario según la forma de compra",
           compareHint:
             "La diferencia es de {{times}}× entre las dos. El interés y el plazo pesan más que cualquier otra elección del simulador.",

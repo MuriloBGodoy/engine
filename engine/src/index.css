@@ -759,6 +759,23 @@ h5 {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Modal de duas colunas: no desktop cada coluna rola sozinha.
+   Antes o corpo inteiro era um scroll só, então o formulário (curto) acabava e
+   deixava metade da tela vazia enquanto o resultado (longo) continuava
+   rolando — a pessoa perdia de vista os controles que queria mexer. */
+@media (min-width: 1024px) {
+  .engine-modal-body.engine-modal-split {
+    overflow: hidden;
+  }
+
+  .engine-modal-split > .engine-modal-col {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.5rem;
+  }
+}
+
 @media (min-width: 640px) {
   .engine-modal-overlay {
     align-items: center;

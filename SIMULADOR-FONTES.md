@@ -42,10 +42,34 @@ Comparando **o mesmo carro** em tabelas de anos diferentes (verificado):
 Num carro de R$ 70 mil isso é ~R$ 350/mês de custo fantasma na maior linha do
 orçamento.
 
-**Ressalva que impede a correção imediata:** FIPE é preço nominal em BRL. Com
-IPCA de 4–5% ao ano, a depreciação real é maior que a nominal, e uma amostra de
-um único ano pode estar capturando um efeito de período em vez da curva. Antes
-de recalibrar, é preciso amostrar vários anos e vários segmentos.
+### Recalibrada em 13/08/2026
+
+Feito por corte transversal na API pública (`parallelum.com.br/fipe`, tabela de
+agosto/2026): **90 pares de anos-modelo consecutivos, 21 modelos**, de Mobi e
+Kwid a Hilux, Tucson, 320i e Classe C. Mede o que um ano a mais de idade custa
+hoje, que é o número que interessa a quem está decidindo a compra.
+
+| idade | mediana real | média | curva antiga | curva nova |
+| --- | --- | --- | --- | --- |
+| 1 | 9,7% | 8,8% | 16% | **10%** |
+| 2 | 6,2% | 5,7% | 12% | **7%** |
+| 3 | 7,4% | 6,9% | 10% | **7%** |
+| 4–5 | 4,9% | 5,2% | 8% | **5,5%** |
+| 6–8 | 3,9% | 4,7% | 6% | **5%** |
+| 9+ | 3,9% | 5,2% | 4% | **5,5%** |
+
+A curva antiga era o padrão americano: despencava no primeiro ano e achatava. O
+mercado brasileiro é bem mais plano — a queda medida fica entre 4% e 10% do
+começo ao fim da vida do carro.
+
+Na ponta velha ficou na **média** e não na mediana, de propósito: as idades de
+12 a 15 anos medem 6% a 9%, e subestimar depreciação faz o carro parecer mais
+barato do que é.
+
+**Ressalva que continua valendo:** é corte transversal de uma tabela só, não
+série temporal. Não separa depreciação de efeito de safra, e FIPE é preço
+nominal — com IPCA de 4–5% ao ano, a perda real de poder de compra é maior. Uma
+série longitudinal (mesmo carro em tabelas de anos diferentes) ainda vale.
 
 **Não é API oficial** — é o backend do site da FIPE, sem termos de uso nem SLA.
 O mesmo vale para o `parallelum.com.br` que já está em produção. Se for usado,

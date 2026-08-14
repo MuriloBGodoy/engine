@@ -14,6 +14,7 @@ import {
   Receipt,
   Save,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InfoTip } from "./InfoTip";
@@ -35,6 +36,7 @@ import { pickReferenceCar } from "../services/expenses";
 import { engineDB } from "../services/db";
 import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
 import { fipeService } from "../services/fipeService";
+import { consumptionFor } from "../services/consumption";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-sm text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
@@ -183,18 +185,32 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
 
   const states = useMemo(() => getStates(country), [country]);
 
-  // Carregar consumo real do modelo quando abrir o modal
+  // Consumo do modelo, da base local do INMETRO — síncrono, então é valor
+  // derivado e não estado. Vinha só do backend, que em produção não existe, e
+  // mesmo em dev o número era exibido como dica e nunca entrava na conta: o
+  // combustível saía do padrão do tipo, igual para um Mobi e para uma Hilux.
+  const localConsumption = useMemo(() => consumptionFor(car?.model), [car?.model]);
+
+  // O backend continua sendo consultado por cima, porque pode ter base mais
+  // nova que a embarcada. Guarda o modelo junto para não aplicar a resposta de
+  // um carro no carro seguinte.
   useEffect(() => {
-    const loadRealConsumption = async () => {
-      if (car?.model) {
-        const consumption = await fipeService.getConsumption(car.model);
-        if (consumption) {
-          setRealConsumption(consumption);
-        }
-      }
+    if (!car?.model) return undefined;
+    let alive = true;
+    fipeService
+      .getConsumption(car.model)
+      .then((data) => {
+        if (alive && data) setRealConsumption({ model: car.model, data });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
     };
-    loadRealConsumption();
   }, [car?.model]);
+
+  const modelConsumption =
+    (realConsumption?.model === car?.model ? realConsumption.data : null) ||
+    localConsumption;
 
   // Renda e despesa são da pessoa e vivem em `settings`; a migração aceita o
   // valor antigo que ficou preso em `car.ownership.monthlyIncome`.
@@ -224,9 +240,19 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
   // A renda mora em `settings.budget`, mas o motor continua recebendo pelos
   // inputs — assim a regra de comprometimento segue funcionando sem duplicar
   // o campo em dois lugares que podem divergir.
+  // `consumption` é o degrau do meio da hierarquia do motor (usuário > modelo >
+  // padrão do combustível). Estava reservado e vazio; agora recebe o número do
+  // INMETRO, então o combustível passa a ser do carro e não do tipo de motor.
   const effectiveInputs = useMemo(
-    () => ({ ...inputs, monthlyIncome: Number(budget.monthlyIncome) || 0 }),
-    [inputs, budget.monthlyIncome],
+    () => ({
+      ...inputs,
+      monthlyIncome: Number(budget.monthlyIncome) || 0,
+      consumption:
+        Number(inputs.consumption) > 0
+          ? Number(inputs.consumption)
+          : Number(modelConsumption?.[inputs.fuelType]) || 0,
+    }),
+    [inputs, budget.monthlyIncome, modelConsumption],
   );
 
   const result = useMemo(
@@ -363,9 +389,9 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
           </button>
         </div>
 
-        <div className="engine-modal-body engine-scroll grid content-start gap-7 px-4 py-5 sm:gap-8 sm:px-8 sm:py-6 lg:grid-cols-[1fr_1.1fr]">
+        <div className="engine-modal-body engine-modal-split engine-scroll grid content-start gap-7 px-4 py-5 sm:gap-8 sm:px-8 sm:py-6 lg:grid-cols-[1fr_1.1fr]">
           {/* ------------------------------ Formulário ----------------------- */}
-          <div className="space-y-6">
+          <div className="engine-modal-col engine-scroll space-y-6">
             {/* Trocar de modo não mexe nos dados, só no que aparece. O que foi
                 digitado no Avançado continua valendo no Padrão — some da tela,
                 não da conta —, e por isso o número não pode mudar na troca. */}
@@ -526,8 +552,8 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                       <InfoTip text={
                         inputs.userConsumption
                           ? "Usando seu consumo informado"
-                          : realConsumption && realConsumption[inputs.fuelType]
-                          ? `Consumo real INMETRO: ${realConsumption[inputs.fuelType].toFixed(1)} km/l`
+                          : modelConsumption && modelConsumption[inputs.fuelType]
+                          ? `Consumo real INMETRO: ${modelConsumption[inputs.fuelType].toFixed(1)} km/l`
                           : "Usando estimativa padrão"
                       } />
                     </div>
@@ -535,8 +561,8 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   hint={
                     inputs.userConsumption
                       ? `Seu consumo: ${inputs.userConsumption} km/l`
-                      : realConsumption && realConsumption[inputs.fuelType]
-                      ? `Real INMETRO: ${realConsumption[inputs.fuelType].toFixed(1)} km/l — edite se conhecer seu real`
+                      : modelConsumption && modelConsumption[inputs.fuelType]
+                      ? `Real INMETRO: ${modelConsumption[inputs.fuelType].toFixed(1)} km/l — edite se conhecer seu real`
                       : `Padrão: ${defaultConsumption} km/l — edite se conhecer seu real`
                   }
                 >
@@ -545,8 +571,8 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                     min="0"
                     step="0.1"
                     placeholder={
-                      realConsumption && realConsumption[inputs.fuelType]
-                        ? `Real: ${realConsumption[inputs.fuelType].toFixed(1)} km/l`
+                      modelConsumption && modelConsumption[inputs.fuelType]
+                        ? `Real: ${modelConsumption[inputs.fuelType].toFixed(1)} km/l`
                         : `Padrão: ${defaultConsumption} km/l`
                     }
                     value={inputs.userConsumption || ""}
@@ -770,7 +796,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
           </div>
 
           {/* ------------------------------ Resultado ------------------------ */}
-          <div className="space-y-4">
+          <div className="engine-modal-col engine-scroll space-y-4">
             {/* Números principais.
 
                 A hierarquia troca com o modo, de propósito. No Padrão a
@@ -837,29 +863,55 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
             {/* Quanto da renda a pessoa aceita entregar ao carro é preferência,
                 não dado a descobrir — então vale nos dois modos, e fica junto
                 do resultado que ela move, não perdido no formulário. */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4 py-3">
-              <span className="text-[11px] font-semibold text-[var(--engine-text-muted)]">
-                {t("ownership.results.shareLabel")}
-              </span>
-              <div className="flex gap-1.5">
-                {/* Cobre as três sugestões de LIFE_SITUATIONS (15, 20 e 35);
-                    sem o 35 quem mora com a família via a régua sem nada
-                    marcado. O campo livre segue no Avançado para o resto. */}
-                {[10, 15, 20, 25, 30, 35].map((pct) => (
-                  <button
-                    key={pct}
-                    type="button"
-                    onClick={() => set("incomeSharePct", pct)}
-                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold tabular-nums transition-colors ${
-                      sharePct === pct
-                        ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
-                        : "border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
-                    }`}
-                  >
-                    {pct}%
-                  </button>
-                ))}
+            <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="text-[11px] font-semibold text-[var(--engine-text-muted)]">
+                  {t("ownership.results.shareLabel")}
+                </span>
+                {/* Digitável de 1 a 100. Os atalhos cobrem as três sugestões de
+                    LIFE_SITUATIONS (15, 20 e 35), mas quem quiser 47% escreve
+                    47 — travar a régua fazia o simulador recusar a conta de
+                    quem já vive com o carro pesando mais do que devia. */}
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={sharePct}
+                    onChange={(e) => set("incomeSharePct", e.target.value)}
+                    className="w-20 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-2.5 py-1.5 text-center text-[13px] font-bold tabular-nums text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)]"
+                  />
+                  <span className="text-[13px] font-bold text-[var(--engine-text-muted)]">%</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[10, 15, 20, 25, 30, 35, 50].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => set("incomeSharePct", pct)}
+                      className={`rounded-lg border px-2 py-1 text-[11px] font-bold tabular-nums transition-colors ${
+                        sharePct === pct
+                          ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                          : "border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
+                      }`}
+                    >
+                      {pct}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {/* Acima do limite da situação de vida, avisa — sem impedir. */}
+              {sharePct > (LIFE_SITUATIONS[inputs.lifeSituation]?.warning || 0.3) * 100 && (
+                <p className="mt-2 text-[11px] leading-relaxed text-amber-600 dark:text-amber-400">
+                  {t("ownership.results.shareWarning", {
+                    pct: sharePct,
+                    limit: Math.round(
+                      (LIFE_SITUATIONS[inputs.lifeSituation]?.warning || 0.3) * 100,
+                    ),
+                  })}
+                </p>
+              )}
             </div>
 
             {/* À vista contra financiado. Era o número mais forte do simulador
@@ -985,12 +1037,17 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
               </div>
             )}
 
-            {/* Breakdown */}
-            <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+            {/* Breakdown. Fechado por padrão: é conferência, não decisão, e
+                aberto empurrava o resto da coluna para fora da tela. */}
+            <details className="group rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                 {t("ownership.results.breakdown")}
-              </p>
-              <div className="divide-y divide-[var(--engine-border)]">
+                <ChevronDown
+                  size={14}
+                  className="shrink-0 transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <div className="mt-2 divide-y divide-[var(--engine-border)]">
                 {isFinance && result.monthly.financing > 0 && (
                   <BreakdownRow
                     icon={Wallet}
@@ -1070,15 +1127,19 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
               <p className="mt-2 text-[11px] leading-relaxed text-[var(--engine-text-subtle)]">
                 {t("ownership.results.depreciationNote")}
               </p>
-            </div>
+            </details>
 
             {/* Financiamento */}
             {isFinance && financing && financing.principal > 0 && (
-              <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+              <details className="group rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                   {t("ownership.results.financingTitle")}
-                </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
+                  <ChevronDown
+                    size={14}
+                    className="shrink-0 transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
                   <span className="text-[var(--engine-text-muted)]">
                     {t("ownership.results.downPayment")}
                   </span>
@@ -1105,7 +1166,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                     {money(financing.totalPaid)}
                   </span>
                 </div>
-              </div>
+              </details>
             )}
 
             {/* Plano de conquista */}

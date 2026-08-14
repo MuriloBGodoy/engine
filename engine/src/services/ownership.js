@@ -197,10 +197,13 @@ export const normalizeOwnershipInputs = (raw = {}) => {
     lifeSituation: LIFE_SITUATION_TYPES.includes(raw.lifeSituation)
       ? raw.lifeSituation
       : base.lifeSituation,
+    // Até 100: comprometer a renda inteira é péssima ideia, mas é uma escolha
+    // que existe, e travar em 60 fazia o simulador mentir sobre a conta de quem
+    // já vive assim. O aviso é papel do veredito, não do clamp.
     incomeSharePct: clamp(
       Math.round(num(raw.incomeSharePct, base.incomeSharePct)),
-      5,
-      60,
+      1,
+      100,
     ),
     monthlyIncome: clamp(num(raw.monthlyIncome, 0), 0, 100000000),
     parkingMonthly: clamp(num(raw.parkingMonthly, 0), 0, 1000000),
@@ -298,15 +301,36 @@ const annualMaintenance = (value, carAge, inputs, country) => {
   return base * kmFactor * countryProfile(country).maintenanceFactor;
 };
 
-// Curva realista: 1º ano máximo (contrato + transferência), desacelera depois.
-// Baseado em Edmunds TCO e dados reais de mercado (2024-2026).
+// Calibrada em 13/08/2026 contra a própria FIPE: 90 pares de anos-modelo
+// consecutivos, 21 modelos, do Mobi ao Classe C, tabela de agosto/2026.
+//
+// A curva anterior (16/12/10/8/6/4) era o padrão americano — despencava no
+// primeiro ano e achatava. O mercado brasileiro é muito mais plano: carro
+// usado aqui segura valor, e a queda medida fica entre 4% e 10% do começo ao
+// fim. O erro chegava a 6 p.p. por ano na ponta jovem.
+//
+//   idade   mediana real   código antigo
+//   1        9,7%           16%
+//   2        6,2%           12%
+//   3        7,4%           10%
+//   4-5      4,9%            8%
+//   6-8      3,9%            6%
+//   9+       3,9% (média 5,2%)  4%
+//
+// Depois do 1º ano fica no piso de 5%: a mediana de 9+ anos é 3,9%, mas a
+// média é 5,2% e as idades de 12 a 15 anos medem 6% a 9% — carro muito velho
+// volta a cair rápido. Subestimar depreciação faz o carro parecer mais barato
+// do que é, que é o erro que este simulador não pode cometer.
+//
+// Ressalva: é corte transversal de uma tabela só, não série temporal. Mede o
+// que um ano a mais de idade custa HOJE, que é o certo para planejamento, mas
+// não separa depreciação de efeito de safra.
 const annualDepreciationRate = (carAge) => {
-  if (carAge <= 1) return 0.16; // 1º ano: contrato + uso inicial (máximo)
-  if (carAge <= 2) return 0.12; // 2º ano: desaceleração
-  if (carAge <= 3) return 0.10;
-  if (carAge <= 5) return 0.08;
-  if (carAge <= 8) return 0.06;
-  return 0.04; // 8+ anos: estabiliza
+  if (carAge <= 1) return 0.10;
+  if (carAge <= 3) return 0.07;
+  if (carAge <= 5) return 0.055;
+  if (carAge <= 8) return 0.05;
+  return 0.055;
 };
 
 // Parcela pela tabela Price.
