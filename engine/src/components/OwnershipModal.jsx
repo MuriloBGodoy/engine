@@ -258,6 +258,27 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
   // num contrato que não paga; superestimar custa um carro que caberia.
   const headlineCost = range.high;
 
+  // A mesma conta com a outra forma de compra. O contraste é o dado mais forte
+  // do simulador — financiar costuma mais que dobrar a renda necessária — e até
+  // agora dependia de a pessoa lembrar de simular duas vezes. Custa ~1 ms.
+  const altPurchase = inputs.purchaseMode === "finance" ? "cash" : "finance";
+  const altRange = useMemo(
+    () =>
+      estimateOwnershipRange(
+        car,
+        { ...effectiveInputs, purchaseMode: altPurchase },
+        { country, state },
+        unknownFields,
+      ),
+    [car, effectiveInputs, altPurchase, country, state, unknownFields],
+  );
+
+  // "Quanto preciso ganhar" é a pergunta que traz alguém ao simulador. Sai do
+  // teto da faixa pela mesma razão que o resto.
+  const sharePct = inputs.incomeSharePct || 20;
+  const requiredIncome = headlineCost / (sharePct / 100);
+  const altRequiredIncome = altRange.high / (sharePct / 100);
+
   // Carro da garagem com gasto lançado: serve de régua real contra a projeção.
   const reference = useMemo(() => pickReferenceCar(cars, car.id), [cars, car.id]);
 
@@ -630,30 +651,49 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                       ))}
                     </select>
                   </Field>
-                  <Field
-                    label={
-                      <div className="flex items-center gap-1.5">
-                        {t("ownership.fields.monthlyRate")}
-                        <InfoTip text={t("ownership.tips.monthlyRate", {
-                          defaultValue: (financing?.monthlyRate * 100 || 1.99).toFixed(2)
-                        })} />
-                      </div>
-                    }
-                    hint={t("ownership.fields.monthlyRateHint", {
-                      value: (financing?.monthlyRate * 100 || 1.99).toFixed(2),
-                    })}
-                  >
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.05"
-                      placeholder={((financing?.monthlyRate || 0.0199) * 100).toFixed(2)}
-                      value={inputs.monthlyRatePct || ""}
-                      onChange={(e) => set("monthlyRatePct", e.target.value)}
-                      className={fieldClass}
-                    />
-                  </Field>
+                  {/* Juros só no Avançado. Entrada e prazo a pessoa sabe e
+                      escolhe; a taxa ela só descobre no banco, depois de
+                      decidir. Perguntar um número que ninguém tem antes da
+                      hora é convidar um chute — e chute que compõe por 48
+                      meses é o pior tipo de entrada errada. No Padrão a taxa
+                      média entra como suposição declarada e a incerteza dela
+                      vai para a faixa, que é onde risco desconhecido deve
+                      aparecer. */}
+                  {mode === "advanced" && (
+                    <Field
+                      label={
+                        <div className="flex items-center gap-1.5">
+                          {t("ownership.fields.monthlyRate")}
+                          <InfoTip text={t("ownership.tips.monthlyRate", {
+                            defaultValue: (financing?.monthlyRate * 100 || 1.99).toFixed(2)
+                          })} />
+                        </div>
+                      }
+                      hint={t("ownership.fields.monthlyRateHint", {
+                        value: (financing?.monthlyRate * 100 || 1.99).toFixed(2),
+                      })}
+                    >
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.05"
+                        placeholder={((financing?.monthlyRate || 0.0199) * 100).toFixed(2)}
+                        value={inputs.monthlyRatePct || ""}
+                        onChange={(e) => set("monthlyRatePct", e.target.value)}
+                        className={fieldClass}
+                      />
+                    </Field>
+                  )}
                 </div>
+              )}
+              {mode === "standard" && isFinance && (
+                <p className="rounded-xl border border-dashed border-[var(--engine-border)] px-3 py-2 text-[11px] leading-relaxed text-[var(--engine-text-muted)]">
+                  {t("ownership.fields.rateAssumed", {
+                    rate: ((financing?.monthlyRate || 0.0199) * 100)
+                      .toFixed(2)
+                      .replace(".", i18n.language.startsWith("en") ? "." : ","),
+                  })}
+                </p>
               )}
             </section>
 
@@ -731,46 +771,134 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
 
           {/* ------------------------------ Resultado ------------------------ */}
           <div className="space-y-4">
-            {/* Números principais */}
+            {/* Números principais.
+
+                A hierarquia troca com o modo, de propósito. No Padrão a
+                pergunta é "quanto preciso ganhar para ter esse carro?" — quem
+                abre o simulador sonhando ainda não sabe a própria conta, e a
+                renda necessária é a resposta. No Avançado a pessoa já informou
+                renda e despesa; ali o custo mensal é o que ela veio conferir. */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-[var(--engine-accent)]/25 bg-[var(--engine-accent-soft)] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--engine-accent)]">
-                  {t("ownership.results.monthlyTotal")}
-                </p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums tracking-tight text-[var(--engine-text)] sm:text-2xl">
-                  {money(headlineCost)}
-                </p>
-                {/* Com campos por informar, o número é o teto de uma faixa — e
-                    a faixa aparece, senão o teto viraria uma precisão que não
-                    existe. Ela estreita conforme a pessoa preenche. */}
-                {unknownFields.length > 0 ? (
-                  <p className="text-[11px] text-[var(--engine-text-muted)]">
-                    {t("ownership.results.rangeHint", {
-                      low: money(range.low),
-                      high: money(range.high),
-                    })}
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-[var(--engine-text-muted)]">
-                    {t("ownership.results.perMonth")}
-                  </p>
-                )}
+              {(mode === "standard"
+                ? ["requiredIncome", "monthlyTotal"]
+                : ["monthlyTotal", "requiredIncome"]
+              ).map((tile, index) => {
+                const isHero = index === 0;
+                const shell = isHero
+                  ? "rounded-2xl border border-[var(--engine-accent)]/25 bg-[var(--engine-accent-soft)] p-4"
+                  : "rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4";
+                const kicker = isHero
+                  ? "text-[10px] font-bold uppercase tracking-widest text-[var(--engine-accent)]"
+                  : "text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]";
+
+                if (tile === "monthlyTotal") {
+                  return (
+                    <div key={tile} className={shell}>
+                      <p className={kicker}>{t("ownership.results.monthlyTotal")}</p>
+                      <p className="mt-1 text-xl font-extrabold tabular-nums tracking-tight text-[var(--engine-text)] sm:text-2xl">
+                        {money(headlineCost)}
+                      </p>
+                      {/* Com campos por informar, o número é o teto de uma
+                          faixa — e a faixa aparece, senão o teto viraria uma
+                          precisão que não existe. Ela estreita conforme a
+                          pessoa preenche. */}
+                      <p className="text-[11px] text-[var(--engine-text-muted)]">
+                        {unknownFields.length > 0
+                          ? t("ownership.results.rangeHint", {
+                              low: money(range.low),
+                              high: money(range.high),
+                            })
+                          : t("ownership.results.perMonth")}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={tile} className={shell}>
+                    <p className={`flex items-center gap-1.5 ${kicker}`}>
+                      {t("ownership.results.requiredIncome")}
+                      <InfoTip
+                        text={t("ownership.tips.requiredIncome")}
+                        align={isHero ? "left" : "right"}
+                      />
+                    </p>
+                    <p className="mt-1 text-xl font-extrabold tabular-nums tracking-tight text-[var(--engine-text)] sm:text-2xl">
+                      {money(requiredIncome)}
+                    </p>
+                    <p className="text-[11px] text-[var(--engine-text-muted)]">
+                      {t("ownership.results.requiredIncomeHint", { pct: sharePct })}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Quanto da renda a pessoa aceita entregar ao carro é preferência,
+                não dado a descobrir — então vale nos dois modos, e fica junto
+                do resultado que ela move, não perdido no formulário. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] px-4 py-3">
+              <span className="text-[11px] font-semibold text-[var(--engine-text-muted)]">
+                {t("ownership.results.shareLabel")}
+              </span>
+              <div className="flex gap-1.5">
+                {/* Cobre as três sugestões de LIFE_SITUATIONS (15, 20 e 35);
+                    sem o 35 quem mora com a família via a régua sem nada
+                    marcado. O campo livre segue no Avançado para o resto. */}
+                {[10, 15, 20, 25, 30, 35].map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => set("incomeSharePct", pct)}
+                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold tabular-nums transition-colors ${
+                      sharePct === pct
+                        ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                        : "border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
               </div>
+            </div>
+
+            {/* À vista contra financiado. Era o número mais forte do simulador
+                e o único que exigia simular duas vezes para enxergar. */}
+            {result.value > 0 && (
               <div className="rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-4">
-                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
-                  {t("ownership.results.requiredIncome")}
-                  <InfoTip text={t("ownership.tips.requiredIncome")} align="right" />
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+                  {t("ownership.results.compareTitle")}
                 </p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums tracking-tight text-[var(--engine-text)] sm:text-2xl">
-                  {money(headlineCost / (rec.incomeSharePct / 100))}
-                </p>
-                <p className="text-[11px] text-[var(--engine-text-muted)]">
-                  {t("ownership.results.requiredIncomeHint", {
-                    pct: rec.incomeSharePct,
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold text-[var(--engine-accent)]">
+                      {t(`ownership.purchaseOptions.${inputs.purchaseMode}`)}
+                    </p>
+                    <p className="text-base font-extrabold tabular-nums text-[var(--engine-text)]">
+                      {money(requiredIncome)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold text-[var(--engine-text-muted)]">
+                      {t(`ownership.purchaseOptions.${altPurchase}`)}
+                    </p>
+                    <p className="text-base font-extrabold tabular-nums text-[var(--engine-text-muted)]">
+                      {money(altRequiredIncome)}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-[var(--engine-text-muted)]">
+                  {t("ownership.results.compareHint", {
+                    times: (
+                      Math.max(requiredIncome, altRequiredIncome) /
+                      Math.max(Math.min(requiredIncome, altRequiredIncome), 1)
+                    )
+                      .toFixed(1)
+                      .replace(".", i18n.language.startsWith("en") ? "." : ","),
                   })}
                 </p>
               </div>
-            </div>
+            )}
 
             {/* Sobra ou não sobra. Fica no bloco de RESULTADO, e não no
                 formulário, de propósito: a pessoa preenche porque quer a
@@ -1094,7 +1222,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                 {t("ownership.results.requiredIncome")}
               </p>
               <p className="text-lg font-extrabold leading-tight tabular-nums text-[var(--engine-text)]">
-                {money(headlineCost / (rec.incomeSharePct / 100))}
+                {money(requiredIncome)}
               </p>
             </div>
           </div>

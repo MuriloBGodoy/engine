@@ -232,6 +232,8 @@ const resources = {
           months: "Prazo",
           monthlyRate: "Juros (% a.m.)",
           monthlyRateHint: "Vazio = média de mercado ({{value}}% a.m.)",
+          rateAssumed:
+            "Juros considerado: {{rate}}% ao mês, a média do mercado. Sua taxa real só sai no banco — por isso ela não é um campo aqui, e sim parte da faixa do resultado.",
           monthlyIncome: "Sua renda mensal (R$)",
           monthlyIncomeHint: "Opcional — para avaliar o comprometimento",
           lifeSituation: "Situação de moradia e gastos",
@@ -276,6 +278,10 @@ const resources = {
           perMonth: "por mês, tudo incluído",
           requiredIncome: "Renda necessária",
           requiredIncomeHint: "para o carro ocupar {{pct}}% da renda",
+          shareLabel: "Quanto da minha renda esse carro pode ocupar",
+          compareTitle: "Renda necessária conforme a forma de compra",
+          compareHint:
+            "A diferença é de {{times}}× entre as duas formas. Juros e prazo pesam mais do que qualquer outra escolha do simulador.",
           rangeHint: "entre {{low}} e {{high}} — usamos o teto para a conta de renda",
           realTitle: "Comparando com o real",
           realSelf:
@@ -1000,6 +1006,8 @@ const resources = {
           months: "Term",
           monthlyRate: "Interest (% p.m.)",
           monthlyRateHint: "Empty = market average ({{value}}% p.m.)",
+          rateAssumed:
+            "Assumed interest: {{rate}}% per month, the market average. Your real rate only comes from the bank — so it isn't a field here, it's part of the range in the result.",
           monthlyIncome: "Your monthly income",
           monthlyIncomeHint: "Optional — to check budget commitment",
           lifeSituation: "Living and expenses situation",
@@ -1044,6 +1052,10 @@ const resources = {
           perMonth: "per month, all included",
           requiredIncome: "Income needed",
           requiredIncomeHint: "for the car to take {{pct}}% of income",
+          shareLabel: "How much of my income this car can take",
+          compareTitle: "Required income by how you buy",
+          compareHint:
+            "A {{times}}× difference between the two. Interest and term weigh more than any other choice in the simulator.",
           rangeHint: "between {{low}} and {{high}} — we use the ceiling for the income math",
           realTitle: "Against the real thing",
           realSelf:
@@ -1766,6 +1778,8 @@ const resources = {
           months: "Plazo",
           monthlyRate: "Interés (% mensual)",
           monthlyRateHint: "Vacío = promedio de mercado ({{value}}% mensual)",
+          rateAssumed:
+            "Interés considerado: {{rate}}% mensual, el promedio del mercado. Tu tasa real solo sale en el banco — por eso no es un campo acá, sino parte del rango del resultado.",
           monthlyIncome: "Tu ingreso mensual",
           monthlyIncomeHint: "Opcional — para evaluar el compromiso",
           lifeSituation: "Situación de vivienda y gastos",
@@ -1810,6 +1824,10 @@ const resources = {
           perMonth: "por mes, todo incluido",
           requiredIncome: "Ingreso necesario",
           requiredIncomeHint: "para que el auto ocupe {{pct}}% del ingreso",
+          shareLabel: "Cuánto de mi ingreso puede ocupar este auto",
+          compareTitle: "Ingreso necesario según la forma de compra",
+          compareHint:
+            "La diferencia es de {{times}}× entre las dos. El interés y el plazo pesan más que cualquier otra elección del simulador.",
           rangeHint: "entre {{low}} y {{high}} — usamos el techo para la cuenta de ingreso",
           realTitle: "Comparando con lo real",
           realSelf:
