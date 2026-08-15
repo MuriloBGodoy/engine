@@ -174,6 +174,68 @@ novo e atrasa a isenção. Na fronteira exata (2006 no exercício 2026) há lit�
 o fisco paulista cobrou alegando fato gerador em 1º de janeiro e foi afastado em
 1ª instância (proc. 1001145-07.2026.8.26.0053).
 
+### SP conferido na lei — 4% inclusive para flex (14/08/2026)
+
+Hipótese testada e **refutada**: a Lei 13.296/2008 escalona a alíquota, e havia
+faixa reduzida para álcool/GNV/eletricidade, o que faria `SP: 0.04` estar errado
+para quase toda a frota. Não está.
+
+- Art. 9º, III (redação da Lei 17.473/2021): **4% para "qualquer veículo
+  automotor não incluído nos incisos I e II"** — automóvel de passeio cai aqui.
+- A faixa de 3% foi **revogada pela Lei 17.293/2020**.
+- Mesmo sob a redação antiga, flex nunca entraria: exigia motor para funcionar
+  **"exclusivamente"** a álcool, GNV ou eletricidade.
+- Só escapam locadora (1%, § 1º) e GNV adaptado em carro fabricado até
+  31/12/2008 (3%, § 3º).
+
+A página "Como é calculado o IPVA" do portal da Fazenda-SP responde 200 com
+94 KB de chrome de SharePoint e **uma frase** de conteúdo, mandando consultar o
+sistema pelo RENAVAM. Quem responde é o texto consolidado em
+`legislacao.fazenda.sp.gov.br`.
+
+**O que existe em SP é isenção de HÍBRIDO, e tem prazo.** Disposições
+Transitórias art. 5º (acrescido pela Lei 18.065/2024, Portaria SRE-94/24):
+híbrido de motor elétrico + combustão a etanol, até R$ 250.000 corrigidos por
+IPCA, **isento em 2025 e 2026**; depois 1% em 2027, 2% em 2028, 3% em 2029, 4%
+de 2030. O 100% elétrico **não** entra — o dispositivo cobre hidrogênio
+exclusivo ou híbrido com motor a combustão, e um BEV não é nenhum dos dois, o
+que confirma manter SP fora de `IPVA_BR_ELECTRIC`. O gap do híbrido está
+documentado no código e vale R$ 600/mês num carro de R$ 180 mil.
+
+### Duas aproximações estruturais que a leitura da lei expôs
+
+1. **A base de cálculo não é a FIPE.** Em SP é tabela própria da SEFAZ (art. 7º,
+   §§ 1º-2º), publicada por resolução e congelada nos preços médios de
+   **setembro do ano anterior** — 4 a 15 meses de defasagem contra a FIPE do mês
+   corrente, que é o que o motor usa. Em usado com preço nominal em alta a base
+   tende a ser menor, então superestimamos. **Não medido** — mediria fácil com a
+   tabela da Resolução SFP-40/25 cruzada contra a FIPE.
+2. **Zero km paga proporcional** aos meses restantes do ano (art. 11). O motor
+   cobra o ano cheio porque não sabe o mês da compra.
+
+### Uma exceção à afirmação de que não há dado estruturado
+
+A **Resolução SFP-40/25** (DOE de 12/12/2025) divulga os valores de mercado de
+veículos usados de SP para o exercício 2026 — tabela marca × modelo × ano em
+reais, por ato oficial. Não é API nem dado aberto formal, e **o formato do anexo
+não foi verificado**: se for PDF morre ali, se for planilha vira a série que
+permite medir o viés FIPE × base-IPVA. Registrado como pista, não como fonte.
+
+### Suspeitos de erro para baixo — MS, PI e BA
+
+Levantados por diff contra uma calculadora comercial (camada 5, oráculo de
+teste), que declara usar a **média** entre faixas quando a UF escalona. Nas 27
+UFs, 20 batem. Das 7 divergências, quatro têm explicação (AM: a calculadora está
+desatualizada e nós temos primária; DF, PE e AL: média abaixo da nossa faixa
+máxima, direção segura). **MS, PI e BA são as únicas em que a média dela supera
+a nossa faixa máxima**, o que só é possível se a faixa real for maior — ou seja,
+o único lugar da tabela onde podemos estar errando **para baixo**. Conferir na
+lei. Três leis, ~40 min cada.
+
+O mesmo diff corroborou o MT em 3,0% por terceira via: um agregador comercial
+concordando com a portaria contra os 3,45% que circulam é sinal razoável de que
+aquele número nunca teve origem legal.
+
 ### MT corrigido de 3,45% para 3,0% (14/08/2026)
 
 **Portaria SEFAZ-MT 196/2025**, art. 2º, VII (DOE Edição Extra de 23/12/2025):

@@ -14,6 +14,10 @@ dist-ssr
 dev-dist
 *.local
 
+# Referências visuais do Jesse (moodboard): arte de terceiros, nunca asset do
+# produto. Fica só na máquina local.
+ui designs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

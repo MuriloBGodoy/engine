@@ -167,6 +167,19 @@ Na ordem de retorno:
 - [x] ~~**IPVA cobrado em carro de qualquer idade**~~ — corrigido em 14/08/2026.
       A EC 137/2025 tornou imune o veículo com 20+ anos de fabricação em todo o
       país; `IPVA_BR_EXEMPT_AGE` cobre GO (15), RJ (16) e MT (18) por cima disso
+- [ ] **MS, PI e BA — únicos suspeitos de erro PARA BAIXO.** Numa calculadora
+      comercial que usa média entre faixas, os três aparecem acima da nossa
+      faixa máxima, o que só é possível se a faixa real for maior. É a única
+      direção de erro que o motor não pode ter. Três leis, ~40 min cada
+- [ ] **Híbrido em SP é isento até 31/12/2026** (Lei 18.065/2024), depois 1% em
+      2027, 2% em 2028, 3% em 2029, 4% de 2030. Cobramos 4% hoje: R$ 600/mês
+      num híbrido de R$ 180 mil. Depende de `FUEL_TYPES` distinguir híbrido de
+      combustão, que hoje não distingue
+- [ ] **Medir o viés FIPE × base do IPVA.** A base não é a FIPE: em SP é tabela
+      própria da SEFAZ congelada em setembro do ano anterior. A Resolução
+      SFP-40/25 publica a tabela de 2026 — **conferir se o anexo é planilha ou
+      PDF** (meia hora). Se for planilha, dá para medir o viés de verdade em vez
+      de supor que erramos para cima
 - [ ] **Isenção por idade nas ~15 UFs que faltam.** O piso nacional de 20 anos
       já está aplicado e erra para cima, então isto é ganho marginal: são as UFs
       que isentam antes (o "grupo dos 15" em fonte secundária, mais AP e RR com

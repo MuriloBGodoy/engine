@@ -33,6 +33,32 @@
 // VII, DOE Extra de 23/12/2025; 2% até 1.000 cc). Era 3,45% aqui, que é a
 // alíquota de utilitários de GOIÁS — provável contaminação entre UFs vizinhas.
 // GO: 3,75% para automóvel acima de 100 cv (Secretaria da Economia/GO) — certo.
+//
+// SP: 4% para automóvel de passeio, INCLUSIVE FLEX E 100% ELÉTRICO. Conferido
+// no texto consolidado da Lei 13.296/2008 em 14/08/2026, porque a hipótese
+// contrária é convidativa e volta sempre. Art. 9º, III (redação da Lei
+// 17.473/2021, efeitos desde 1º/01/2022): "4% para qualquer veículo automotor
+// não incluído nos incisos I e II". A faixa de 3% para álcool/GNV/eletricidade
+// foi REVOGADA pela Lei 17.293/2020 — e mesmo antes exigia motor
+// "exclusivamente" a álcool, que flex nunca cumpriu. Só escapam locadora (1%,
+// § 1º) e GNV adaptado em carro fabricado até 31/12/2008 (3%, § 3º).
+//
+// LACUNA CONHECIDA EM SP, com prazo: híbrido de motor elétrico + combustão a
+// etanol, de valor até R$ 250.000 (corrigido por IPCA), é ISENTO em 2025 e
+// 2026 — Disposições Transitórias art. 5º, acrescido pela Lei 18.065/2024,
+// regulamentado pela Portaria SRE-94/24. Depois volta escalonado: 1% em 2027,
+// 2% em 2028, 3% em 2029, 4% de 2030. Não dá para modelar enquanto FUEL_TYPES
+// não distinguir híbrido de combustão. Hoje cobramos 4% — erro para cima, e o
+// maior de SP em valor absoluto: R$ 600/mês num híbrido de R$ 180 mil.
+// O 100% elétrico NÃO entra nessa isenção: o dispositivo cobre hidrogênio
+// exclusivo ou híbrido COM motor a combustão, e um BEV não é nenhum dos dois.
+// É por isso que SP fica fora de IPVA_BR_ELECTRIC.
+//
+// Suspeitos de erro PARA BAIXO — únicos da tabela, e por isso os próximos:
+// MS (temos 3,0), PI (2,5) e BA (2,5). Numa calculadora comercial, que declara
+// usar a MÉDIA entre faixas, os três aparecem acima da nossa faixa máxima, o
+// que só é possível se a faixa máxima real for maior. É pista, não valor —
+// conferir na lei antes de mexer.
 const IPVA_BR = {
   AC: 0.02, AL: 0.0325, AP: 0.03, AM: 0.02, BA: 0.025, CE: 0.03, DF: 0.035,
   ES: 0.02, GO: 0.0375, MA: 0.025, MT: 0.03, MS: 0.03, MG: 0.04, PA: 0.025,
@@ -294,6 +320,18 @@ const countryProfile = (country) => COUNTRY_PROFILES[country] || COUNTRY_PROFILE
 // Blocos de cálculo
 // ---------------------------------------------------------------------------
 
+// Duas aproximações conhecidas, as duas erram para cima e nenhuma é modelável
+// com o que o simulador sabe hoje:
+//
+// 1. A base de cálculo não é a FIPE. Em SP (Lei 13.296/2008, art. 7º, §§ 1º-2º)
+//    é tabela própria da SEFAZ, publicada por resolução e congelada nos preços
+//    médios de SETEMBRO do ano anterior — 4 a 15 meses de defasagem contra a
+//    FIPE do mês corrente, que é o `car.targetValue` que entra aqui. Em mercado
+//    de usado em alta a base tende a ser menor que a FIPE, então o imposto sai
+//    superestimado. Quanto, ninguém mediu.
+// 2. Zero km paga PROPORCIONAL aos meses restantes do ano (art. 11). Aqui sai
+//    sempre o ano cheio, porque o simulador não sabe o mês da compra — quem
+//    compra em outubro paga 3/12 e a tela mostra 12/12.
 const annualVehicleTax = (value, country, state, fuelType, carAge) => {
   if (country === "BR") {
     // Imunidade por idade antes de qualquer alíquota: acima do limite não há
