@@ -172,9 +172,81 @@ h5 {
      lista com o branco do sistema, enquanto as opções ficam com a cor de
      texto clara do tema escuro — branco no branco, ilegível. Definir as duas
      cores aqui vale para todos os selects de uma vez. */
-  select option {
+  select option,
+  select optgroup {
     background-color: var(--engine-surface);
     color: var(--engine-text);
+  }
+
+  /* ===== Widgets nativos no tema escuro =====
+     `color-scheme: dark` no :root deveria bastar, mas o navegador volta ao
+     esquema claro em vários controles quando o elemento tem fundo próprio —
+     que é o caso de todo campo do app, que pinta `--engine-surface-2`. Daí a
+     repetição explícita: é o que faz o widget desenhado pelo sistema (e não
+     por nós) nascer escuro. */
+  :root.dark input,
+  :root.dark select,
+  :root.dark textarea,
+  :root.dark button {
+    color-scheme: dark;
+  }
+
+  /* O spinner do campo numérico é a caixinha branca que aparecia no meio do
+     campo escuro. Some em todo o app: não há campo numérico aqui em que subir
+     de 1 em 1 seja o gesto certo — km/mês, entrada e % de renda são digitados
+     ou vêm de atalho, e o teclado do celular nem mostra o spinner. */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  /* Caixa de seleção, rádio e slider vinham no azul do sistema. */
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: var(--engine-accent);
+  }
+
+  /* O ícone de calendário/relógio é desenhado preto e desaparecia no escuro. */
+  :root.dark input[type="date"]::-webkit-calendar-picker-indicator,
+  :root.dark input[type="time"]::-webkit-calendar-picker-indicator,
+  :root.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  :root.dark input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.65;
+    cursor: pointer;
+  }
+
+  :root.dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  :root.dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  :root.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+  :root.dark input[type="month"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* Preenchimento automático do Chrome: o navegador pinta o campo de branco
+     amarelado por cima do tema, e é o "elemento em branco" que aparece em
+     login, cadastro e perfil. Não dá para sobrescrever com background — só
+     com uma sombra interna do tamanho do campo. A transição longa existe
+     porque o Chrome reaplica a cor depois de um tempo. */
+  :root.dark input:-webkit-autofill,
+  :root.dark input:-webkit-autofill:hover,
+  :root.dark input:-webkit-autofill:focus,
+  :root.dark input:-webkit-autofill:active,
+  :root.dark textarea:-webkit-autofill,
+  :root.dark select:-webkit-autofill {
+    -webkit-text-fill-color: var(--engine-text);
+    -webkit-box-shadow: 0 0 0 1000px var(--engine-surface-2) inset;
+    caret-color: var(--engine-text);
+    transition: background-color 100000s ease-in-out 0s;
   }
 }
 
@@ -772,7 +844,8 @@ h5 {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-right: 0.5rem;
+    /* Folga para a barra de rolagem não encostar no conteúdo da coluna. */
+    padding-right: 0.875rem;
   }
 }
 

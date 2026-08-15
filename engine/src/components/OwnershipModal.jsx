@@ -38,8 +38,10 @@ import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
 import { fipeService } from "../services/fipeService";
 import { consumptionFor } from "../services/consumption";
 
+// `min-h-11` são os 44px de alvo de toque. O campo tinha 40 e, com o rótulo
+// colado nele, a coluna do formulário virava uma parede de retângulos.
 const fieldClass =
-  "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-sm text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
+  "w-full min-h-11 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-2.5 text-sm text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
 
 /**
  * Campos que só existem no modo Avançado. Servem para duas coisas: decidir em
@@ -79,7 +81,7 @@ const KM_BANDS = [
   { key: "work", value: 4000 },
 ];
 const labelClass =
-  "ml-1 text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]";
+  "ml-0.5 block text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]";
 const sectionTitleClass =
   "text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--engine-accent)]";
 
@@ -94,11 +96,13 @@ const comfortStyles = {
 
 function Field({ label, children, hint }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <label className={labelClass}>{label}</label>
       {children}
       {hint ? (
-        <p className="ml-1 text-[11px] text-[var(--engine-text-subtle)]">{hint}</p>
+        <p className="ml-0.5 text-[11px] leading-relaxed text-[var(--engine-text-subtle)]">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
@@ -107,7 +111,7 @@ function Field({ label, children, hint }) {
 function BreakdownRow({ icon, label, value, tip = "", share = null, muted = false }) {
   const Icon = icon;
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
+    <div className="flex items-center justify-between gap-3 py-2">
       <span className="flex min-w-0 items-center gap-2 text-[13px] text-[var(--engine-text-muted)]">
         <Icon size={14} className="shrink-0 text-[var(--engine-text-subtle)]" />
         <span className="truncate">{label}</span>
@@ -389,7 +393,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
           </button>
         </div>
 
-        <div className="engine-modal-body engine-modal-split engine-scroll grid content-start gap-7 px-4 py-5 sm:gap-8 sm:px-8 sm:py-6 lg:grid-cols-[1fr_1.1fr]">
+        <div className="engine-modal-body engine-modal-split engine-scroll grid content-start gap-7 px-4 py-5 sm:gap-8 sm:px-8 sm:py-6 lg:grid-cols-[1fr_1.1fr] lg:gap-x-10">
           {/* ------------------------------ Formulário ----------------------- */}
           <div className="engine-modal-col engine-scroll space-y-6">
             {/* Trocar de modo não mexe nos dados, só no que aparece. O que foi
@@ -418,15 +422,15 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   {t("ownership.modes.standardHint", { location: state || country })}
                 </p>
 
-                <section className="space-y-3">
+                <section className="space-y-3.5">
                   <h3 className={sectionTitleClass}>{t("ownership.fields.kmPerMonth")}</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {KM_BANDS.map((band) => (
                       <button
                         key={band.key}
                         type="button"
                         onClick={() => set("kmPerMonth", band.value)}
-                        className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                        className={`rounded-xl border px-3.5 py-3 text-left transition ${
                           Number(inputs.kmPerMonth) === band.value
                             ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)]"
                             : "border-[var(--engine-border)] hover:border-[var(--engine-accent)]"
@@ -443,15 +447,15 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   </div>
                 </section>
 
-                <section className="space-y-3">
+                <section className="space-y-3.5">
                   <h3 className={sectionTitleClass}>{t("ownership.fields.coverage")}</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2.5">
                     {COVERAGE_TYPES.map((option) => (
                       <button
                         key={option}
                         type="button"
                         onClick={() => set("coverage", option)}
-                        className={`rounded-xl border px-2 py-2.5 text-[11px] font-bold transition ${
+                        className={`flex min-h-11 items-center justify-center rounded-xl border px-2 text-[11px] font-bold leading-tight transition ${
                           inputs.coverage === option
                             ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
                             : "border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
@@ -468,9 +472,9 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
             {mode === "advanced" && (
             <>
             {/* Localização */}
-            <section className="space-y-3">
+            <section className="space-y-3.5">
               <h3 className={sectionTitleClass}>{t("ownership.sections.location")}</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field label={t("ownership.fields.country")}>
                   <select
                     value={country}
@@ -506,9 +510,9 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
             </section>
 
             {/* Uso do carro */}
-            <section className="space-y-3">
+            <section className="space-y-3.5">
               <h3 className={sectionTitleClass}>{t("ownership.sections.usage")}</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field label={t("ownership.fields.kmPerMonth")}>
                   <input
                     type="number"
@@ -584,9 +588,9 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
             </section>
 
             {/* Perfil do condutor */}
-            <section className="space-y-3">
+            <section className="space-y-3.5">
               <h3 className={sectionTitleClass}>{t("ownership.sections.driver")}</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field label={t("ownership.fields.driverAge")}>
                   <select
                     value={inputs.driverAgeBand}
@@ -630,15 +634,15 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
             )}
 
             {/* Compra */}
-            <section className="space-y-3">
+            <section className="space-y-3.5">
               <h3 className={sectionTitleClass}>{t("ownership.sections.purchase")}</h3>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {["finance", "cash"].map((mode) => (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => set("purchaseMode", mode)}
-                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition-colors ${
                       inputs.purchaseMode === mode
                         ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-text)]"
                         : "border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)] hover:border-[var(--engine-border-strong)]"
@@ -649,7 +653,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                 ))}
               </div>
               {isFinance && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                   <Field
                     label={t("ownership.fields.downPayment")}
                     hint={t("ownership.fields.downPaymentHint")}
@@ -725,7 +729,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
 
             {/* Renda e extras */}
             {mode === "advanced" && (
-            <section className="space-y-3">
+            <section className="space-y-3.5">
               <h3 className={sectionTitleClass}>{t("ownership.sections.budget")}</h3>
               <div className="space-y-1">
                 <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -753,7 +757,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field
                   label={t("ownership.fields.incomeShare")}
                   hint={t("ownership.fields.incomeShareHint", {
@@ -762,8 +766,8 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                 >
                   <input
                     type="number"
-                    min="5"
-                    max="60"
+                    min="1"
+                    max="100"
                     step="1"
                     value={inputs.incomeSharePct}
                     onChange={(e) => set("incomeSharePct", e.target.value)}
@@ -872,25 +876,26 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                     LIFE_SITUATIONS (15, 20 e 35), mas quem quiser 47% escreve
                     47 — travar a régua fazia o simulador recusar a conta de
                     quem já vive com o carro pesando mais do que devia. */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="1"
                     max="100"
                     step="1"
+                    inputMode="numeric"
                     value={sharePct}
                     onChange={(e) => set("incomeSharePct", e.target.value)}
-                    className="w-20 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-2.5 py-1.5 text-center text-[13px] font-bold tabular-nums text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)]"
+                    className="h-9 w-16 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-2 text-center text-sm font-bold tabular-nums text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)]"
                   />
-                  <span className="text-[13px] font-bold text-[var(--engine-text-muted)]">%</span>
+                  <span className="text-sm font-bold text-[var(--engine-text-muted)]">%</span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {[10, 15, 20, 25, 30, 35, 50].map((pct) => (
                     <button
                       key={pct}
                       type="button"
                       onClick={() => set("incomeSharePct", pct)}
-                      className={`rounded-lg border px-2 py-1 text-[11px] font-bold tabular-nums transition-colors ${
+                      className={`h-9 min-w-9 rounded-lg border px-2.5 text-[12px] font-bold tabular-nums transition-colors ${
                         sharePct === pct
                           ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
                           : "border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)]"
@@ -1349,7 +1354,7 @@ function BudgetBlock({ t, money, monthlyCost, budget, currentCar, onChange, onCo
         {t("ownership.budget.title")}
       </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
         <Field label={t("ownership.budget.income")}>
           <input
             type="number"
