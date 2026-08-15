@@ -234,6 +234,14 @@ const resources = {
           monthlyRateHint: "Vazio = média de mercado ({{value}}% a.m.)",
           rateAssumed:
             "Juros considerado: {{rate}}% ao mês, a média do mercado. Sua taxa real só sai no banco — por isso ela não é um campo aqui, e sim parte da faixa do resultado.",
+          consumptionUser: "Usando o consumo que você informou",
+          consumptionUserHint: "Seu consumo: {{value}} km/l",
+          consumptionEstimate:
+            "Estimativa por categoria de veículo, não medição deste carro. Se você sabe o seu, escreva — é o número que mais move a conta.",
+          consumptionEstimateHint: "Estimado: {{value}} km/l — edite se souber o seu",
+          consumptionDefault: "Usando a média geral, sem estimativa para este modelo",
+          consumptionDefaultHint: "Padrão: {{value}} km/l — edite se souber o seu",
+          consumptionPlaceholder: "{{value}} km/l",
           monthlyIncome: "Sua renda mensal (R$)",
           monthlyIncomeHint: "Opcional — para avaliar o comprometimento",
           lifeSituation: "Situação de moradia e gastos",
@@ -1010,6 +1018,14 @@ const resources = {
           monthlyRateHint: "Empty = market average ({{value}}% p.m.)",
           rateAssumed:
             "Assumed interest: {{rate}}% per month, the market average. Your real rate only comes from the bank — so it isn't a field here, it's part of the range in the result.",
+          consumptionUser: "Using the mileage you entered",
+          consumptionUserHint: "Your mileage: {{value}} km/l",
+          consumptionEstimate:
+            "Estimate by vehicle category, not a measurement of this car. If you know yours, type it — it's the number that moves the result the most.",
+          consumptionEstimateHint: "Estimated: {{value}} km/l — edit if you know yours",
+          consumptionDefault: "Using the overall average, no estimate for this model",
+          consumptionDefaultHint: "Default: {{value}} km/l — edit if you know yours",
+          consumptionPlaceholder: "{{value}} km/l",
           monthlyIncome: "Your monthly income",
           monthlyIncomeHint: "Optional — to check budget commitment",
           lifeSituation: "Living and expenses situation",
@@ -1784,6 +1800,14 @@ const resources = {
           monthlyRateHint: "Vacío = promedio de mercado ({{value}}% mensual)",
           rateAssumed:
             "Interés considerado: {{rate}}% mensual, el promedio del mercado. Tu tasa real solo sale en el banco — por eso no es un campo acá, sino parte del rango del resultado.",
+          consumptionUser: "Usando el consumo que informaste",
+          consumptionUserHint: "Tu consumo: {{value}} km/l",
+          consumptionEstimate:
+            "Estimación por categoría de vehículo, no una medición de este auto. Si conocés el tuyo, escribilo — es el número que más mueve la cuenta.",
+          consumptionEstimateHint: "Estimado: {{value}} km/l — editá si conocés el tuyo",
+          consumptionDefault: "Usando el promedio general, sin estimación para este modelo",
+          consumptionDefaultHint: "Estándar: {{value}} km/l — editá si conocés el tuyo",
+          consumptionPlaceholder: "{{value}} km/l",
           monthlyIncome: "Tu ingreso mensual",
           monthlyIncomeHint: "Opcional — para evaluar el compromiso",
           lifeSituation: "Situación de vivienda y gastos",

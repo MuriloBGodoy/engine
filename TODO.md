@@ -3,7 +3,7 @@
 Lista acionável do que ficou pendente. O **porquê** de cada decisão está no
 `ROADMAP.md`; aqui é só o que fazer.
 
-Última atualização: 11 de agosto de 2026.
+Última atualização: 14 de agosto de 2026.
 
 ---
 
@@ -152,17 +152,29 @@ cancelamento vem no segundo mês.
 Inventário completo, com endpoints verificados, em **`SIMULADOR-FONTES.md`**.
 Na ordem de retorno:
 
-- [ ] **ANP semanal → Firestore.** Substitui `FUEL_PRICE_BR` e `FUEL_FACTOR_BR`.
-      A média nacional do código está certa; os fatores por UF erram até 9,3
-      p.p. CSV público, sem autenticação, ~8 MB por semana
+- [ ] **ANP semanal → Firestore.** Os valores foram remedidos à mão em
+      14/08/2026 (preços, `FUEL_FACTOR_BR` e o novo `FUEL_FACTOR_BR_ETHANOL`),
+      então o ganho agora é não apodrecer. CSV público, sem autenticação, ~8 MB
+      por semana. Falta também o **diesel**, que está noutro arquivo da ANP e
+      segue com valor de jul/2026 não reconferido
 - [ ] **BCB SGS 25471 mensal → Firestore.** Cinco linhas. Hoje o ganho é nulo
       (1,97% contra 1,99%), mas a série já marcou 1,63% e vai divergir de novo
 - [x] ~~**IPVA do Amazonas está 2× errado**~~ — corrigido em 13/08/2026: AM foi
-      para 2,0% (1,5% elétrico), CE para 3,0%, e o PR já estava certo com 1,9%.
-      Sobrou **`MT: 0.0345` sem confirmação em fonte primária**
+      para 2,0% (1,5% elétrico), CE para 3,0%, e o PR já estava certo com 1,9%
+- [x] ~~**`MT: 0.0345` sem confirmação**~~ — corrigido em 14/08/2026 para 3,0%
+      (Portaria SEFAZ-MT 196/2025, art. 2º VII). O 3,45% era a alíquota de
+      utilitários de GOIÁS; provável contaminação entre UFs vizinhas
+- [x] ~~**IPVA cobrado em carro de qualquer idade**~~ — corrigido em 14/08/2026.
+      A EC 137/2025 tornou imune o veículo com 20+ anos de fabricação em todo o
+      país; `IPVA_BR_EXEMPT_AGE` cobre GO (15), RJ (16) e MT (18) por cima disso
+- [ ] **Isenção por idade nas ~15 UFs que faltam.** O piso nacional de 20 anos
+      já está aplicado e erra para cima, então isto é ganho marginal: são as UFs
+      que isentam antes (o "grupo dos 15" em fonte secundária, mais AP e RR com
+      10 anos e fontes que se contradizem). Um dia de trabalho, lei por lei
 - [ ] **Alíquota de elétrico por UF.** Existe `IPVA_BR_ELECTRIC`, mas só com o
-      AM. MT e CE aparecem com redução em fonte secundária; vários outros
-      estados também reduzem ou isentam
+      AM — e continua só com o AM depois da rodada de 14/08: o MT não tem inciso
+      de elétrico na portaria vigente, e o DF isenta mas de forma **condicional**
+      (só se comprado de revendedor do DF), o que não cabe num escalar
 - [x] ~~**Job mensal de amostragem FIPE histórica**~~ — recalibrada em
       13/08/2026 por corte transversal (90 pares, 21 modelos). Curva era o
       padrão americano (16/12/10/8/6/4), virou 10/7/5,5/5/5,5. Falta a série
@@ -171,17 +183,36 @@ Na ordem de retorno:
       então um Lancer 2.0 e um Onix 1.0 do mesmo preço custam igual para manter.
       Sem fonte verificada de custo de peça e mão de obra por marca — não
       inventar fator; procurar dado antes
-- [ ] **AUTOSEG 2020** (535 MB, congelado desde então) para extrair os fatores
-      relativos de faixa etária e região. É a única melhoria disponível para
-      seguro, e enquanto não vier a curva atual precisa ficar rotulada na tela
-      como a estimativa menos confiável do simulador
+- [x] ~~**Completo mais barato que terceiros abaixo de R$ 11 mil**~~ — fechado em
+      14/08/2026: o prêmio de terceiros virou piso do completo
+- [ ] **Casco não existe em carro velho, e o motor finge que existe.** Acima de
+      15–20 anos a seguradora tradicional não vende completo; o motor dá 20% de
+      desconto (`carAgeFactor`) e cospe um prêmio para uma apólice que não está
+      à venda. O certo é não responder, não responder errado
+- [ ] **Piso absoluto do seguro.** RCF, assistência, emissão e IOF não escalam
+      com o FIPE, então % puro está errado no limite. Ordem de grandeza R$ 1.200
+      a R$ 1.800/ano — **sem fonte**, por isso não entrou. Decisão sua: assumir
+      um default grosseiro rotulado ou seguir sem
+- [ ] **AUTOSEG** para extrair os fatores relativos de faixa etária e região.
+      **Reverificar de outra rede:** notícia da SUSEP de jun/2024 diz que a base
+      foi reaberta em caráter permanente, o que contradiz o "congelado em 2020"
+      do inventário. `www2.susep.gov.br` inalcançável daqui, e o `dados.gov.br`
+      passou a exigir chave de API (401)
 - [ ] **Franquia via Open Insurance** — API pública sem autenticação, chaveada
       por CEP + FIPE + ano. Não traz prêmio, mas traz franquia, que hoje o
       simulador ignora
 
+- [ ] **A base de consumo não é do INMETRO.** Desrotulada na tela em 14/08/2026
+      (eram 24 tuplas distintas para 91 modelos, com diesel em Gol e Kwid).
+      Continua em uso como estimativa por categoria, que ainda separa um Hilux
+      de um Mobi. Trocar por medição real é caso para o `expenses.js`, igual à
+      manutenção — e decide ~2/3 da conta da tela
+
 Não fazer: pipeline de PDF do INMETRO, pipeline por país para seguro
-internacional, e procurar API de cotação — está bloqueada por registro de
-corretora na SUSEP, é decisão de parceria e não de engenharia.
+internacional, e procurar API de cotação de seguro — está bloqueada por registro
+de corretora na SUSEP, é decisão de parceria e não de engenharia. Também não
+adianta API comercial de IPVA (Infosimples, Celcoin, APIBrasil): todas consultam
+débito por placa + RENAVAM, e aqui o carro ainda não foi comprado.
 
 ### Notificação de lembrete
 

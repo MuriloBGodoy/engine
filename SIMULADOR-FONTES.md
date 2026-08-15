@@ -1,6 +1,6 @@
 # Simulador — de onde vêm (e de onde deveriam vir) os números
 
-Levantamento de 11/08/2026. Cada constante de `ownership.js` está aqui com a
+Levantamento de 11/08/2026, revisado em 14/08/2026. Cada constante de `ownership.js` está aqui com a
 fonte real que a substituiria, o que já foi verificado buscando de verdade e o
 que é só menção encontrada.
 
@@ -89,23 +89,124 @@ https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/arquivos/shpc/qu
 CSV `;`, granularidade de posto individual por município. Sem API REST.
 Republicado semanalmente. Dado aberto federal, uso comercial permitido.
 
-Calibração sobre 17.640 postos: média nacional real **R$ 6,604/L** contra os
-R$ 6,61 do código — a média nacional está certa. Os fatores por UF não:
+### Aplicado em 14/08/2026 — e o erro maior não era o que estava mapeado
 
-| UF | real | código | erro |
+Remedido sobre a coleta de 07-08/2026: **17.619 postos de gasolina e 14.989 de
+etanol**. Preços nacionais: gasolina **R$ 6,594** (código dizia 6,61, erro de
+0,2%) e etanol **R$ 4,283** (código dizia 4,49, **4,8% alto**). Os dois foram
+para 6,59 e 4,28.
+
+O achado que não estava no levantamento anterior: **gasolina e etanol precisam
+de tabelas de fator separadas.** O código aplicava um fator único por UF aos
+dois, e eles não têm nada a ver um com o outro — a gasolina segue frete e ICMS
+a partir da refinaria, o etanol segue distância da usina. Onde se planta cana o
+etanol é barato e a gasolina não é:
+
+| UF | fator gasolina | fator etanol | diferença |
 | --- | --- | --- | --- |
-| AP | 0,987 | 1,08 | −9,3 p.p. |
-| AM | 1,127 | 1,06 | +6,7 |
-| RR | 1,146 | 1,08 | +6,6 |
-| RS | 0,954 | 1,02 | −6,6 |
+| SP | 0,97 | **0,86** | −10,6 p.p. |
+| MT | 1,03 | **0,87** | −16,1 p.p. |
+| RS | 0,96 | **1,09** | +13,6 p.p. |
+| RJ | 1,01 | **1,12** | +10,9 p.p. |
+| SC | 0,99 | **1,07** | +7,9 p.p. |
 
-Não cobre energia elétrica. Candidata para isso: ANEEL dados abertos (não
-verificada).
+Em SP o simulador cobrava 12% a mais de etanol do que ele custa — R$ 93/mês na
+maior linha do orçamento. Existem agora `FUEL_FACTOR_BR` (gasolina, e o diesel
+cai nela por falta de dado) e `FUEL_FACTOR_BR_ETHANOL`. O AP ficou de fora da
+tabela de etanol: 3 postos na amostra não sustentam média, e sem entrada cai
+em 1.
+
+Sai de graça do mesmo dado: em SP o etanol está a **57,8%** do preço da
+gasolina, bem abaixo da paridade de 70%. Um flex em SP deveria rodar a etanol e
+o simulador ainda não diz isso.
+
+**O que este CSV não cobre:** diesel (é outro arquivo da ANP, não baixado — o
+valor segue o de jul/2026, não reconferido) e energia elétrica. Candidata para
+o kWh: ANEEL dados abertos, não verificada.
 
 ## 3. IPVA e licenciamento — não existe fonte consolidada
 
-Não há API, dataset ou CKAN. São 27 leis estaduais, revisão anual. Os
-agregadores existentes são conteúdo editorial de terceiros.
+Não há API, dataset ou CKAN — reconfirmado em 14/08/2026 com teste, não só
+busca: a BrasilAPI tem `/api/taxas/v1` (só Selic, CDI e IPCA) e devolve 404 em
+`/api/ipva/v1`; nenhum repositório público mantém a tabela; as APIs comerciais
+(Infosimples, Celcoin, APIBrasil) consultam débito por placa + RENAVAM, o que é
+inútil aqui por construção — o simulador roda sobre um carro que a pessoa ainda
+não tem. O que as SEFAZ publicam em formato estruturado é a tabela de valores
+venais, que é base de cálculo, não alíquota.
+
+Mas a estrutura do problema mudou: **não são mais 27 leis estaduais soltas.**
+
+### EC 137/2025 — imunidade nacional acima de 20 anos (aplicada em 14/08/2026)
+
+Promulgada em 09/12/2025, vigente desde a publicação, acrescenta a alínea "e" ao
+art. 155, § 6º, III da Constituição:
+
+> "veículos terrestres de passageiros, caminhonetes e mistos com 20 (vinte) anos
+> ou mais de fabricação, excetuados os micro-ônibus, ônibus, reboques e
+> semirreboques."
+
+Texto conferido na base Legin da Câmara (reprodução da publicação original no
+DOU). É **imunidade**, não isenção: o estado perdeu competência, então vale em
+toda UF sem depender de lei estadual. Confirmada de forma independente pela
+SEFAZ/PE, que não tinha regra de idade própria e publicou aviso aplicando-a ao
+IPVA 2026.
+
+Agora o mapa é **um teto constitucional único mais 27 regras que só podem ser
+mais generosas**. Por isso `IPVA_BR_EXEMPT_AGE` só lista quem isenta ANTES dos
+20, e a ausência cai no piso de 20 — que erra para cima, o lado seguro.
+
+| UF | idade | fonte | camada |
+| --- | --- | --- | --- |
+| GO | 15 | Lei 11.651/91; FAQ da Secretaria da Economia | primária |
+| RJ | 16 ("mais de 15") | Lei 2.877/97 art. 5º VII; SEFAZ-RJ isenta 2010 e anteriores | primária |
+| MT | 18 | Lei 10.252/2017 (altera a 7.301/2000) | portal da ALMT, falta o texto da lei |
+| SP, RS | 21 pela lei estadual, 20 pela EC | Lei 13.296/2008 art. 13 VIII | primária |
+
+**Em aberto:** ~15 UFs sem confirmação primária (o "grupo dos 15 anos" segundo
+agregador: AM, CE, ES, MA, PA, PB, PI, RO, SE, mais BA, RN e DF). AP e RR são as
+mais generosas (10 anos) e as menos confiáveis: agregadores diferentes deram 10,
+15 e 20 para RR na mesma semana, e o DETRAN/AP responde 403 a requisição
+automatizada. Custo estimado: um dia de trabalho, mais recoleta anual.
+
+**Ressalva que não some:** a norma fala em ano de FABRICAÇÃO e a FIPE só dá o
+ano-MODELO, que é igual ou um ano maior. O motor enxerga o carro até um ano mais
+novo e atrasa a isenção. Na fronteira exata (2006 no exercício 2026) há litígio:
+o fisco paulista cobrou alegando fato gerador em 1º de janeiro e foi afastado em
+1ª instância (proc. 1001145-07.2026.8.26.0053).
+
+### MT corrigido de 3,45% para 3,0% (14/08/2026)
+
+**Portaria SEFAZ-MT 196/2025**, art. 2º, VII (DOE Edição Extra de 23/12/2025):
+3% para veículo de passeio acima de 1.000 cc, 2% até 1.000 cc. Pela regra da
+faixa maior, `MT: 0.03`.
+
+Hipótese sobre a origem do erro, não comprovada: 3,45% é exatamente a alíquota
+de **utilitários em Goiás**, confirmada na FAQ da Secretaria da Economia/GO na
+mesma pesquisa. Cheira a contaminação entre UFs vizinhas na montagem da tabela.
+
+A mesma portaria **não tem inciso de elétrico ou híbrido** — a redução de 1,5%
+que os agregadores atribuem ao MT não está na norma vigente.
+
+### Licenciamento — conferido, e é ruído
+
+| UF | código | verificado 2026 | fonte |
+| --- | --- | --- | --- |
+| SP | 167 → **174** | 174,08 | carta de serviço do Governo de SP, base Lei 15.266/2013 |
+| RS | 98 → **114** | 114,09 (código 7714) | Portaria DETRAN/RS 036/2026 |
+| RJ | 231 | não confirmado | a tabela de DUDAs do DETRAN-RJ publica transferência e 2ª via, não o licenciamento anual |
+
+Vale R$ 0,59/mês em SP e R$ 1,34/mês no RS. Corrigido porque é barato, mas não
+priorize acima de seguro ou depreciação.
+
+Padrão de manutenção: SP indexa à UFESP, RS à UPF/RS, RJ à UFIR-RJ, e todos
+republicam portaria em janeiro. **Os 27 números apodrecem em bloco todo começo
+de ano.** Se forem para o Firestore, guarde `{valor, unidadeFiscal, exercicio,
+sourceUrl, updatedAt}` e trate janeiro como janela de recoleta.
+
+**Método que vale reaproveitar:** várias SEFAZ mantêm bases Lotus Notes de
+legislação tributária em subdomínios `app1.*` / `www5.*`. Foi uma delas que
+entregou a alíquota do MT. Valem mais que o portal bonito da SEFAZ, que costuma
+ser SPA e redirecionar para a home.
 
 ### Conferência de 13/08/2026 — corrigido
 
@@ -143,6 +244,46 @@ Recomendação: aceitar que é manual, mover para o Firestore com `updatedAt` e
 **A curva atual não tem fonte.** O comentário credita SUSEP, mas a SUSEP publica
 frequência e severidade de sinistro, não prêmio como % do valor FIPE por faixa
 etária. Os números 9,5% / 6,5% / 5,5% / 4,5% são chute vestido de fonte.
+
+### Contradição interna, fechada em 14/08/2026
+
+Terceiros tinha piso absoluto (`clamp(value * 0.015, 700, 2200)`); completo
+tinha piso **relativo** (`value * 0.025`), que vai a zero junto com o valor do
+carro. Resultado medido no próprio motor: abaixo de ~R$ 11.250 de FIPE o modelo
+dizia que **cobertura completa custava menos que só terceiros**. Completo contém
+terceiros — não era calibragem ruim, era impossibilidade lógica, e bem na faixa
+de preço que o público do Engine compra. Agora o prêmio de terceiros é o piso do
+completo.
+
+**Isso não resolve o piso de verdade.** Prêmio real tem componente que não
+escala com o FIPE: RCF (limites em R$ fixos, precificados pelo risco do
+condutor), assistência 24h e carro reserva (custo fixo de serviço), emissão de
+apólice, e IOF de 7,38% por cima. Como % → 0 quando o valor → 0, a fórmula
+continua errada no limite. A ordem de grandeza do piso é R$ 1.200 a R$ 1.800/ano
+— **estimativa, não fonte**: a CNseg publica prêmio médio agregado só em
+matéria de imprensa, e o resto que circula é conteúdo comercial de quem vende
+seguro. Não entrou no código por isso.
+
+### O problema que ninguém tinha levantado: casco em carro velho não existe
+
+O teto prático de aceitação das seguradoras tradicionais é 15 a 20 anos, e
+várias param em 15 (a MAPFRE tem FAQ própria sobre isso). Acima disso sobram
+Suhai (só roubo/furto), proteção veicular associativa — que **não é seguro** e
+não é regulada pela SUSEP — ou nada.
+
+O motor trata carro velho como **20% de desconto** (`carAgeFactor = 0.85` acima
+de 10 anos) e nunca como produto indisponível. Para um carro de 18 ou 20 anos
+ele cospe um prêmio de completo confiante para uma apólice que não está à
+venda. Não é subestimar um número, é responder a pergunta errada. **Em aberto.**
+
+### AUTOSEG pode ter voltado — reverificar de outra rede
+
+A SUSEP publicou notícia em jun/2024 dizendo que a base de automóvel foi
+reaberta em caráter permanente no PDA 2024-2026, e existe página de conjunto no
+`dados.gov.br`. Isso contradiz o "congelado em 2020" registrado abaixo. Não deu
+para confirmar: `www2.susep.gov.br` ficou inalcançável (falha de conexão, não
+404) nas tentativas de 14/08/2026, e o `dados.gov.br` **agora exige chave de
+API** (401) — era aberto no levantamento de 11/08.
 
 **AUTOSEG está congelado em 2020.** Verificado semestre a semestre:
 
@@ -187,11 +328,37 @@ Série 25471 = taxa média mensal de aquisição de veículos, PF. Hoje 1,97% co
 os 1,99% do código — ganho imediato nulo. O valor é não apodrecer: a mesma série
 marcava 1,63% em 2019.
 
-## 6. Consumo — dead end no Brasil
+## 6. Consumo — dead end no Brasil, e uma base rotulada errado
 
 INMETRO/PBE Veicular só publica **PDF**. Nenhum CSV, nenhuma API. 794 modelos no
 ciclo 2026. Licença CC Atribuição-**SemDerivações**, o que é uma questão
 jurídica real se formos redistribuir tabela derivada.
+
+### `fipe-consumption-db.json` NÃO é do INMETRO (auditado em 14/08/2026)
+
+A base embutida no bundle era anunciada na tela como "Consumo real INMETRO" e no
+cabeçalho do `consumption.js` como "do INMETRO". O próprio arquivo desmente:
+
+- **91 modelos compartilham só 24 tuplas distintas.** Corolla, Focus, T-Cross,
+  C4 Cactus, 408, Captur, Yuan, H2 e um Mercedes C180 têm exatamente o mesmo
+  consumo. São faixas por categoria, não medições.
+- **Todo modelo tem valor de diesel**, inclusive Gol, Uno, Palio, Kwid, Onix,
+  Mobi e Prius — que não existem em versão diesel no Brasil.
+- O JSON **não declara fonte nenhuma**: só `compiledAt`, `version` e
+  `coverage: "100.0%"`.
+
+Consistente com o parágrafo acima: se o INMETRO só publica PDF, esta base não
+veio de lá.
+
+Isso importa muito mais que o erro numérico, porque o consumo decide ~2/3 da
+conta na tela. A base continua em uso — estimativa por categoria ainda separa um
+Hilux de um Mobi, o que a média única não faz —, mas a tela e o código agora
+chamam pelo nome. **Substituir por medição real segue em aberto**, e é
+provavelmente caso para o `expenses.js`, igual à manutenção.
+
+(Um argumento que NÃO serve como prova: a razão etanol/gasolina ficar em ~0,72
+em todos os modelos. Isso é física — o etanol tem ~30% menos energia por litro —
+e apareceria igual numa base real.)
 
 Para os EUA existe a API pública do EPA (`fueleconomy.gov/ws/rest/...`, domínio
 público, verificada), mas os modelos não coincidem com o mercado brasileiro.

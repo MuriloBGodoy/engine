@@ -370,6 +370,24 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
   const defaultConsumption = DEFAULT_CONSUMPTION[inputs.fuelType];
   const carName = `${car.brand} ${car.model}`;
 
+  // De onde vem o km/l que está valendo, para a tela dizer a verdade sobre a
+  // procedência. A base embutida era anunciada como "consumo real INMETRO" e
+  // não é: são 24 tuplas distintas para 91 modelos (Corolla, T-Cross e um
+  // Mercedes C180 com o mesmo número), e há valor de diesel em Gol, Uno e
+  // Kwid, que não têm versão diesel. É estimativa por categoria, e agora a
+  // tela chama pelo nome — este é o número que decide dois terços da conta.
+  const modelKmPerLiter = modelConsumption?.[inputs.fuelType];
+  const consumptionSource = inputs.userConsumption
+    ? "User"
+    : modelKmPerLiter
+      ? "Estimate"
+      : "Default";
+  const shownConsumption = (
+    inputs.userConsumption ||
+    modelKmPerLiter ||
+    defaultConsumption
+  ).toFixed(1);
+
   return (
     <div className="engine-modal-overlay">
       <div className="engine-modal-panel engine-pop sm:max-w-4xl">
@@ -553,32 +571,20 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   label={
                     <div className="flex items-center gap-1.5">
                       {t("ownership.fields.consumption")}
-                      <InfoTip text={
-                        inputs.userConsumption
-                          ? "Usando seu consumo informado"
-                          : modelConsumption && modelConsumption[inputs.fuelType]
-                          ? `Consumo real INMETRO: ${modelConsumption[inputs.fuelType].toFixed(1)} km/l`
-                          : "Usando estimativa padrão"
-                      } />
+                      <InfoTip text={t(`ownership.fields.consumption${consumptionSource}`)} />
                     </div>
                   }
-                  hint={
-                    inputs.userConsumption
-                      ? `Seu consumo: ${inputs.userConsumption} km/l`
-                      : modelConsumption && modelConsumption[inputs.fuelType]
-                      ? `Real INMETRO: ${modelConsumption[inputs.fuelType].toFixed(1)} km/l — edite se conhecer seu real`
-                      : `Padrão: ${defaultConsumption} km/l — edite se conhecer seu real`
-                  }
+                  hint={t(`ownership.fields.consumption${consumptionSource}Hint`, {
+                    value: shownConsumption,
+                  })}
                 >
                   <input
                     type="number"
                     min="0"
                     step="0.1"
-                    placeholder={
-                      modelConsumption && modelConsumption[inputs.fuelType]
-                        ? `Real: ${modelConsumption[inputs.fuelType].toFixed(1)} km/l`
-                        : `Padrão: ${defaultConsumption} km/l`
-                    }
+                    placeholder={t("ownership.fields.consumptionPlaceholder", {
+                      value: shownConsumption,
+                    })}
                     value={inputs.userConsumption || ""}
                     onChange={(e) => set("userConsumption", e.target.value)}
                     className={fieldClass}

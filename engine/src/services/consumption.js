@@ -1,4 +1,19 @@
-// Consumo real por modelo, do INMETRO, compilado em 31/07/2026.
+// Consumo estimado por modelo, compilado em 31/07/2026.
+//
+// ATENÇÃO À PROCEDÊNCIA. Isto já foi rotulado aqui e na tela como "consumo real
+// do INMETRO", e não é. Auditado em 14/08/2026, o próprio arquivo desmente:
+//   - 91 modelos compartilham só 24 tuplas distintas de valores — Corolla,
+//     Focus, T-Cross, C4 Cactus, 408, Captur, Yuan, H2 e um Mercedes C180 têm
+//     exatamente o mesmo consumo;
+//   - todo modelo tem valor de diesel, inclusive Gol, Uno, Palio, Kwid, Onix,
+//     Mobi e Prius, que não existem em versão diesel no Brasil;
+//   - o JSON não declara fonte nenhuma, só `compiledAt` e `coverage: 100%`.
+// O SIMULADOR-FONTES.md §6 já registrava que o INMETRO só publica PDF, sem CSV
+// nem API — consistente com esta base não ter vindo de lá.
+//
+// Continua valendo a pena usar: é estimativa POR CATEGORIA e ainda separa um
+// Hilux de um Mobi, o que a média única não faz. Mas é estimativa, a tela diz
+// isso, e trocar por medição real segue em aberto.
 //
 // A base já existia no backend Java, mas só o dev fala com o backend: em
 // produção `VITE_API_URL` é vazio, `getConsumption` devolvia null e todo carro

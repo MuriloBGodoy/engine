@@ -29,13 +29,45 @@
 // AM: 2,0% acima de 1.000 cc e 1,5% até 1.000 cc / elétrico e híbrido
 // (LC estadual 280/2025, em vigor desde 2026; era 4% e 3%).
 // PR: 1,9% (Lei 22.645/2025) — conferido na Fazenda estadual, está correto.
+// MT: 3,0% para passeio acima de 1.000 cc (Portaria SEFAZ-MT 196/2025, art. 2º,
+// VII, DOE Extra de 23/12/2025; 2% até 1.000 cc). Era 3,45% aqui, que é a
+// alíquota de utilitários de GOIÁS — provável contaminação entre UFs vizinhas.
+// GO: 3,75% para automóvel acima de 100 cv (Secretaria da Economia/GO) — certo.
 const IPVA_BR = {
   AC: 0.02, AL: 0.0325, AP: 0.03, AM: 0.02, BA: 0.025, CE: 0.03, DF: 0.035,
-  ES: 0.02, GO: 0.0375, MA: 0.025, MT: 0.0345, MS: 0.03, MG: 0.04, PA: 0.025,
+  ES: 0.02, GO: 0.0375, MA: 0.025, MT: 0.03, MS: 0.03, MG: 0.04, PA: 0.025,
   PB: 0.025, PR: 0.019, PE: 0.03, PI: 0.025, RJ: 0.04, RN: 0.03, RS: 0.03,
   RO: 0.03, RR: 0.03, SC: 0.02, SP: 0.04, SE: 0.025, TO: 0.02,
 };
 const IPVA_BR_DEFAULT = 0.03;
+
+// Idade a partir da qual não se paga IPVA.
+//
+// Piso NACIONAL: a EC 137/2025 acrescentou a alínea "e" ao art. 155, § 6º, III
+// da Constituição e tornou IMUNE ao IPVA o "veículo terrestre de passageiros,
+// caminhonete e misto com 20 (vinte) anos ou mais de fabricação". Promulgada em
+// 09/12/2025, em vigor desde a publicação. É imunidade, não isenção: o estado
+// perdeu competência, então não existe UF onde não valha.
+//
+// O mapa abaixo só tem UF que isenta ANTES dos 20 e foi confirmada em fonte
+// primária. Ausência significa "não conferido", não "não isenta" — e cair no
+// piso de 20 cobra imposto de quem talvez não deva, que é o lado do erro que
+// este motor já escolheu em todo o resto.
+//
+// Fronteira em disputa: no exercício em que o carro completa exatamente 20
+// anos, o fisco paulista cobrou alegando fato gerador em 1º de janeiro, e foi
+// afastado em 1ª instância (proc. 1001145-07.2026.8.26.0053). Aqui vale o texto
+// constitucional, que diz "20 anos OU MAIS".
+//
+// Ressalva estrutural: a norma fala em ano de FABRICAÇÃO e a FIPE só dá o
+// ano-MODELO, que é igual ou um ano maior. O motor enxerga o carro até um ano
+// mais novo e atrasa a isenção — de novo, errando para cima.
+const IPVA_BR_EXEMPT_AGE_DEFAULT = 20;
+const IPVA_BR_EXEMPT_AGE = {
+  GO: 15, // "15 anos ou mais de uso" — Lei 11.651/91; FAQ da Secretaria da Economia/GO
+  RJ: 16, // "mais de 15 anos" — Lei 2.877/97, art. 5º, VII; SEFAZ-RJ isenta 2010 e anteriores
+  MT: 18, // Lei 10.252/2017, que altera a 7.301/2000 — portal da ALMT, falta o texto da lei
+};
 
 // Alíquota reduzida para elétrico e híbrido, SÓ onde a redução foi confirmada
 // em fonte primária. Ausência aqui não significa que o estado não reduza —
@@ -45,20 +77,56 @@ const IPVA_BR_ELECTRIC = {
 };
 
 // Taxa anual de licenciamento (CRLV) aproximada por UF, em BRL.
+//
+// Cada UF indexa a uma unidade fiscal própria (SP à UFESP, RS à UPF/RS, RJ à
+// UFIR-RJ) e republica portaria em janeiro — a tabela inteira apodrece em bloco
+// todo começo de ano. Conferidos em fonte primária no exercício 2026:
+//   SP 174,08 — carta de serviço do Governo de SP, base Lei 15.266/2013
+//   RS 114,09 — Portaria DETRAN/RS 036/2026, código 7714
+// O RJ segue em 231 por falta de fonte: a tabela de DUDAs do DETRAN-RJ publica
+// transferência e 2ª via, mas não a linha do licenciamento anual.
 const LICENSING_BR = {
-  SP: 167, MG: 161, RJ: 231, RS: 98, PR: 107, SC: 138, ES: 127, BA: 132,
+  SP: 174, MG: 161, RJ: 231, RS: 114, PR: 107, SC: 138, ES: 127, BA: 132,
   PE: 122, CE: 127, DF: 145, GO: 128, MT: 150, MS: 140, PA: 120, MA: 110,
   PB: 115, PI: 110, RN: 118, AL: 115, SE: 112, AM: 130, AC: 120, AP: 115,
   RO: 125, RR: 115, TO: 118,
 };
 const LICENSING_BR_DEFAULT = 140;
 
-// Fator de preço de combustível por UF sobre a média nacional (frete/ICMS).
+// Fator de preço de combustível por UF sobre a média nacional.
+//
+// Medidos no CSV semanal da ANP em 14/08/2026 (coletas de 07 e 08/2026):
+// 17.619 postos de gasolina e 14.989 de etanol, preço de bomba por município.
+//
+// Gasolina e etanol precisam de tabelas SEPARADAS, e essa é a correção que
+// justifica o retrabalho: os dois têm formação de preço diferente — a gasolina
+// segue frete e ICMS a partir da refinaria, o etanol segue distância da usina.
+// Onde se planta cana o etanol é barato e a gasolina não é. Um fator só, como
+// era antes, errava até 13,6 p.p.:
+//
+//   UF   fator gasolina   fator etanol
+//   SP        0,97            0,86     ← maior produtor: etanol estruturalmente barato
+//   RS        0,96            1,09
+//   SC        0,99            1,07
+//   RJ        1,01            1,12
+//   MT        1,03            0,87
+//
+// Em SP o etanol saía 12% mais caro do que é — R$ 93/mês a mais na maior linha
+// do orçamento de quem roda a álcool.
 const FUEL_FACTOR_BR = {
-  SP: 0.97, PR: 0.96, SC: 0.98, MG: 0.99, RJ: 1.03, ES: 1.0, RS: 1.02,
-  DF: 1.0, GO: 0.98, MT: 0.97, MS: 0.96, BA: 1.02, PE: 1.02, CE: 1.03,
-  MA: 1.03, PI: 1.04, PB: 1.03, RN: 1.03, AL: 1.03, SE: 1.02, PA: 1.06,
-  AM: 1.06, AC: 1.15, RO: 1.07, RR: 1.08, AP: 1.08, TO: 1.04,
+  AC: 1.12, AL: 1.05, AM: 1.13, AP: 0.99, BA: 1.07, CE: 1.05, DF: 0.97,
+  ES: 1.0, GO: 1.01, MA: 1.05, MG: 0.96, MS: 1.0, MT: 1.03, PA: 1.03,
+  PB: 0.99, PE: 1.05, PI: 1.04, PR: 1.0, RJ: 1.01, RN: 1.04, RO: 1.11,
+  RR: 1.15, RS: 0.96, SC: 0.99, SE: 1.07, SP: 0.97, TO: 1.07,
+};
+
+// O AP fica de fora: só 3 postos de etanol na amostra, que não sustenta média.
+// Sem entrada aqui, cai em 1 — a média nacional, que é o chute honesto.
+const FUEL_FACTOR_BR_ETHANOL = {
+  AC: 1.2, AL: 1.2, AM: 1.17, BA: 1.11, CE: 1.21, DF: 0.96, ES: 1.1,
+  GO: 0.97, MA: 1.24, MG: 0.94, MS: 0.94, MT: 0.87, PA: 1.16, PB: 1.13,
+  PE: 1.19, PI: 1.14, PR: 0.97, RJ: 1.12, RN: 1.27, RO: 1.25, RR: 1.26,
+  RS: 1.09, SC: 1.07, SE: 1.26, SP: 0.86, TO: 1.17,
 };
 
 // Fator regional de risco do seguro (roubo/furto/sinistralidade).
@@ -67,10 +135,19 @@ const INSURANCE_REGION_BR = {
   CE: 1.05, PA: 1.05, GO: 1.02, MG: 1.0, PR: 1.0, ES: 1.0, SC: 0.92,
 };
 
-// Preços médios de combustível no Brasil (ANP, jul/2026), BRL por litro/kWh.
+// Preços médios de combustível no Brasil, BRL por litro/kWh.
+//
+// Gasolina e etanol medidos no CSV da ANP em 14/08/2026, mesma amostra dos
+// fatores acima. A gasolina estava certa (6,61 contra 6,594 medido); o etanol
+// estava 4,8% alto.
+//
+// O diesel NÃO vem dessa medição: o CSV de "últimas 4 semanas" da ANP só traz
+// gasolina, gasolina aditivada e etanol. O valor segue sendo o de jul/2026 e
+// não foi reconferido — o mesmo vale para o kWh, que é tarifa residencial e
+// nem sequer é publicada pela ANP.
 const FUEL_PRICE_BR = {
-  gasoline: 6.61,
-  ethanol: 4.49,
+  gasoline: 6.59,
+  ethanol: 4.28,
   diesel: 6.3,
   electric: 0.85, // BRL por kWh (tarifa residencial média com impostos)
 };
@@ -217,8 +294,13 @@ const countryProfile = (country) => COUNTRY_PROFILES[country] || COUNTRY_PROFILE
 // Blocos de cálculo
 // ---------------------------------------------------------------------------
 
-const annualVehicleTax = (value, country, state, fuelType) => {
+const annualVehicleTax = (value, country, state, fuelType, carAge) => {
   if (country === "BR") {
+    // Imunidade por idade antes de qualquer alíquota: acima do limite não há
+    // imposto a calcular. Ver IPVA_BR_EXEMPT_AGE.
+    const exemptAge = IPVA_BR_EXEMPT_AGE[state] ?? IPVA_BR_EXEMPT_AGE_DEFAULT;
+    if (carAge >= exemptAge) return 0;
+
     // Híbrido cai na alíquota cheia porque o simulador ainda não distingue
     // híbrido de combustão — ver FUEL_TYPES.
     const reduced = fuelType === "electric" ? IPVA_BR_ELECTRIC[state] : undefined;
@@ -233,25 +315,28 @@ const annualLicensing = (country, state) => {
   return countryProfile(country).registrationFlat || 0;
 };
 
+// Cobertura só contra terceiros: pouco sensível ao valor do carro, mas muito
+// sensível a quem dirige — responsabilidade civil é risco do condutor, não do
+// veículo. Ignorar a idade fazia um motorista de 19 anos e um de 60 pagarem
+// exatamente o mesmo.
+//
+// O fator sai da própria curva etária, normalizada pela faixa do meio, e é
+// achatado pela raiz porque o prêmio de terceiros varia menos que o de casco.
+// É um default grosseiro assumido: não conheço fonte que publique curva etária
+// de RCF isolada.
+const thirdPartyPremium = (value, inputs, countryFactor) => {
+  const ageRatio = INSURANCE_AGE_RATES[inputs.driverAgeBand] / INSURANCE_AGE_RATES["36-55"];
+  const ageFactor = clamp(Math.sqrt(ageRatio), 0.85, 1.35);
+  return clamp(value * 0.015, 700, 2200) * ageFactor * countryFactor;
+};
+
 const annualInsurance = (value, carAge, inputs, country, state) => {
   if (inputs.coverage === "none") return 0;
 
   const countryFactor = countryProfile(country).insuranceFactor;
+  const thirdParty = thirdPartyPremium(value, inputs, countryFactor);
 
-  if (inputs.coverage === "thirdparty") {
-    // Cobertura só contra terceiros: pouco sensível ao valor do carro, mas
-    // muito sensível a quem dirige — responsabilidade civil é risco do
-    // condutor, não do veículo. Ignorar a idade fazia um motorista de 19 anos
-    // e um de 60 pagarem exatamente o mesmo.
-    //
-    // O fator sai da própria curva etária, normalizada pela faixa do meio,
-    // e é achatado pela raiz porque o prêmio de terceiros varia menos que o
-    // de casco. É um default grosseiro assumido: não conheço fonte que
-    // publique curva etária de RCF isolada.
-    const ageRatio = INSURANCE_AGE_RATES[inputs.driverAgeBand] / INSURANCE_AGE_RATES["36-55"];
-    const ageFactor = clamp(Math.sqrt(ageRatio), 0.85, 1.35);
-    return clamp(value * 0.015, 700, 2200) * ageFactor * countryFactor;
-  }
+  if (inputs.coverage === "thirdparty") return thirdParty;
 
   const ageRate = INSURANCE_AGE_RATES[inputs.driverAgeBand];
   const regionFactor =
@@ -266,7 +351,21 @@ const annualInsurance = (value, carAge, inputs, country, state) => {
   // Os limites são de mercado brasileiro e precisam acompanhar o fator do
   // país: aplicados crus, o piso de 2,5% reintroduzia em Portugal e Espanha um
   // seguro 15–26% mais caro do que o próprio modelo acabara de dizer que era.
-  return clamp(annual, value * 0.025 * countryFactor, value * 0.16 * countryFactor);
+  const bounded = clamp(annual, value * 0.025 * countryFactor, value * 0.16 * countryFactor);
+
+  // Completo nunca pode custar menos que só terceiros — completo CONTÉM
+  // terceiros. Sem este piso, o piso relativo de 2,5% ia a zero junto com o
+  // valor do carro e o modelo cruzava: abaixo de ~R$ 11 mil de FIPE ele dizia
+  // que a cobertura completa saía mais barata que a de terceiros. Não era
+  // calibragem ruim, era contradição interna — e bem na faixa de preço que o
+  // público do Engine compra.
+  //
+  // Isto NÃO é o piso absoluto que o prêmio real tem (RCF, assistência,
+  // emissão de apólice e IOF não escalam com o FIPE). Esse piso existe e é
+  // maior que este; não entrou porque não há fonte pública brasileira que o
+  // publique, e chutar aqui seria inventar número na linha que o próprio
+  // SIMULADOR-FONTES.md já marca como a menos confiável do simulador.
+  return Math.max(bounded, thirdParty);
 };
 
 const monthlyFuel = (inputs, country, state) => {
@@ -275,10 +374,13 @@ const monthlyFuel = (inputs, country, state) => {
   // O fator por UF é de frete e ICMS de combustível líquido; energia elétrica
   // tem outra formação de preço. Aplicá-lo ao elétrico cobrava 18% a mais de
   // um carro no Acre por um motivo que não existe na conta de luz.
-  const stateFactor =
-    country === "BR" && inputs.fuelType !== "electric"
-      ? FUEL_FACTOR_BR[state] || 1
-      : 1;
+  let stateFactor = 1;
+  if (country === "BR" && inputs.fuelType !== "electric") {
+    stateFactor =
+      (inputs.fuelType === "ethanol"
+        ? FUEL_FACTOR_BR_ETHANOL[state]
+        : FUEL_FACTOR_BR[state]) || 1;
+  }
 
   // Hierarquia: user informado > consumption > default
   let consumption = DEFAULT_CONSUMPTION[inputs.fuelType];
@@ -529,7 +631,7 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
   }
 
   // --- Custos mensais de manutenção da posse ----------------------------
-  const tax = annualVehicleTax(value, country, state, inputs.fuelType);
+  const tax = annualVehicleTax(value, country, state, inputs.fuelType, carAge);
   const licensing = annualLicensing(country, state);
   const insurance = annualInsurance(value, carAge, inputs, country, state);
   const fuel = monthlyFuel(inputs, country, state);
