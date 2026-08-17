@@ -1,6 +1,6 @@
 # Simulador — de onde vêm (e de onde deveriam vir) os números
 
-Levantamento de 11/08/2026, revisado em 14/08/2026. Cada constante de `ownership.js` está aqui com a
+Levantamento de 11/08/2026, revisado em 14/08 e em 17/08/2026. Cada constante de `ownership.js` está aqui com a
 fonte real que a substituiria, o que já foi verificado buscando de verdade e o
 que é só menção encontrada.
 
@@ -217,24 +217,148 @@ documentado no código e vale R$ 600/mês num carro de R$ 180 mil.
 
 A **Resolução SFP-40/25** (DOE de 12/12/2025) divulga os valores de mercado de
 veículos usados de SP para o exercício 2026 — tabela marca × modelo × ano em
-reais, por ato oficial. Não é API nem dado aberto formal, e **o formato do anexo
-não foi verificado**: se for PDF morre ali, se for planilha vira a série que
-permite medir o viés FIPE × base-IPVA. Registrado como pista, não como fonte.
+reais, por ato oficial.
 
-### Suspeitos de erro para baixo — MS, PI e BA
+**Formato do anexo verificado em 17/08/2026: é PDF, e mesmo assim serve.**
+
+```
+https://legislacao.fazenda.sp.gov.br/Paginas/Resolução-SFP-40-de-2025.aspx
+  ANEXO I  - Tabela de Valores Venais IPVA 2026   → .pdf, 8,3 MB, 286 páginas
+  ANEXO II - IPVA 2026 LEGENDA                     → .pdf
+```
+
+A pergunta certa não era "planilha ou PDF", era **"tem camada de texto?"**. Tem,
+e com coordenadas: cada token volta com `(x, y)` pelo `visitor_text` do pypdf, os
+números são alinhados por coluna de ano e a descrição fica toda em `x < 200`.
+Um parser por coordenada lê a tabela; não é OCR, não é adivinhação. Estimativa:
+meio dia, e a única complicação real é que o anexo reparte os anos em grupos de
+páginas, então o mesmo modelo aparece mais de uma vez com colunas diferentes.
+
+Dois presentes que o PDF dá de graça:
+
+1. **Ele declara a própria data.** O cabeçalho de toda página diz `MÊS BASE:
+   SETEMBRO/2025 (EM REAIS)`. O congelamento em setembro do ano anterior deixa
+   de ser inferência da leitura do art. 7º e passa a ser afirmação do documento.
+2. **A direção do viés que estava suposta aqui não se sustentou.** Estava
+   escrito, no código e neste arquivo, que a base tende a ser MENOR que a FIPE e
+   que portanto superestimávamos o IPVA de SP. Num spot check de 4 versões
+   ano-modelo 2024, base SFP-40/25 contra FIPE de agosto/2026:
+
+   | versão | base IPVA 2026 | FIPE ago/2026 | base − FIPE |
+   | --- | --- | --- | --- |
+   | FIAT/ARGO 1.0 | 67.395 | 66.063 | **+2,0%** |
+   | FIAT/ARGO DRIVE 1.0 | 68.762 | 68.652 | +0,2% |
+   | FIAT/MOBI LIKE | 57.191 | 56.138 | **+1,9%** |
+   | FIAT/MOBI TREKKING 1.0 MT | 59.828 | 61.174 | **−2,2%** |
+
+   Faz sentido depois de escrito: um carro de 2024 **envelheceu um ano** entre
+   setembro de 2025 e agosto de 2026, então a base congelada compara com uma
+   FIPE já mais baixa. Se isso se confirmar na tabela inteira, o motor
+   **subestima** o IPVA de SP no usado — a direção perigosa, não a segura.
+
+   **Quatro pontos não medem viés**, todos de duas famílias e de um ano-modelo
+   só. O que muda é que a suposição antiga perdeu o benefício da dúvida: até a
+   medição existir, o comentário no código não pode afirmar direção nenhuma, e
+   agora não afirma. A medição completa é o próximo item desta linha.
+
+### Suspeitos de erro para baixo — MS, PI e BA: fechados em 17/08/2026
 
 Levantados por diff contra uma calculadora comercial (camada 5, oráculo de
 teste), que declara usar a **média** entre faixas quando a UF escalona. Nas 27
 UFs, 20 batem. Das 7 divergências, quatro têm explicação (AM: a calculadora está
 desatualizada e nós temos primária; DF, PE e AL: média abaixo da nossa faixa
-máxima, direção segura). **MS, PI e BA são as únicas em que a média dela supera
-a nossa faixa máxima**, o que só é possível se a faixa real for maior — ou seja,
-o único lugar da tabela onde podemos estar errando **para baixo**. Conferir na
-lei. Três leis, ~40 min cada.
+máxima, direção segura). **MS, PI e BA eram as únicas em que a média dela supera
+a nossa faixa máxima**, o que só é possível se a faixa real for maior.
+
+**Os três escalares estavam certos.** O que a calculadora enxergava não era uma
+alíquota maior escondida: era uma **segunda dimensão da lei** que um escalar por
+UF não carrega. E é uma dimensão que o motor conhece, então virou precisão em
+vez de ressalva. O oráculo comercial fez exatamente o trabalho que se espera
+dele — apontou onde olhar e errou o diagnóstico.
+
+| UF | escalar | veredito | dimensão que faltava | fonte |
+| --- | --- | --- | --- | --- |
+| MS | 3,0% | **certo** para usado | 5% no zero km; **4,5% diesel** | SEFAZ-MS, tabela de alíquotas 2026 |
+| BA | 2,5% | **certo** para flex/gasolina | **3,0% óleo diesel** | SEFAZ-BA, página de informações do IPVA |
+| PI | 2,5% | **certo** até R$ 150 mil | **3,0% acima de R$ 150 mil** | Lei 6.749/2015, PDF da lei sancionada no SAPL/ALEPI |
+
+Detalhe de cada um:
+
+- **MS** — a alíquota nominal de "automóvel (carro de passeio), camioneta,
+  camioneta de uso misto e utilitário" é **5%**, com **redução de 40% para
+  veículo usado**, o que dá 3,00%. Vigência da redução: **01/01/2026** (Decreto
+  16.693/2025); até 2025 a redução era menor e o efetivo era 3,5%, que é o que
+  ainda aparece no manual antigo em `arq.sefaz.ms.gov.br/ipvaHom/manual.html`
+  (página de 2017, oficial e podre — bom lembrete de que domínio `.gov.br` não
+  é sinônimo de atual). Automóvel de passeio a **óleo diesel** com capacidade
+  até oito pessoas é linha própria: **6% novo, 4,5% usado** (redução de 25%).
+- **BA** — Lei 6.348/91, art. 6º, I: 3,0% para automóveis e utilitários a óleo
+  diesel, 2,5% para os movidos a outros combustíveis, 2,5% para 100% elétrico
+  acima de R$ 300.000. E **100% elétrico até R$ 300.000 é ISENTO** (Lei
+  14.638/2023, efeitos desde 01/01/2024) — a isenção está na lista de isenções
+  da própria SEFAZ-BA, e nós cobrávamos 2,5% dele.
+- **PI** — Lei 4.548/92, art. 14, na redação da Lei 6.749/2015: incisos IV "a" e
+  V fixam 2,5% até R$ 150.000 de valor venal, e o inciso VI, acrescentado pela
+  mesma lei, fixa **3,0% acima de R$ 150.000**. Conferido depois contra a Lei
+  8.558/2024, que também altera o art. 14 e mexeu **só** no inciso de aeronaves.
+
+**Beco sem saída a registrar, e é do tipo pior que 404:** o PDF consolidado da
+Lei 4.548/92 que a SEFAZ-PI publica
+(`www.sefaz.pi.gov.br/arquivos/legislacao/leis/Lei4548.pdf`, HTTP 200) traz na
+primeira linha "ATUALIZADA ATÉ A LEI Nº 6.142, DE 14 DE DEZEMBRO DE 2011" e
+mostra o art. 14 **sem** a faixa de R$ 150 mil. É fonte primária, oficial,
+acessível — e 14 anos desatualizada. Quem confiasse nela concluiria que o
+escalar de 2,5% cobre tudo. O portal de legislação da SEFAZ-PI
+(`portaldalegislacao.sefaz.pi.gov.br`) não substitui: é SPA Angular sobre um
+backend ZK que devolve tela de login a requisição automatizada.
+
+**O que resolveu foi o SAPL da Assembleia Legislativa.** `sapl.al.pi.leg.br` tem
+API REST pública, sem chave, que entrega o PDF da lei sancionada:
+
+```
+GET https://sapl.al.pi.leg.br/api/norma/normajuridica/?numero=6749&ano=2015
+→ { "texto_integral": ".../3866_texto_integral.pdf", ... }
+```
+
+Vale como **método reaproveitável para as outras UFs**: o SAPL é software do
+Interlegis e roda em boa parte das assembleias estaduais, com o mesmo caminho de
+API. É camada 1 (o Legislativo publicando a própria lei), responde a script, e
+resolve o problema que as SEFAZ criam ao publicar consolidado velho ou portal
+SPA. Onde houver SAPL, tentar ele **antes** da SEFAZ.
 
 O mesmo diff corroborou o MT em 3,0% por terceira via: um agregador comercial
 concordando com a portaria contra os 3,45% que circulam é sinal razoável de que
 aquele número nunca teve origem legal.
+
+### O que entrou no código em 17/08/2026
+
+Nenhum escalar de `IPVA_BR` mudou. Entraram três tabelas novas, todas com o
+mesmo contrato de `IPVA_BR_ELECTRIC`: **ausência significa "não conferido"**.
+
+| constante | conteúdo | efeito |
+| --- | --- | --- |
+| `IPVA_BR_DIESEL` | BA 3,0% · MS 4,5% | corrige erro **para baixo** em diesel |
+| `IPVA_BR_VALUE_BRACKET` | PI acima de R$ 150 mil → 3,0% | corrige erro **para baixo** em carro caro |
+| `IPVA_BR_ELECTRIC_EXEMPT_MAX` | BA R$ 300 mil | tira cobrança que a lei não autoriza |
+
+Efeito medido em cenário concreto, na linha de IPVA por mês:
+
+| cenário | antes | depois |
+| --- | --- | --- |
+| picape diesel R$ 220 mil, 3 anos, MS | R$ 550,00 | **R$ 825,00** |
+| picape diesel R$ 220 mil, 3 anos, BA | R$ 458,33 | **R$ 550,00** |
+| sedan R$ 200 mil, 3 anos, PI | R$ 416,67 | **R$ 500,00** |
+| elétrico R$ 180 mil, 2 anos, BA | R$ 375,00 | **R$ 0,00** |
+| elétrico R$ 400 mil, 2 anos, BA | R$ 833,33 | R$ 833,33 (acima do teto, correto) |
+| hatch R$ 80 mil, 3 anos, PI | R$ 166,67 | R$ 166,67 (abaixo da faixa, correto) |
+
+**O que ficou de fora de propósito: a alíquota de PRIMEIRA TRIBUTAÇÃO.** MS cobra
+5% do zero km sobre a nota fiscal contra 3% de usado. O motor segue na de usado,
+porque é a que o carro paga em todos os anos seguintes e é a única que casa com
+o custo mensal recorrente que a tela mostra. Cobrar 5% de ano cheio somaria dois
+erros para cima, já que o motor também ignora a proporcionalidade por mês de
+compra que quase sempre acompanha o zero km. O 5% é **custo de entrada**, e a
+tela ainda não tem essa linha — junto com transferência e emplacamento.
 
 ### MT corrigido de 3,45% para 3,0% (14/08/2026)
 
@@ -326,26 +450,104 @@ continua errada no limite. A ordem de grandeza do piso é R$ 1.200 a R$ 1.800/an
 matéria de imprensa, e o resto que circula é conteúdo comercial de quem vende
 seguro. Não entrou no código por isso.
 
-### O problema que ninguém tinha levantado: casco em carro velho não existe
+### Casco em carro velho não existe — fechado em 17/08/2026
 
 O teto prático de aceitação das seguradoras tradicionais é 15 a 20 anos, e
 várias param em 15 (a MAPFRE tem FAQ própria sobre isso). Acima disso sobram
 Suhai (só roubo/furto), proteção veicular associativa — que **não é seguro** e
 não é regulada pela SUSEP — ou nada.
 
-O motor trata carro velho como **20% de desconto** (`carAgeFactor = 0.85` acima
-de 10 anos) e nunca como produto indisponível. Para um carro de 18 ou 20 anos
-ele cospe um prêmio de completo confiante para uma apólice que não está à
-venda. Não é subestimar um número, é responder a pergunta errada. **Em aberto.**
+O motor tratava carro velho como desconto (`carAgeFactor = 0.85` acima de 10
+anos) e nunca como produto indisponível. Para um carro de 22 anos ele cuspia um
+prêmio de completo confiante para uma apólice que não está à venda. Não era
+subestimar um número, era responder a pergunta errada.
 
-### AUTOSEG pode ter voltado — reverificar de outra rede
+**Não dependia de fonte nenhuma — é decisão de modelagem, e foi tomada.** Acima
+de `INSURANCE_FULL_COVERAGE_MAX_AGE = 20` anos, e **só no Brasil**, pedir
+cobertura completa devolve o prêmio de terceiros com `basis:
+"thirdparty_forced"`, e a tela imprime abaixo do número: *"Seguradora
+tradicional não vende cobertura completa para carro com mais de 20 anos. O valor
+acima é só de terceiros (RCF)."*
 
-A SUSEP publicou notícia em jun/2024 dizendo que a base de automóvel foi
-reaberta em caráter permanente no PDA 2024-2026, e existe página de conjunto no
-`dados.gov.br`. Isso contradiz o "congelado em 2020" registrado abaixo. Não deu
-para confirmar: `www2.susep.gov.br` ficou inalcançável (falha de conexão, não
-404) nas tentativas de 14/08/2026, e o `dados.gov.br` **agora exige chave de
-API** (401) — era aberto no levantamento de 11/08.
+**O critério do 20, escrito porque um corte sem critério é um chute:** a faixa de
+aceitação observada é 15 a 20, com seguradoras parando em pontos diferentes
+dela. Cortar em 15 apagaria a linha de carros que boa parte do mercado ainda
+aceita. Cortar no **topo** da faixa faz o silêncio significar "nenhuma
+seguradora tradicional vende isto", que é uma afirmação que se sustenta. Entre
+15 e 20 o número continua saindo e fica cada vez mais incerto — é o preço de não
+apagar informação que existe. Fica limitado ao Brasil porque o teto de aceitação
+de outros mercados não foi conferido.
+
+**Devolver `null` foi considerado e descartado.** `monthly.insurance` entra em
+`monthlyMaintain`, que entra em `monthlyTotal`, que entra na conta de renda: um
+`null` ali vira `NaN` na tela inteira, que é pior que o número errado que se
+queria consertar. Terceiros **é** a resposta honesta para esse carro — o produto
+existe, é o que a pessoa vai conseguir comprar —, então o certo é dar o número
+certo com o rótulo certo, não dar buraco. Medido em Node, carro de 22 anos e
+R$ 20 mil em SP com condutor 18-25: seguro de **R$ 136,20 → R$ 76,67/mês** e
+total de **R$ 689,38 → R$ 629,85/mês**. A faixa do modo Padrão também estreitou
+(teto de R$ 1.736 para R$ 1.626), porque as duas variações de cobertura passam a
+dar o mesmo número, que é exatamente a realidade que ela deveria refletir.
+
+### Piso absoluto — a pergunta estava mal endereçada
+
+Procurado em 17/08/2026, **fonte não encontrada** (ver abaixo). Mas a conta em
+três cenários mostrou que o item estava apontando para o lugar errado:
+
+| carro (SP, com garagem, 36-55) | completo hoje | terceiros hoje |
+| --- | --- | --- |
+| R$ 30 mil, 12 anos | R$ 1.419/ano | **R$ 700/ano** |
+| R$ 60 mil, 7 anos | R$ 3.340/ano | **R$ 900/ano** |
+| R$ 150 mil, 3 anos | R$ 8.349/ano | R$ 2.200/ano |
+
+Um piso de R$ 1.200 a R$ 1.800/ano **quase nunca toca o completo**: em 6 das 6
+células de completo testadas (18-25 e 36-55 × três valores) ele só morde uma, o
+carro de R$ 30 mil com condutor maduro. O completo já sai acima disso sozinho,
+porque é percentual de um valor que não é pequeno.
+
+Onde o piso morde é **terceiros**, e ali ele **já existe**: o `clamp(value *
+0.015, 700, 2200)` de `thirdPartyPremium` tem piso absoluto de **R$ 700/ano**,
+que também não tem fonte. Então a decisão real não é "criar um piso", é
+**"R$ 700/ano é pouco para RCF + assistência 24h + emissão + IOF?"**. Efeito de
+mudar: com piso de R$ 1.200 o carro de R$ 30 mil sobe R$ 41,67/mês e o de
+R$ 60 mil sobe R$ 25,00/mês; com R$ 1.800, R$ 91,67 e R$ 75,00. É a faixa de
+preço que o público do Engine compra, então não é decoração. **Decisão do
+Murilo**, porque continua sem fonte e o material está nesta tabela.
+
+### Fonte de piso — o que foi procurado e o que respondeu
+
+- **SPVAT/DPVAT: dead end confirmado, e é uma boa notícia.** A LC 211/2024
+  revogou em definitivo a retomada do seguro obrigatório, então **não há**
+  parcela fixa anual de seguro obrigatório para somar ao custo de posse em 2026.
+  O simulador não tem essa linha e está certo em não ter. Registrado para não
+  ser "descoberto" de novo.
+- **CNseg**: continua publicando prêmio médio agregado só em matéria de
+  imprensa.
+- **SUSEP**: ver abaixo — a aplicação de estatísticas está quebrada.
+
+### AUTOSEG e SES — o modo de falha era outro
+
+O inventário de 14/08 registrou `www2.susep.gov.br` como "inalcançável (falha de
+conexão)", e supôs rede. **Retestado em 17/08/2026 de outra rede: o host
+responde.** O que não funciona é a aplicação:
+
+```
+GET https://www2.susep.gov.br/menuestatistica/SES/principal.aspx      → 500
+GET https://www2.susep.gov.br/menuestatistica/Autoseg/principal.aspx  → 500
+    "Could not load file or assembly 'System.Runtime.Serialization,
+     Version=3.0.0.0 ...' Server Error in '/menuestatistica' Application."
+```
+
+É erro de deploy do ASP.NET no servidor da SUSEP, não bloqueio nem 404 — e
+derruba **SES e AUTOSEG juntos**, porque os dois moram na mesma aplicação. O
+HTTP direto no `/download/menuestatistica/autoseg/*.zip` não completa handshake.
+Corrigir o registro importa: "falha de rede" convida a tentar de outro lugar,
+"aplicação quebrada do lado deles" é coisa que só passa quando eles consertarem.
+
+A notícia da SUSEP de jun/2024 dizendo que a base de automóvel foi reaberta em
+caráter permanente no PDA 2024-2026 continua **não confirmada** pelo mesmo
+motivo, e o `dados.gov.br` segue exigindo chave de API (401 em
+`/api/3/action/package_search?q=autoseg`, reconfirmado em 17/08).
 
 **AUTOSEG está congelado em 2020.** Verificado semestre a semestre:
 
@@ -427,6 +629,17 @@ público, verificada), mas os modelos não coincidem com o mercado brasileiro.
 
 Prioridade baixa: são 4 constantes que a pessoa já pode sobrescrever.
 
+**Estado em 17/08/2026 (detalhe no apêndice de ficha técnica, no fim deste
+arquivo):** as quatro APIs comerciais auditadas foram descartadas — nenhuma tem
+consumo de carro brasileiro, e as que têm consumo têm EPA (mpg) ou ciclo europeu
+(l/100 km), que **não são intercambiáveis com INMETRO/PBEV**. Trocar um pelo
+outro repetiria em silêncio o erro de rótulo que acabou de ser corrigido. O PBEV
+2026 existe com 895 versões, 277 delas flex, e continua **só em PDF** com o
+download programático bloqueado por Cloudflare. O único fio não esgotado é a
+chave grátis do `dados.gov.br` (401 hoje), que responderia se há PBEV
+estruturado publicado lá. **O item é "bloqueado numa chave de API", não
+"morto".**
+
 ## 7. Manutenção — não existe fonte pública brasileira
 
 Nenhuma. AAA e Edmunds são americanos, com copyright: a metodologia é copiável,
@@ -456,3 +669,363 @@ seguro.
 **Não fazer:** pipeline de PDF do INMETRO; pipeline por país para seguro
 internacional (11 publicações anuais para calibrar 11 escalares — calibra uma
 vez à mão); procurar API de cotação de seguro, que está bloqueada por regulação.
+
+---
+
+# Apêndice — APIs de ficha técnica (auditoria de 17/08/2026)
+
+Motivo: vai nascer uma seção "Ficha técnica" (dono: Brian), aberta na Garagem,
+na criação de veículo e no post da Comunidade. Quatro APIs foram levantadas
+para preencher o buraco que a FIPE não cobre: potência, torque, câmbio, tração,
+dimensões, peso, porta-malas, consumo, tanque, 0-100.
+
+Interesse do simulador: o `consumption.js` foi desmascarado (24 tuplas para 91
+modelos, diesel em Gol e Kwid). Se alguma dessas APIs tivesse consumo por
+versão para carro brasileiro, consertaria ~2/3 da conta de combustível.
+**Nenhuma tem.** Detalhe abaixo.
+
+## A chave de consulta: temos código FIPE e jogamos fora
+
+`ModalNewCar.jsx` (linhas ~144, ~161, ~177) é uma cascata de três selects sobre
+`parallelum.com.br/fipe/api/v1/carros`. Não é texto livre: é vocabulário
+controlado da FIPE. O que é persistido em `db.js:316` (`normalizeCar`) são só os
+**nomes**:
+
+- `brand` = `"GM - Chevrolet"` (nome da marca FIPE, não "Chevrolet")
+- `model` = `"ONIX HATCH 1.0 12V TB Flex 5p Aut."`
+- `year`  = `"2022 Flex"`
+
+Os códigos (`selectedBrand=23`, `selectedModel=8889`, `selectedYear=2022-5`) e o
+`CodigoFipe` (`004511-0`) existem no submit e são descartados. Persistir os
+quatro é mudança de três linhas e deve ser feita independentemente do resto
+desta auditoria — é a chave canônica brasileira do veículo, de graça.
+
+**Nenhuma das quatro APIs aceita ou mapeia código FIPE.** Verificado por
+ausência total do termo "FIPE" na documentação das quatro (grep sobre o HTML
+servido de `carapi.app/docs`, `api-ninjas.com/api/cars`, `car2db.com/` e
+`vehicledatabases.com/api/vehicle-specifications`: zero ocorrências, junto com
+zero ocorrências de "Brazil"/"Brasil"/"South America"). Consequência: qualquer
+uma delas exigiria casar `"ONIX HATCH 1.0 12V TB Flex 5p Aut."` com nomenclatura
+em inglês, por string. Custo de parsing estimado adiante.
+
+## Resultado da cobertura da frota brasileira
+
+Testado contra o catálogo real de cada base, não contra a página de marketing.
+
+| Modelo testado        | CarAPI | API Ninjas | Vehicle DB | Car2DB |
+|-----------------------|--------|------------|-----------|--------|
+| Chevrolet Onix 2022   | não    | não decl.  | não decl. | não decl. |
+| Fiat Strada 2023      | não    | não decl.  | não decl. | não decl. |
+| VW Gol 2018           | não    | não decl.  | não decl. | não decl. |
+| Hyundai HB20 2021     | não    | não decl.  | não decl. | não decl. |
+| Fiat Toro 2022        | não    | não decl.  | não decl. | não decl. |
+| Toyota Corolla 2020 * | SIM    | provável   | provável  | provável |
+
+(*) controle que existe nos EUA. "não decl." = a própria empresa declara uma
+cobertura geográfica que exclui a América do Sul; ver cada seção.
+
+**CarAPI foi medida diretamente, sem chave**, e é 0/5 nos brasileiros:
+
+- `GET /api/models/v2?make=Chevrolet&limit=200` → 31 modelos, sem Onix:
+  Blazer, Bolt EV, Camaro, Caprice, Captiva Sport, City Express, Colorado,
+  Corvette, Cruze, Cruze Limited, Equinox, Express 2500/3500, Impala,
+  Impala Limited, Malibu, Malibu Limited, Silverado 1500/1500 Legacy/2500 HD/
+  3500 HD, Sonic, Spark, Spark EV, SS, Suburban, Suburban 3500 HD, Tahoe,
+  Traverse, Trax, Volt.
+- `make=Fiat` → 4 modelos: 124 Spider, 500, 500L, 500X. Sem Strada, Toro,
+  Argo, Mobi, Pulse, Cronos.
+- `make=Volkswagen` → 17 modelos, sem Gol, Polo, Virtus, T-Cross, Nivus.
+- `make=Hyundai` → 20 modelos, sem HB20 e sem Creta.
+- `GET /api/makes?year=2020` → 44 marcas, sem Renault, Peugeot, Citroën, Chery
+  e BYD. O catálogo inteiro de marcas já exclui parte relevante da frota BR.
+
+CarAPI declara isso na própria documentação: *"The API returns vehicle data for
+cars sold in the United States since 1900."*
+
+## Tolerância de string: zero (e o briefing estava invertido)
+
+Como o input é vocabulário FIPE e não digitação, o teste certo é se a API
+aguenta a string longa da FIPE. CarAPI, medida:
+
+- `?model=ONIX HATCH 1.0 12V TB Flex 5p Aut.` → `total: 0`
+- `?model=Coroll` (prefixo de um modelo que ela TEM) → `total: 0`
+- `?make=VW` → `total: 0`; `?make=fiat` → 4 (só a caixa é tolerada)
+- `?search=Onix` → devolve os 727 modelos, ou seja, o parâmetro é ignorado
+
+É **igualdade exata, case-insensitive, sem fuzzy e sem busca parcial**. Então o
+casamento teria de ser feito por nós: quebrar `"ONIX HATCH 1.0 12V TB Flex 5p
+Aut."` em modelo + versão + motor + câmbio, traduzir, e ainda normalizar
+`"GM - Chevrolet"` → `"Chevrolet"` e `"2022 Flex"` → `2022`. Isso é uma tabela
+de-para mantida à mão, por marca e por modelo, para uma base que não tem os
+carros do outro lado. Trabalho garantido, resultado não.
+
+## Por API
+
+### 1. CarAPI — https://carapi.app
+
+- **Camada:** 4 (agregador comercial de dados de mercado americano).
+- **Chave:** year/make/model/trim exatos, ou VIN. Não aceita FIPE.
+- **Cobertura BR:** 0/5 medido. Corolla 2020 devolve 13 versões.
+- **Campos:** bons, e o tier grátis dá mais do que a página de preços sugere.
+  `GET /api/engines/v2?make=Toyota&model=Corolla&year=2020` respondeu sem auth:
+  `engine_type`, `fuel_type`, `cylinders`, `size`, `horsepower_hp`,
+  `horsepower_rpm`, `torque_ft_lbs`, `torque_rpm`, `valves`, `valve_timing`,
+  `cam_type`, `drive_type`, `transmission`. E `/api/mileages/v2`:
+  `fuel_tank_capacity`, `combined_mpg`, `epa_city_mpg`, `epa_highway_mpg`,
+  `range_city`, `range_highway`. Os endpoints v1 equivalentes retornam 403
+  `DeprecatedException` exigindo plano pago; os v2 estão abertos hoje.
+- **Consumo:** é **EPA (ciclo americano)**, em mpg. Não é INMETRO, não é
+  intercambiável, e não existe para carro brasileiro de todo jeito.
+- **Preço:** US$199/ano (1.500 req/dia), US$249/ano (3.000/dia), US$299/ano
+  (6.000/dia); excedente US$0,001/chamada. Sem tier grátis anunciado, embora
+  vários endpoints respondam sem chave hoje.
+- **Cache:** **permitido e recomendado** — *"Yes, absolutely. We advise you to
+  cache data as you request it from CarAPI."* É a melhor condição comercial das
+  quatro, e é a única coisa boa dela para nós.
+- **Veredito: não serve** — a frota é a errada, e nenhum preço conserta isso.
+
+### 2. API Ninjas Cars — https://api-ninjas.com/api/cars
+
+- **Camada:** 4 (revenda de dataset de terceiros).
+- **Chave:** `make` + `model` + `trim` em texto. Não aceita FIPE.
+- **Cobertura BR:** **não medida** — nenhum acesso anônimo. `GET
+  https://api.api-ninjas.com/v1/cars?model=corolla` → HTTP 400
+  `{"error": "Missing API Key."}`; idem `/v1/carmakes`. Não há endpoint de demo
+  público (varri o bundle da página: só os cinco `api.api-ninjas.com/v1/*`).
+  Obter chave exige cadastro por e-mail, que não foi feito. **Item não
+  confirmado**, e registrado como tal.
+- **O que é documentado:** o `/v1/cars` legado devolve `city_mpg`,
+  `highway_mpg`, `combination_mpg`, `class` — formato do dataset do EPA
+  (fueleconomy.gov), portanto EUA. O `/v1/cardetails` novo tem outra origem:
+  o exemplo da doc é `{"make":"Audi","model":"A4","trim":"1.6 AT (101 hp)",
+  "start_production_year":1994,"specifications":{"Engine power":"101 hp",
+  "Curb weight":"1255 kg","Number of seater":"5"}}` — métrico, formato de
+  versão europeu.
+- **Inferência, marcada como tal:** esse formato de trim (`"1.6 AT (101 hp)"`)
+  é praticamente idêntico ao do Car2DB (`"1.5 CVT (110 h.p.)"`), o que sugere
+  que ambos derivam da mesma linhagem de base europeia/russa de fichas. Se
+  estiver certo, a cobertura BR do `/v1/cardetails` é tão ruim quanto a do
+  Car2DB. **É palpite, não medição.**
+- **Preço:** grátis 3.000 chamadas/mês; Developer US$39/mês (100k); Business
+  US$99/mês (1M); Professional US$199/mês (10M). Sem cartão no grátis.
+- **Cache: proibido abaixo de US$99/mês.** A tabela de planos lista
+  *"Data caching/storing allowed"* apenas em Business, Professional e
+  Enterprise. Além disso os endpoints novos (`carmakes`/`carmodels`/`cartrims`/
+  `cardetails`) exigem Business, Professional ou assinatura anual. Ou seja: o
+  tier que dá ficha técnica e o tier que permite cache são o mesmo, e custa
+  US$99/mês.
+- **Veredito: não serve** — cobertura BR não comprovada e provavelmente ausente,
+  e o direito de cache custa US$99/mês, o que inverte a economia da feature.
+
+### 3. Vehicle Databases — https://vehicledatabases.com
+
+- **Camada:** 4 (agregador comercial americano).
+- **Chave:** VIN, placa, **ou** year/make/model/trim. O YMM existe, o que a
+  salva do primeiro filtro. Não aceita FIPE.
+- **Cobertura BR:** **declarada como ausente pela própria empresa** — a página
+  do produto de especificações diz cobertura *"North America and European
+  Union"*, 1981–2026, "over 75 makes, 1,831 models, 80,000+ trims". Os 80 mil
+  versões do print são NA+UE. Confirmando pelo mapa de produtos (sitemap):
+  existem `vin-decoder/canada` e `vin-decoder/europe`, e **nenhum** produto para
+  América do Sul. Onix, Strada, HB20 e Toro nunca foram vendidos em NA nem na
+  UE; o Gol tampouco. Nenhum dos cinco pode estar lá.
+- **Medição direta:** impossível sem chave. `GET
+  https://api.vehicledatabases.com/ymm-specs/options/v2/2020` → HTTP 401
+  `{"statusCode":401,"message":"Access denied due to missing subscription
+  key..."}`. Idem `/vehicle-market-value/v2/{vin}`.
+- **Preço:** **não publicado.** `vehicledatabases.com/pricing` → 404. A página
+  do produto diz *"Pricing details are available once you sign up"*. Preço só
+  por cadastro é, por si, um sinal ruim para uma feature de consumo alto.
+- **Cache:** **não confirmado.** `vehicledatabases.com/terms-of-service` → 404;
+  nada sobre cache na página do produto. Item em aberto — mas irrelevante,
+  porque a cobertura já a elimina.
+- **Veredito: não serve** — a própria empresa declara NA+UE, e nossos cinco
+  carros de teste não existem em nenhum dos dois.
+
+### 4. Car2DB — https://car2db.com
+
+- **Camada:** 4 (base comercial). **É o `basebuy.ru` rebrandado** — a home do
+  `auto.car2db.com` linka `auto.basebuy.ru/download/ru/auto_rus_demo.zip` e
+  `api.basebuy.ru`, e `api.car2db.com` serve uma página em russo
+  (`application-name: api.basebuy.hm`). Base de origem russa.
+- **Chave:** ids internos (`id_car_make`/`id_car_model`/`id_car_trim`), com um
+  `/search/vehicles` na v3. Não aceita FIPE.
+- **Cobertura BR:** **declarada como ausente** — a página da API diz
+  *"North America, Europe, and Asia"*, 110.000+ trims, 80+ especificações.
+  América do Sul não é citada.
+- **Amostra grátis baixada e inspecionada** (`car2db.com/download/en/car2db_en_cut.zip`,
+  1,15 MB, HTTP 200, sem cadastro): 12 CSVs mais um dump
+  SQL. Contém só Honda e Infiniti, e o recorte de modelos é JDM
+  (Airwave, Ascot, Avancier, Capa, Concerto, Crossroad). **O ano de produção
+  máximo em `car_trim.csv` é 2016**, e os `date_update` são de 2016–2018. A
+  amostra pública está 10 anos defasada.
+- **Campos: são os melhores dos quatro, e são exatamente os que Brian quer.**
+  `car_specification.csv` traz 58 especificações, entre elas: Body type,
+  Number of seater, Length/Width/Height, Wheelbase, Ground clearance,
+  Engine type, Capacity, Engine power, Max power at RPM, Maximum torque,
+  Turnover of maximum torque, Injection type, Number of cylinders,
+  Valves per cylinder, Fuel, Gearbox type, Number of gear, Drive wheels,
+  Front/Rear brakes, Front/Back suspension, Max speed,
+  **Acceleration (0-100 km/h)**, Curb weight, Full weight, Payload,
+  **Fuel tank capacity**, **City/Highway/Mixed driving fuel consumption per
+  100 km**, Cruising range, Min/Max trunk capacity, Emission standards.
+- **Registro real extraído da amostra** (Honda Accord `2.0 MT (133 h.p.)`,
+  1987–1989), para mostrar o que de fato vem preenchido:
+  `Body type: Sedan · Number of seater: 5 · Length: 4685 · Width: 1695 ·
+  Height: 1390 · Wheelbase: 2720 · Ground clearance: 160 · Engine type:
+  Gasoline · Capacity: 1996 · Engine power: 133 · Max power at RPM: to 5 300 ·
+  Maximum torque: 179 · Injection type: Multi-point fuel injection ·
+  Number of cylinders: 4 · Valves per cylinder: 4 · Fuel: 95 RON ·
+  Gearbox type: Manual · Drive wheels: Front wheel drive ·
+  City fuel consumption: 10 · Highway: 6 · Mixed: 8 · Fuel tank capacity: 60 ·
+  Max speed: 200 · Acceleration (0-100 km/h): 9 · Curb weight: 1240 ·
+  Full weight: 1760 · Min/Max trunk capacity: 448`
+- **Consumo:** l/100 km, ciclo europeu (NEDC/WLTP conforme a época), **nem EPA
+  nem INMETRO**. E o campo `Fuel` é do tipo `"95 RON"`: **a base não tem
+  conceito de flex**. Carro brasileiro tem dois consumos (etanol e gasolina) e
+  essa modelagem não comporta isso. Mesmo que a cobertura BR existisse, o
+  consumo dela não substituiria o `consumption.js`.
+- **Preço:** trial grátis US$0 (1.000 req/mês, base de demonstração); API
+  US$49/mês (base completa, atualização mensal); dump MySQL **US$95 uma vez**;
+  export Excel US$190 uma vez. Trial sem cartão.
+- **Cache:** o dump de US$95 torna a pergunta discutível — dado que você baixa é
+  dado que você guarda. Os termos (`car2db.com/agreement/`) não foram lidos
+  linha a linha; **item em aberto**, mas a modalidade de dump é a única das
+  quatro cuja economia não é por chamada.
+- **Veredito: não serve** — o modelo comercial é o melhor dos quatro (US$95 de
+  uma vez, dado local, cache não é problema) e o schema é o certo, mas é uma
+  base russa que declara NA/Europa/Ásia, a amostra pública para em 2016, e não
+  representa flex. Se algum dia ela anunciar catálogo sul-americano, vale
+  reabrir — é a única das quatro que valeria.
+
+## A alternativa brasileira
+
+### FIPE — já está em produção, e o que falta nela
+
+`fipeService.js` cai direto na `parallelum` quando `VITE_API_URL` está vazio,
+que é o caso em prod. Então não é opção nova; é a base instalada.
+
+**v1 vs v2: a v2 não traz um único campo a mais.** Medido no mesmo veículo
+(Chevrolet 23 / modelo 8889 / ano 2022-5):
+
+- v1 `.../carros/marcas/23/modelos/8889/anos/2022-5` →
+  `{"TipoVeiculo":1,"Valor":"R$ 67.091,00","Marca":"GM - Chevrolet",
+  "Modelo":"ONIX HATCH 1.0 12V TB Flex 5p Aut.","AnoModelo":2022,
+  "Combustivel":"Flex","CodigoFipe":"004511-0","MesReferencia":"agosto de
+  2026","SiglaCombustivel":"F"}`
+- v2 `.../cars/brands/23/models/8889/years/2022-5` →
+  `{"vehicleType":1,"price":"R$ 67.091,00","brand":"GM - Chevrolet",
+  "model":"ONIX HATCH 1.0 12V TB Flex 5p Aut.","modelYear":2022,"fuel":"Flex",
+  "codeFipe":"004511-0","referenceMonth":"agosto de 2026","fuelAcronym":"F"}`
+
+São os mesmos nove campos com as chaves renomeadas de pt para en. **Migrar para
+a v2 não ganha nada** e custaria renomear o parsing. A v2 ainda cobra pelo que a
+v1 não tem: `?reference=300` devolve HTTP 402 *"apenas assinantes pagos podem
+acessar o histórico de preços estendido"*. Recomendação: **ficar na v1**.
+
+O que a FIPE não tem e nunca terá: potência, torque, câmbio, tração, dimensões,
+peso, porta-malas, consumo, tanque, 0-100. Ela é uma tabela de **preço**. O
+buraco de ficha técnica é real e nenhuma das quatro APIs o preenche para o
+Brasil.
+
+Achado operacional (camada 1, medido nos headers): a parallelum devolve
+`x-ratelimit-limit: 500` por dia. Como em prod a chamada sai do browser do
+usuário, o limite é por IP do usuário final, não da aplicação — hoje não é
+gargalo, mas qualquer movimento para chamar a FIPE do servidor transformaria
+500/dia num teto único para o app inteiro. Registrar antes de alguém "otimizar"
+isso para o backend.
+
+### FIPE oficial — funciona, sem chave, e ninguém está usando
+
+`veiculos.fipe.org.br/api/veiculos/*` responde a POST JSON com header
+`Referer: https://veiculos.fipe.org.br/`, sem autenticação. Verificado:
+
+- `POST /ConsultarTabelaDeReferencia` `{}` →
+  `[{"Codigo":336,"Mes":"agosto/2026 "}, ...]`
+- `POST /ConsultarMarcas` `{"codigoTabelaReferencia":336,"codigoTipoVeiculo":1}`
+  → `[{"Label":"Acura","Value":"1"}, ...]`
+- `POST /ConsultarValorComTodosParametros` com
+  `{"codigoTabelaReferencia":336,"codigoTipoVeiculo":1,"codigoMarca":23,
+  "codigoModelo":8889,"ano":"2022-5","anoModelo":2022,
+  "codigoTipoCombustivel":5,"tipoVeiculo":"carro","tipoConsulta":"tradicional"}`
+  → `{"Valor":"R$ 67.091,00","Marca":"GM - Chevrolet","Modelo":"ONIX HATCH 1.0
+  12V TB Flex 5p Aut.","AnoModelo":2022,"Combustivel":"Flex","CodigoFipe":
+  "004511-0","MesReferencia":"agosto de 2026 ","Autenticacao":"4pyzxmd23plf",
+  "TipoVeiculo":1,"SiglaCombustivel":"F","DataConsulta":"segunda-feira, 17 de
+  agosto de 2026 09:11"}`
+
+**É camada 1** (a própria FIPE) contra a camada 4 da parallelum, não tem teto de
+500/dia, e traz dois campos que a parallelum não expõe: `Autenticacao` (código
+de verificação da consulta) e `DataConsulta`. Também não tem ficha técnica.
+Vale como fallback quando a parallelum estourar o limite ou sair do ar; não vale
+uma migração agora, porque não é documentada como API pública e pode mudar sem
+aviso.
+
+### PBEV/INMETRO — continua sendo só PDF (dead end reconfirmado)
+
+A tabela 2026 tem 41 marcas e 895 modelos/versões, com 277 flex — exatamente o
+recorte que consertaria o `consumption.js`, e no ciclo brasileiro certo.
+
+**Só que não há versão estruturada.** Varri a página oficial de tabelas
+(`gov.br/inmetro/.../veiculos-automotivos-pbe-veicular`) e o portal antigo
+(`inmetro.gov.br/consumidor/tabelas_pbe_veicular.asp`, que só responde em HTTP —
+o 443 dá `ECONNREFUSED 200.20.212.34:443`). Ambos listam **exclusivamente PDFs**:
+`pbe-veicular-2022.pdf`, `-2023.pdf`, `-2024-1.pdf`, `mascara-pbev-2025-mar-11.pdf`,
+`mascara-pbev-2026_19_jan-rev01.pdf`. Zero `.xls`, `.xlsx`, `.csv`, `.ods`.
+
+Dois becos sem saída a registrar, com o modo de falha:
+
+1. **Download programático dos PDFs está bloqueado.** As URLs devolvem HTTP 200
+   com `content-type: text/html` e o corpo é a home do INMETRO — Cloudflare
+   servindo a homepage para cliente não-browser. Não é 404: o arquivo existe, o
+   acesso automatizado é que não passa. Não cheguei a checar se o PDF tem camada
+   de texto tabular, o que mudaria o custo de um parser. **Item em aberto.**
+2. **`dados.gov.br` exige chave.** `GET /api/publico/conjuntos-dados?nomeConjuntoDados=veicular`
+   e `GET /api/3/action/package_search?q=PBE+veicular`
+   → **HTTP 401** nos dois. Se existe PBEV estruturado publicado lá, não dá para
+   saber sem credencial. **Item em aberto, e é o de maior valor da lista** —
+   uma chave de dados.gov.br é grátis e resolveria a pergunta.
+
+A decisão de **não fazer pipeline de PDF do INMETRO continua valendo**, agora
+com a evidência de que nem o download automatizado passa.
+
+### APIs FIPE brasileiras alternativas — todas só preço
+
+`fipe.api.br` (mesmo operador da parallelum; é para lá que o 402 da v2 aponta),
+`apifipe.com.br`, `fipeapi.com.br`. Verificado: `fipe.api.br/api/v1/carros/marcas`
+devolve exatamente a mesma lista da parallelum. **Nenhuma tem ficha
+técnica** — são todas a mesma tabela de preço com embalagens diferentes.
+
+`apiplacas.com.br` responde HTTP 403 a cliente não-browser (Cloudflare) e é
+**chaveada por placa**, o que a elimina de saída: metade da Garagem é carro que
+a pessoa ainda quer comprar e não tem placa. `api.invertexto.com/v1/fipe/*`
+exige token (HTTP 401 `{"message":"Unauthenticated."}`) e também é só preço.
+
+## Conclusão para o Brian e para a Xuria
+
+**Para o Brian:** nenhuma das quatro serve. A seção "Ficha técnica" não tem
+fonte de dados viável hoje via API paga internacional. As opções reais são
+(a) adiar a seção, (b) montar base própria a partir do vocabulário FIPE que já
+temos, começando pelos ~50 modelos mais frequentes na Garagem, ou (c) exibir só
+o que a FIPE já dá (marca, versão, ano, combustível, valor) e chamar de "Dados
+do veículo" em vez de "Ficha técnica", sem prometer o que não há.
+
+A string da FIPE já carrega mais do que parece: `"ONIX HATCH 1.0 12V TB Flex 5p
+Aut."` contém motor (1.0), válvulas (12V), aspiração (TB), combustível (Flex),
+carroceria (5p) e câmbio (Aut.). Um parser dessa nomenclatura extrai 6 campos de
+ficha técnica **sem nenhuma API externa**, e é a coisa de melhor custo-benefício
+nesta investigação inteira. Falta o que não está na string: torque, dimensões,
+peso, porta-malas, 0-100.
+
+**Para a Xuria:** nada aqui muda uma constante. Nenhuma das quatro APIs tem
+consumo de carro brasileiro; as que têm consumo têm EPA (CarAPI, mpg) ou ciclo
+europeu (Car2DB, l/100 km), e o Car2DB nem modela flex. **O `consumption.js`
+continua sem substituto**, e o caminho segue sendo o PBEV — bloqueado em PDF,
+com a chave do `dados.gov.br` como única pista não esgotada.
+
+**Não fazer:** assinar qualquer uma das quatro; migrar a FIPE da v1 para a v2;
+trocar consumo INMETRO por EPA ou por ciclo europeu "porque é o que tem".
+
+**Fazer agora, barato:** persistir `codigoFipe`, `codigoMarca`, `codigoModelo` e
+`codigoAno` no submit do `ModalNewCar.jsx`. Sem isso, qualquer fonte de ficha
+técnica futura vai depender de casar string, e com isso vira `join` por chave.

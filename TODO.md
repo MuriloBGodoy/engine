@@ -3,7 +3,7 @@
 Lista acionável do que ficou pendente. O **porquê** de cada decisão está no
 `ROADMAP.md`; aqui é só o que fazer.
 
-Última atualização: 14 de agosto de 2026.
+Última atualização: 17 de agosto de 2026.
 
 ---
 
@@ -167,19 +167,37 @@ Na ordem de retorno:
 - [x] ~~**IPVA cobrado em carro de qualquer idade**~~ — corrigido em 14/08/2026.
       A EC 137/2025 tornou imune o veículo com 20+ anos de fabricação em todo o
       país; `IPVA_BR_EXEMPT_AGE` cobre GO (15), RJ (16) e MT (18) por cima disso
-- [ ] **MS, PI e BA — únicos suspeitos de erro PARA BAIXO.** Numa calculadora
-      comercial que usa média entre faixas, os três aparecem acima da nossa
-      faixa máxima, o que só é possível se a faixa real for maior. É a única
-      direção de erro que o motor não pode ter. Três leis, ~40 min cada
+- [x] ~~**MS, PI e BA — únicos suspeitos de erro PARA BAIXO**~~ — fechado em
+      17/08/2026, e os três escalares estavam **certos**. O que a calculadora
+      comercial via era uma segunda dimensão da lei que um escalar não carrega,
+      e que o motor conhece. Entraram `IPVA_BR_DIESEL` (BA 3,0% · MS 4,5%),
+      `IPVA_BR_VALUE_BRACKET` (PI acima de R$ 150 mil → 3,0%) e
+      `IPVA_BR_ELECTRIC_EXEMPT_MAX` (BA isenta 100% elétrico até R$ 300 mil, e
+      nós cobrávamos). Picape diesel de R$ 220 mil em MS: IPVA de R$ 550 para
+      **R$ 825/mês**. Método que vale guardar: o **SAPL das assembleias
+      estaduais** (`sapl.al.pi.leg.br/api/norma/normajuridica/?numero=&ano=`)
+      entrega o PDF da lei sancionada por API sem chave, e foi ele que resolveu
+      o PI depois que o consolidado oficial da SEFAZ-PI se revelou congelado em
+      2011
+- [ ] **Alíquota de primeira tributação (zero km) por UF.** MS cobra 5% do zero
+      km sobre a nota fiscal contra 3% de usado; provavelmente não é o único. O
+      motor fica na de usado de propósito — ver `SIMULADOR-FONTES.md` —, e o
+      lugar certo disso é uma linha de **custo de entrada** que a tela não tem,
+      junto com transferência e emplacamento
 - [ ] **Híbrido em SP é isento até 31/12/2026** (Lei 18.065/2024), depois 1% em
       2027, 2% em 2028, 3% em 2029, 4% de 2030. Cobramos 4% hoje: R$ 600/mês
       num híbrido de R$ 180 mil. Depende de `FUEL_TYPES` distinguir híbrido de
       combustão, que hoje não distingue
-- [ ] **Medir o viés FIPE × base do IPVA.** A base não é a FIPE: em SP é tabela
-      própria da SEFAZ congelada em setembro do ano anterior. A Resolução
-      SFP-40/25 publica a tabela de 2026 — **conferir se o anexo é planilha ou
-      PDF** (meia hora). Se for planilha, dá para medir o viés de verdade em vez
-      de supor que erramos para cima
+- [ ] **Medir o viés FIPE × base do IPVA.** Formato do anexo da Resolução
+      SFP-40/25 conferido em 17/08/2026: é **PDF** (8,3 MB, 286 páginas) — mas
+      com camada de texto e coordenadas, então um parser por coluna lê a tabela.
+      Meio dia. O PDF ainda declara na folha `MÊS BASE: SETEMBRO/2025`, o que
+      confirma o congelamento por fonte primária. **Um spot check de 4 versões
+      2024 deu a base do IPVA ACIMA da FIPE em três delas (+2,0%, +0,2%, +1,9%,
+      −2,2%)** — ou seja, a suposição de que erramos para cima em SP não se
+      sustentou, e o erro pode ser para baixo. Quatro pontos não medem viés; a
+      medição completa virou a parte que falta, e o comentário no código já não
+      afirma direção
 - [ ] **Isenção por idade nas ~15 UFs que faltam.** O piso nacional de 20 anos
       já está aplicado e erra para cima, então isto é ganho marginal: são as UFs
       que isentam antes (o "grupo dos 15" em fonte secundária, mais AP e RR com
@@ -198,19 +216,34 @@ Na ordem de retorno:
       inventar fator; procurar dado antes
 - [x] ~~**Completo mais barato que terceiros abaixo de R$ 11 mil**~~ — fechado em
       14/08/2026: o prêmio de terceiros virou piso do completo
-- [ ] **Casco não existe em carro velho, e o motor finge que existe.** Acima de
-      15–20 anos a seguradora tradicional não vende completo; o motor dá 20% de
-      desconto (`carAgeFactor`) e cospe um prêmio para uma apólice que não está
-      à venda. O certo é não responder, não responder errado
-- [ ] **Piso absoluto do seguro.** RCF, assistência, emissão e IOF não escalam
-      com o FIPE, então % puro está errado no limite. Ordem de grandeza R$ 1.200
-      a R$ 1.800/ano — **sem fonte**, por isso não entrou. Decisão sua: assumir
-      um default grosseiro rotulado ou seguir sem
+- [x] ~~**Casco não existe em carro velho, e o motor finge que existe**~~ —
+      fechado em 17/08/2026. Acima de `INSURANCE_FULL_COVERAGE_MAX_AGE = 20`
+      anos, e só no Brasil, pedir completo devolve o prêmio de terceiros com
+      `basis: "thirdparty_forced"` e a tela explica por quê (chave nova em
+      pt-BR, en-US e es-ES). O corte é o **topo** da faixa de aceitação de 15 a
+      20 anos, para o silêncio significar "nenhuma seguradora vende isto" e não
+      "algumas não vendem"; critério escrito no comentário. `null` foi
+      descartado porque `monthly.insurance` alimenta o total e viraria `NaN`.
+      Carro de 22 anos e R$ 20 mil em SP, condutor 18-25: seguro de R$ 136,20
+      para **R$ 76,67/mês**, total de R$ 689,38 para R$ 629,85
+- [ ] **DECISÃO DO MURILO — piso absoluto do seguro.** Procurado em 17/08/2026,
+      **sem fonte** (CNseg só em imprensa; SUSEP fora do ar; SPVAT revogado em
+      definitivo pela LC 211/2024, então não há parcela obrigatória a somar). O
+      material da decisão está no `SIMULADOR-FONTES.md`, e ele reposiciona a
+      pergunta: um piso de R$ 1.200–1.800/ano quase **não toca o completo**, que
+      já sai acima disso sozinho. Quem tem piso sem fonte é o **terceiros**, com
+      os **R$ 700/ano** do `clamp` em `thirdPartyPremium`. A pergunta é se
+      R$ 700 cobre RCF + assistência 24h + emissão + IOF. Subir para R$ 1.200
+      custa +R$ 41,67/mês num carro de R$ 30 mil e +R$ 25,00 num de R$ 60 mil;
+      para R$ 1.800, +R$ 91,67 e +R$ 75,00. É a faixa de preço do público do
+      Engine
 - [ ] **AUTOSEG** para extrair os fatores relativos de faixa etária e região.
-      **Reverificar de outra rede:** notícia da SUSEP de jun/2024 diz que a base
-      foi reaberta em caráter permanente, o que contradiz o "congelado em 2020"
-      do inventário. `www2.susep.gov.br` inalcançável daqui, e o `dados.gov.br`
-      passou a exigir chave de API (401)
+      Reverificado de outra rede em 17/08/2026 e o modo de falha era outro: o
+      host `www2.susep.gov.br` **responde**, mas a aplicação `/menuestatistica`
+      devolve **HTTP 500** (`Could not load file or assembly
+      'System.Runtime.Serialization'`) — erro de deploy do lado deles, que
+      derruba SES e AUTOSEG juntos. Não adianta trocar de rede; só passa quando
+      a SUSEP consertar. O `dados.gov.br` segue em 401 por falta de chave
 - [ ] **Franquia via Open Insurance** — API pública sem autenticação, chaveada
       por CEP + FIPE + ano. Não traz prêmio, mas traz franquia, que hoje o
       simulador ignora
@@ -219,7 +252,15 @@ Na ordem de retorno:
       (eram 24 tuplas distintas para 91 modelos, com diesel em Gol e Kwid).
       Continua em uso como estimativa por categoria, que ainda separa um Hilux
       de um Mobi. Trocar por medição real é caso para o `expenses.js`, igual à
-      manutenção — e decide ~2/3 da conta da tela
+      manutenção — e decide ~2/3 da conta da tela.
+      **Estado em 17/08/2026: bloqueado numa chave de API, não morto.** As
+      quatro APIs de ficha técnica auditadas não têm consumo de carro
+      brasileiro, e as que têm consumo têm EPA ou ciclo europeu — que não são
+      intercambiáveis com INMETRO/PBEV, e trocar em silêncio repetiria o erro de
+      rótulo que a gente acabou de corrigir. O PBEV 2026 tem as 895 versões
+      certas, 277 flex, e continua só em PDF com download bloqueado por
+      Cloudflare. **O fio vivo é a chave grátis do `dados.gov.br`** (401 hoje),
+      que responderia se existe PBEV estruturado publicado lá
 
 Não fazer: pipeline de PDF do INMETRO, pipeline por país para seguro
 internacional, e procurar API de cotação de seguro — está bloqueada por registro

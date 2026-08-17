@@ -108,29 +108,44 @@ function Field({ label, children, hint }) {
   );
 }
 
-function BreakdownRow({ icon, label, value, tip = "", share = null, muted = false }) {
+function BreakdownRow({
+  icon,
+  label,
+  value,
+  tip = "",
+  share = null,
+  muted = false,
+  note = "",
+}) {
   const Icon = icon;
   return (
-    <div className="flex items-center justify-between gap-3 py-2">
-      <span className="flex min-w-0 items-center gap-2 text-[13px] text-[var(--engine-text-muted)]">
-        <Icon size={14} className="shrink-0 text-[var(--engine-text-subtle)]" />
-        <span className="truncate">{label}</span>
-        {tip ? <InfoTip text={tip} /> : null}
-      </span>
-      <span className="flex shrink-0 items-baseline gap-1.5">
-        {share !== null && share >= 0.005 && (
-          <span className="text-[11px] tabular-nums text-[var(--engine-text-subtle)]">
-            {(share * 100).toFixed(0)}%
-          </span>
-        )}
-        <span
-          className={`text-[13px] font-semibold tabular-nums ${
-            muted ? "text-[var(--engine-text-subtle)]" : "text-[var(--engine-text)]"
-          }`}
-        >
-          {value}
+    <div className="py-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-2 text-[13px] text-[var(--engine-text-muted)]">
+          <Icon size={14} className="shrink-0 text-[var(--engine-text-subtle)]" />
+          <span className="truncate">{label}</span>
+          {tip ? <InfoTip text={tip} /> : null}
         </span>
-      </span>
+        <span className="flex shrink-0 items-baseline gap-1.5">
+          {share !== null && share >= 0.005 && (
+            <span className="text-[11px] tabular-nums text-[var(--engine-text-subtle)]">
+              {(share * 100).toFixed(0)}%
+            </span>
+          )}
+          <span
+            className={`text-[13px] font-semibold tabular-nums ${
+              muted ? "text-[var(--engine-text-subtle)]" : "text-[var(--engine-text)]"
+            }`}
+          >
+            {value}
+          </span>
+        </span>
+      </div>
+      {note ? (
+        <p className="mt-1 pl-[22px] text-[11px] leading-relaxed text-[var(--engine-text-subtle)]">
+          {note}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1096,6 +1111,13 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   tip={t("ownership.tips.insurance")}
                   value={money(result.monthly.insurance)}
                   share={shareOf(result.monthly.insurance)}
+                  note={
+                    result.insurance?.basis === "thirdparty_forced"
+                      ? t("ownership.results.fullCoverageUnavailable", {
+                          age: result.insurance.fullCoverageMaxAge,
+                        })
+                      : ""
+                  }
                 />
                 <BreakdownRow
                   icon={Fuel}

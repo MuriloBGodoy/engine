@@ -312,6 +312,8 @@ const resources = {
           tax: "Imposto de circulação",
           licensing: "Licenciamento",
           insurance: "Seguro",
+          fullCoverageUnavailable:
+            "Seguradora tradicional não vende cobertura completa para carro com mais de {{age}} anos. O valor acima é só de terceiros (RCF).",
           fuel: "Combustível",
           maintenance: "Manutenção e pneus",
           parking: "Estacionamento",
@@ -1096,6 +1098,8 @@ const resources = {
           tax: "Road/circulation tax",
           licensing: "Registration",
           insurance: "Insurance",
+          fullCoverageUnavailable:
+            "Traditional insurers don't sell comprehensive cover for cars over {{age}} years old. The figure above is third-party only.",
           fuel: "Fuel",
           maintenance: "Maintenance and tires",
           parking: "Parking",
@@ -1878,6 +1882,8 @@ const resources = {
           tax: "Impuesto de circulación",
           licensing: "Licenciamiento",
           insurance: "Seguro",
+          fullCoverageUnavailable:
+            "La aseguradora tradicional no vende cobertura total para autos de más de {{age}} años. El valor de arriba es solo de terceros (RC).",
           fuel: "Combustible",
           maintenance: "Mantenimiento y neumáticos",
           parking: "Estacionamiento",

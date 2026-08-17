@@ -54,11 +54,16 @@
 // exclusivo ou híbrido COM motor a combustão, e um BEV não é nenhum dos dois.
 // É por isso que SP fica fora de IPVA_BR_ELECTRIC.
 //
-// Suspeitos de erro PARA BAIXO — únicos da tabela, e por isso os próximos:
-// MS (temos 3,0), PI (2,5) e BA (2,5). Numa calculadora comercial, que declara
-// usar a MÉDIA entre faixas, os três aparecem acima da nossa faixa máxima, o
-// que só é possível se a faixa máxima real for maior. É pista, não valor —
-// conferir na lei antes de mexer.
+// MS, PI e BA — os três "suspeitos de erro para baixo" foram conferidos em
+// 17/08/2026 e o escalar de cada um está CERTO para o caso modal (automóvel de
+// passeio, flex ou gasolina, usado). O que a calculadora comercial estava
+// enxergando não era uma alíquota maior escondida, era uma segunda dimensão da
+// lei que um escalar não carrega — e as três dimensões o motor conhece:
+//   MS 3,0% é a alíquota de USADO (5% nominal com redução de 40%, Decreto
+//      16.693/2025, vigência 01/01/2026). Diesel de passeio é outra linha.
+//   BA 2,5% vale para "outros combustíveis"; óleo diesel é 3,0%.
+//   PI 2,5% vale até R$ 150.000 de valor venal; acima disso é 3,0%.
+// Ver IPVA_BR_DIESEL, IPVA_BR_VALUE_BRACKET e IPVA_BR_ELECTRIC_EXEMPT_MAX.
 const IPVA_BR = {
   AC: 0.02, AL: 0.0325, AP: 0.03, AM: 0.02, BA: 0.025, CE: 0.03, DF: 0.035,
   ES: 0.02, GO: 0.0375, MA: 0.025, MT: 0.03, MS: 0.03, MG: 0.04, PA: 0.025,
@@ -100,6 +105,70 @@ const IPVA_BR_EXEMPT_AGE = {
 // significa que ainda não foi conferido, e o padrão fica na alíquota cheia.
 const IPVA_BR_ELECTRIC = {
   AM: 0.015,
+};
+
+// Isenção de 100% elétrico condicionada ao valor do veículo (teto em BRL).
+// Acima do teto o carro volta para a alíquota normal da UF.
+//
+// BA: "Os veículos 100% elétricos de até R$ 300.000,00" estão na lista de
+// isenções da página oficial de IPVA da SEFAZ-BA (Lei 14.638/2023, efeitos
+// desde 01/01/2024). Acima de R$ 300 mil a Lei 6.348/91 mantém 2,5%, que é
+// justamente o IPVA_BR.BA — por isso não precisa de entrada em IPVA_BR_ELECTRIC.
+// Conferido em 17/08/2026.
+const IPVA_BR_ELECTRIC_EXEMPT_MAX = {
+  BA: 300000,
+};
+
+// Alíquota de automóvel de passeio a ÓLEO DIESEL, onde a lei estadual separa o
+// diesel dos demais combustíveis. Este é o lado do erro que o motor não pode
+// ter: sem esta tabela, uma picape a diesel na Bahia ou em MS era cobrada pela
+// alíquota do carro a gasolina, ou seja, PARA BAIXO.
+//
+// BA: 3,0% "para automóveis e utilitários movidos a óleo diesel", contra 2,5%
+// para os demais — Lei 6.348/91, art. 6º, I, reproduzido na página de
+// informações de IPVA da SEFAZ-BA (conferido em 17/08/2026).
+// MS: 4,5% para automóvel de passeio a óleo diesel com capacidade até oito
+// pessoas — alíquota nominal de 6% com redução de 25% para USADO, tabela de
+// alíquotas da SEFAZ-MS para o exercício 2026 (Lei 1.810/97 e Decreto
+// 16.693/2025). Fica a de usado pelo mesmo motivo que o 3,0% de passeio: é a
+// que o carro paga em todo ano que não seja o da primeira tributação.
+//
+// Ausência aqui significa "não conferido", não "não separa diesel".
+const IPVA_BR_DIESEL = {
+  BA: 0.03,
+  MS: 0.045,
+};
+
+// UFs que escalonam a alíquota por VALOR do veículo. `above` é a alíquota
+// aplicada acima de `threshold` (em BRL); abaixo vale o escalar de IPVA_BR.
+//
+// PI: 2,5% até R$ 150.000 de valor venal e 3,0% acima — Lei 4.548/92, art. 14,
+// IV "a" e VI "a", na redação da Lei 6.749/2015 (efeitos desde 01/01/2016).
+// Texto conferido no PDF da lei sancionada, no SAPL da Assembleia Legislativa
+// do Piauí, em 17/08/2026; a Lei 8.558/2024, que também altera o art. 14, mexeu
+// só no inciso de aeronaves. O PDF consolidado que a SEFAZ-PI publica está
+// congelado em 2011 e NÃO contém esta redação — não usar como fonte.
+const IPVA_BR_VALUE_BRACKET = {
+  PI: { threshold: 150000, above: 0.03 },
+};
+
+// Alíquota efetiva de IPVA de um automóvel de passeio, na ordem em que as
+// regras se sobrepõem: isenção de elétrico, alíquota de elétrico, alíquota de
+// diesel, faixa por valor, escalar da UF.
+const ipvaRateBR = (state, fuelType, value) => {
+  if (fuelType === "electric") {
+    const exemptMax = IPVA_BR_ELECTRIC_EXEMPT_MAX[state];
+    if (exemptMax !== undefined && value <= exemptMax) return 0;
+    const reduced = IPVA_BR_ELECTRIC[state];
+    if (reduced !== undefined) return reduced;
+  }
+  if (fuelType === "diesel") {
+    const diesel = IPVA_BR_DIESEL[state];
+    if (diesel !== undefined) return diesel;
+  }
+  const bracket = IPVA_BR_VALUE_BRACKET[state];
+  if (bracket && value > bracket.threshold) return bracket.above;
+  return IPVA_BR[state] ?? IPVA_BR_DEFAULT;
 };
 
 // Taxa anual de licenciamento (CRLV) aproximada por UF, em BRL.
@@ -327,11 +396,23 @@ const countryProfile = (country) => COUNTRY_PROFILES[country] || COUNTRY_PROFILE
 //    é tabela própria da SEFAZ, publicada por resolução e congelada nos preços
 //    médios de SETEMBRO do ano anterior — 4 a 15 meses de defasagem contra a
 //    FIPE do mês corrente, que é o `car.targetValue` que entra aqui. Em mercado
-//    de usado em alta a base tende a ser menor que a FIPE, então o imposto sai
-//    superestimado. Quanto, ninguém mediu.
+//    de usado em alta a base tende a ser menor que a FIPE, então o imposto
+//    sairia superestimado. A DIREÇÃO DESSA SUPOSIÇÃO NÃO SE SUSTENTOU: o Anexo
+//    I da Resolução SFP-40/25 diz na própria folha "MÊS BASE: SETEMBRO/2025", e
+//    numa amostra de 4 versões 2024 contra a FIPE de agosto/2026 a base do IPVA
+//    ficou em +2,0%, +0,2%, +1,9% e −2,2% — pequena e sem sinal definido, e não
+//    do lado que estava escrito aqui. Quatro pontos não medem viés; a medição
+//    inteira está pendente e o anexo é parseável. Ver SIMULADOR-FONTES.md.
 // 2. Zero km paga PROPORCIONAL aos meses restantes do ano (art. 11). Aqui sai
 //    sempre o ano cheio, porque o simulador não sabe o mês da compra — quem
 //    compra em outubro paga 3/12 e a tela mostra 12/12.
+// 3. Onde o estado tem alíquota de PRIMEIRA TRIBUTAÇÃO maior que a de usado, o
+//    motor usa a de usado. Em MS é 5% no zero km (sobre a nota fiscal) contra
+//    3% de usado. A de usado é a que o carro paga em todos os anos seguintes, e
+//    é a única que dá para casar com o custo mensal recorrente que esta tela
+//    mostra; cobrar 5% de ano cheio somaria dois erros para cima, porque a
+//    aproximação 2 já ignora a proporcionalidade que quase sempre acompanha o
+//    zero km. O 5% é custo de ENTRADA, e a tela ainda não tem essa linha.
 const annualVehicleTax = (value, country, state, fuelType, carAge) => {
   if (country === "BR") {
     // Imunidade por idade antes de qualquer alíquota: acima do limite não há
@@ -341,8 +422,7 @@ const annualVehicleTax = (value, country, state, fuelType, carAge) => {
 
     // Híbrido cai na alíquota cheia porque o simulador ainda não distingue
     // híbrido de combustão — ver FUEL_TYPES.
-    const reduced = fuelType === "electric" ? IPVA_BR_ELECTRIC[state] : undefined;
-    return value * (reduced || IPVA_BR[state] || IPVA_BR_DEFAULT);
+    return value * ipvaRateBR(state, fuelType, value);
   }
   const profile = countryProfile(country);
   return value * (profile.taxPct || 0);
@@ -368,13 +448,45 @@ const thirdPartyPremium = (value, inputs, countryFactor) => {
   return clamp(value * 0.015, 700, 2200) * ageFactor * countryFactor;
 };
 
+// Idade acima da qual a seguradora tradicional não vende mais CASCO no Brasil.
+//
+// Não é calibragem de preço, é disponibilidade de produto: acima do corte não
+// existe apólice de cobertura completa para cotar, então responder um prêmio
+// confiante é responder a pergunta errada. O que sobra de verdade é RCF/
+// terceiros, proteção veicular associativa (que não é seguro e não é regulada
+// pela SUSEP) ou nada.
+//
+// O critério do 20: a faixa de aceitação observada no mercado brasileiro é de
+// 15 a 20 anos, com seguradoras parando em pontos diferentes dela. Cortar em 15
+// apagaria a linha de carros que boa parte do mercado ainda aceita; cortar no
+// TOPO da faixa faz o silêncio significar "nenhuma seguradora tradicional vende
+// isto", que é uma afirmação que se sustenta. Entre 15 e 20 anos o número
+// continua saindo e fica cada vez mais incerto — é o preço de não apagar
+// informação que existe.
+//
+// Só vale para o Brasil: o teto de aceitação de outros mercados não foi
+// conferido, e assumir que é o mesmo seria inventar regra.
+const INSURANCE_FULL_COVERAGE_MAX_AGE = 20;
+
+// Devolve { annual, basis }. `basis` é o que o número REALMENTE é, que nem
+// sempre é o que a pessoa pediu — a tela precisa disso para rotular.
+//   "none"              sem seguro
+//   "thirdparty"        terceiros, porque foi o que se pediu
+//   "full"              completo
+//   "thirdparty_forced" pediram completo e não existe completo para esta idade
 const annualInsurance = (value, carAge, inputs, country, state) => {
-  if (inputs.coverage === "none") return 0;
+  if (inputs.coverage === "none") return { annual: 0, basis: "none" };
 
   const countryFactor = countryProfile(country).insuranceFactor;
   const thirdParty = thirdPartyPremium(value, inputs, countryFactor);
 
-  if (inputs.coverage === "thirdparty") return thirdParty;
+  if (inputs.coverage === "thirdparty") {
+    return { annual: thirdParty, basis: "thirdparty" };
+  }
+
+  if (country === "BR" && carAge > INSURANCE_FULL_COVERAGE_MAX_AGE) {
+    return { annual: thirdParty, basis: "thirdparty_forced" };
+  }
 
   const ageRate = INSURANCE_AGE_RATES[inputs.driverAgeBand];
   const regionFactor =
@@ -403,7 +515,7 @@ const annualInsurance = (value, carAge, inputs, country, state) => {
   // maior que este; não entrou porque não há fonte pública brasileira que o
   // publique, e chutar aqui seria inventar número na linha que o próprio
   // SIMULADOR-FONTES.md já marca como a menos confiável do simulador.
-  return Math.max(bounded, thirdParty);
+  return { annual: Math.max(bounded, thirdParty), basis: "full" };
 };
 
 const monthlyFuel = (inputs, country, state) => {
@@ -671,7 +783,8 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
   // --- Custos mensais de manutenção da posse ----------------------------
   const tax = annualVehicleTax(value, country, state, inputs.fuelType, carAge);
   const licensing = annualLicensing(country, state);
-  const insurance = annualInsurance(value, carAge, inputs, country, state);
+  const insuranceResult = annualInsurance(value, carAge, inputs, country, state);
+  const insurance = insuranceResult.annual;
   const fuel = monthlyFuel(inputs, country, state);
   const maintenance = annualMaintenance(value, carAge, inputs, country);
   const depreciation = (value * annualDepreciationRate(carAge)) / 12;
@@ -726,6 +839,12 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
     value,
     carAge,
     monthly,
+    // O que a linha de seguro É, para a tela poder rotular quando ela não for o
+    // que a pessoa pediu. Ver annualInsurance.
+    insurance: {
+      basis: insuranceResult.basis,
+      fullCoverageMaxAge: INSURANCE_FULL_COVERAGE_MAX_AGE,
+    },
     totals: {
       monthlyMaintain,
       monthlyTotal,
