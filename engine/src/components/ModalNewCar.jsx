@@ -20,6 +20,9 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
+  // Código FIPE do veículo (`004278-1`), que só aparece na resposta de preço.
+  // Vinha e ia embora junto com o resto do payload.
+  const [fipeCode, setFipeCode] = useState("");
   const [targetValue, setTargetValue] = useState(0);
   const [savedValue, setSavedValue] = useState(0);
   const [carType, setCarType] = useState(carToEdit?.type || CAR_TYPE_GOAL);
@@ -66,6 +69,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
         setSelectedBrand("");
         setSelectedModel("");
         setSelectedYear("");
+        setFipeCode("");
       }
     }, 0);
 
@@ -137,6 +141,12 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const handleBrandChange = (brandId) => {
     setSelectedBrand(brandId);
     setModels([]);
+    // Limpa o que estava abaixo na cascata: um código de modelo da marca
+    // anterior emparelhado com a marca nova aponta para outro carro.
+    setSelectedModel("");
+    setSelectedYear("");
+    setYears([]);
+    setFipeCode("");
     if (brandId) {
       setLoading(true);
       axios
@@ -154,6 +164,8 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const handleModelChange = (modelId) => {
     setSelectedModel(modelId);
     setYears([]);
+    setSelectedYear("");
+    setFipeCode("");
     if (modelId) {
       setLoading(true);
       axios
@@ -170,6 +182,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
 
   const handleYearSelection = (yearId) => {
     setSelectedYear(yearId);
+    setFipeCode("");
     if (yearId) {
       setLoading(true);
       axios
@@ -179,6 +192,9 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
         .then((res) => {
           const valorLimpo = Number(res.data.Valor.replace(/\D/g, "")) / 100;
           setTargetValue(valorLimpo);
+          // `CodigoFipe` só existe nesta resposta e é a chave canônica do
+          // veículo no Brasil. Vinha sendo descartada junto com o resto.
+          setFipeCode(res.data.CodigoFipe || "");
           setLoading(false);
         })
         .catch(() => setLoading(false));
@@ -192,14 +208,17 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
     setLoading(true);
     setError("");
 
-    const brandName =
-      brands.find((b) => String(b.codigo) === String(selectedBrand))?.nome ||
-      carToEdit?.brand ||
-      "";
-    const modelName =
-      models.find((m) => String(m.codigo) === String(selectedModel))?.nome ||
-      carToEdit?.model ||
-      "";
+    const pickedBrand = brands.find(
+      (b) => String(b.codigo) === String(selectedBrand),
+    );
+    const pickedModel = models.find(
+      (m) => String(m.codigo) === String(selectedModel),
+    );
+    const pickedYear = years.find((y) => String(y.codigo) === String(selectedYear));
+
+    const brandName = pickedBrand?.nome || carToEdit?.brand || "";
+    const modelName = pickedModel?.nome || carToEdit?.model || "";
+    const yearName = pickedYear?.nome || carToEdit?.year || "";
 
     // O select de modelo fica desabilitado enquanto a lista da FIPE não
     // carrega — e navegador nenhum valida campo desabilitado, então dava para
@@ -216,14 +235,37 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       return;
     }
 
+    // Códigos FIPE. Só valem se os TRÊS vierem da seleção desta sessão: um
+    // código de marca novo com um de modelo antigo aponta para outro veículo.
+    //
+    // Na edição, quem não mexe nos selects mantém o que já estava — mesma
+    // lógica dos nomes logo acima. Mas se o nome mudou e o código não pôde ser
+    // resolvido, o código é APAGADO em vez de mantido: um código velho colado
+    // num carro novo é pior que código nenhum, e todo consumidor deste campo
+    // já precisa funcionar sem ele (a maior parte da base nunca vai ter).
+    const resolvedFipe =
+      pickedBrand && pickedModel && pickedYear
+        ? {
+            brandCode: String(pickedBrand.codigo),
+            modelCode: String(pickedModel.codigo),
+            yearCode: String(pickedYear.codigo),
+            code: fipeCode || "",
+          }
+        : null;
+    const keptFipe =
+      carToEdit?.fipe &&
+      carToEdit.brand === brandName &&
+      carToEdit.model === modelName &&
+      carToEdit.year === yearName
+        ? carToEdit.fipe
+        : null;
+
     const carData = {
       id: carToEdit ? carToEdit.id : Date.now(),
       brand: brandName,
       model: modelName,
-      year:
-        years.find((y) => String(y.codigo) === String(selectedYear))?.nome ||
-        carToEdit?.year ||
-        "",
+      year: yearName,
+      fipe: resolvedFipe || keptFipe,
       type: carType,
       targetValue: targetValue,
       // Carro que a pessoa já tem não está sendo poupado: o progresso é total,

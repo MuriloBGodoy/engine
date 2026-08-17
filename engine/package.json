@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "fetch:consumption": "node scripts/fetch-fipe-consumption.js",
+    "fetch:fipe-sample": "node scripts/fetch-fipe-sample.mjs",
+    "check:fipe-parser": "node scripts/check-fipe-parser.mjs",
     "icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {

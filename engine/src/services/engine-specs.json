@@ -1,0 +1,319 @@
+{
+  "_meta": {
+    "descricao": "Potência, torque e desempenho por família de motor no mercado brasileiro. Rodada 1 de coleta — cobertura PARCIAL e proposital: só entram linhas com valor lido em fonte de camada 1 (fabricante). Nada aqui é estimativa.",
+    "compiladoEm": "2026-08-17",
+    "versao": "0.1.0-parcial",
+    "chaveDeJoin": {
+      "campos": ["marca", "cilindrada", "valvulas", "aspiracao", "combustivel"],
+      "nota": "ATENÇÃO: a chave proposta originalmente (marca+cilindrada+aspiracao+combustivel) NÃO é suficiente. 'valvulas' é o discriminador de geração (VW 1.0 8V EA111 vs 1.0 12V EA211; Fiat 1.0 8V FIRE EVO vs 1.0 6V Firefly; GM 1.0 8V SPE/4 vs 1.0 12V). Mesmo com válvulas ainda restam colisões — ver 'colisoes' abaixo — que só o modelo resolve. Por isso cada linha carrega 'modelos' e existe 'overridesPorModelo'.",
+      "aviso": "Um motor elétrico não tem cilindrada. A chave inteira não endereça BEV/e-Power, que já estão no top 15 da Fenabrave (BYD Dolphin Mini, Song, GWM EX2). Tratar como caminho separado."
+    },
+    "unidades": {
+      "potencia": "cv",
+      "torque": "kgfm quando o fabricante publica em kgfm; campo 'torqueNm' quando o fabricante publica em Nm. NUNCA convertido aqui — a conversão é decisão de quem consome.",
+      "rotacao": "rpm",
+      "velocidadeMaxima": "km/h",
+      "aceleracao0a100": "s"
+    },
+    "combustivelFlex": "Carro flex publica DOIS valores. 'etanol' e 'gasolina' são campos separados e ambos são o dado; escolher um é perder informação que o mercado brasileiro considera relevante.",
+    "camadasDeFonte": {
+      "1": "Fabricante — ficha técnica ou catálogo oficial. Único nível que vira constante.",
+      "1-prosa": "Site do fabricante, mas texto de marketing e não tabela de ficha técnica. Valor é do fabricante, porém sem rpm e às vezes sem o par flex. Usar, marcado.",
+      "2": "Imprensa especializada de referência.",
+      "4": "Agregador — lista de suspeitos, nunca valor."
+    },
+    "colisoes": [
+      {
+        "chave": "VW / 1.0 / 12V / TB / Flex",
+        "problema": "Resolve para DOIS motores diferentes: 170 TSI (116 cv) e 200 TSI (128 cv). A chave sozinha erra por 12 cv.",
+        "desempate": "A string da FIPE traz o badge literal ('Tera 1.0 170 TSI Flex 12V 5p Mec.', 'Nivus Comfortline 1.0 200 TSI Flex Aut.'). Brian precisa capturar /\\b(\\d{3})\\s?TSI\\b/ como token próprio.",
+        "residual": "Nem toda string traz o badge: 'Polo Comfortline TSI 1.0 Flex 12V Aut.' e 'Golf Comfortline 1.0 TSI Total Flex Mec.' não trazem. Nesses casos a chave permanece ambígua e a tela deve mostrar buraco, não escolher."
+      },
+      {
+        "chave": "Renault / 1.0 / 12V / NA / Flex",
+        "problema": "Kwid (71/68 cv) e Sandero/Logan (potência maior, não verificada nesta rodada) compartilham marca+cilindrada+válvulas+aspiração+combustível.",
+        "desempate": "Só o modelo. Ver 'overridesPorModelo'."
+      },
+      {
+        "chave": "Fiat / 1.0 / 6V / NA / Flex",
+        "problema": "Firefly no Mobi e no Argo/Cronos/Strada têm calibrações diferentes (valores não verificados nesta rodada).",
+        "desempate": "Só o modelo."
+      }
+    ],
+    "armadilhasDeParser": [
+      "'200 TSI' e '270 T.Flex' indicam TURBO sem conter 'TB' nem 'Turbo'. Um detector de aspiração baseado só em /TB|Turbo/ classifica o T-Cross 200 TSI como aspirado. Bug real, verificado contra as strings da FIPE.",
+      "Nomes de série contêm números que parecem cilindrada ou potência: 'ARGO DRIVE TRIBUTO 125 1.0 6V Flex', 'ONIX HATCH 100 Anos 1.0 12V', 'PULSE TRIBUTO 125 1.0 TB. 200 Flex Aut.' (aqui 125 é série e 200 é o motor).",
+      "8,3% das strings da FIPE (285 de 3.433, nas 10 marcas medidas) já trazem a potência literal no padrão /(\\d{2,3})\\s?cv/i — ex.: 'Palio EX 1.3 mpi Fire 8V 67cv 2p', '500 LOUNGE 1.4 16V 100cv Mec.'. É dado de graça para um subconjunto e serve como conjunto de validação da tabela. Não é 80% e não substitui a tabela."
+    ]
+  },
+
+  "motores": [
+    {
+      "id": "hyundai-1.0-12v-na-flex-kappa",
+      "marca": "Hyundai",
+      "familia": "Kappa 1.0 12V DOHC CVVT",
+      "cilindrada": "1.0",
+      "cilindradaCm3": 998,
+      "cilindros": 3,
+      "valvulas": "12V",
+      "aspiracao": "NA",
+      "combustivel": "Flex",
+      "potencia": { "etanol": 80, "gasolina": 75, "rpm": 6200 },
+      "torque": { "etanol": 10.2, "gasolina": 9.6, "rpm": 4500 },
+      "velocidadeMaxima": { "etanol": 161, "gasolina": 158 },
+      "aceleracao0a100": { "etanol": 14.5, "gasolina": 15.4 },
+      "modelos": ["HB20", "HB20S"],
+      "anoModelo": "26/27",
+      "fonte": {
+        "camada": 1,
+        "editor": "Hyundai Motor Brasil",
+        "documento": "FICHA TÉCNICA NOVO HB20 26/27",
+        "url": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/202602-Ficha-Tecnica-Novo-HB20-26-27.pdf",
+        "verificadoEm": "2026-08-17"
+      }
+    },
+    {
+      "id": "hyundai-1.0-12v-tb-flex-kappa-tgdi",
+      "marca": "Hyundai",
+      "familia": "Kappa 1.0 Turbo GDI 12V DOHC D-CVVT",
+      "cilindrada": "1.0",
+      "cilindradaCm3": 998,
+      "cilindros": 3,
+      "valvulas": "12V",
+      "aspiracao": "TB",
+      "combustivel": "Flex",
+      "potencia": { "etanol": 120, "gasolina": 115, "rpm": 6000 },
+      "torque": { "etanol": 17.5, "gasolina": 17.5, "rpm": 1500 },
+      "velocidadeMaxima": { "etanol": 190, "gasolina": 190 },
+      "aceleracao0a100": { "etanol": 10.7, "gasolina": 10.7 },
+      "modelos": ["HB20", "HB20S", "Creta"],
+      "anoModelo": "26/27",
+      "fonte": {
+        "camada": 1,
+        "editor": "Hyundai Motor Brasil",
+        "documento": "FICHA TÉCNICA NOVO HB20 26/27 (potência/torque/desempenho) e Ficha Técnica Novo Creta 26/27 (confirma potência/torque idênticos)",
+        "url": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/202602-Ficha-Tecnica-Novo-HB20-26-27.pdf",
+        "urlSecundaria": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/CRETA-Ficha-tecnica-Novo-Creta-26_27.pdf",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "Velocidade máxima e 0-100 são os do HB20. O Creta é mais pesado; não assumir os mesmos números de desempenho para ele."
+      }
+    },
+    {
+      "id": "renault-1.0-12v-na-flex-sce",
+      "marca": "Renault",
+      "familia": "SCe 1.0 12V (3 cilindros, injeção multiponto)",
+      "cilindrada": "1.0",
+      "cilindradaCm3": 999,
+      "cilindros": 3,
+      "valvulas": "12V",
+      "aspiracao": "NA",
+      "combustivel": "Flex",
+      "potencia": { "etanol": 71, "gasolina": 68, "rpm": 5500, "norma": "ABNT" },
+      "torque": { "etanol": 10.0, "gasolina": 9.4, "rpm": 4250, "norma": "ABNT" },
+      "velocidadeMaxima": null,
+      "aceleracao0a100": { "etanol": 13.5, "gasolina": 14.0 },
+      "modelos": ["Kwid"],
+      "anoModelo": "2025",
+      "fonte": {
+        "camada": 1,
+        "editor": "Renault do Brasil",
+        "documento": "Catálogo Kwid, abril/2025",
+        "url": "https://cdn.group.renault.com/ren/br/renault-new-cars/editorial/2025/catalogo/abril/AF_RMA002525_Catalogo_Kwid.pdf.asset.pdf/3d3853313e.pdf",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "A Renault publica 0-100 mas NÃO publica velocidade máxima do Kwid neste catálogo. Campo nulo é ausência de fonte, não zero."
+      }
+    },
+    {
+      "id": "renault-1.6-16v-na-flex-sce",
+      "marca": "Renault",
+      "familia": "SCe 1.6 16V (injeção indireta multiponto)",
+      "cilindrada": "1.6",
+      "cilindradaCm3": 1598,
+      "cilindros": 4,
+      "valvulas": "16V",
+      "aspiracao": "NA",
+      "combustivel": "Flex",
+      "potencia": { "etanol": 112, "gasolina": 109, "rpm": 5500, "norma": "ISO/ABNT" },
+      "torque": { "etanol": 15.6, "gasolina": 15.3, "rpm": 4000, "norma": "ISO/ABNT" },
+      "modelos": ["Duster", "Oroch"],
+      "anoModelo": "2025-2026",
+      "fonte": {
+        "camada": 1,
+        "editor": "Renault do Brasil",
+        "documento": "Catálogo Duster abr/2026 (par flex de potência e torque) e Catálogo Oroch mar/2025",
+        "url": "https://cdn.group.renault.com/ren/br/renault-new-cars/editorial/2026/catalogo/maio/AF-RMA02126A-Catalogo-Duster-ABR-26.pdf.asset.pdf/db69771ffa.pdf",
+        "urlSecundaria": "https://cdn.group.renault.com/ren/br/renault-new-cars/editorial/2025/catalogo/mar/AF-RMA001625-Catalogo-Oroch-2025.pdf.asset.pdf/838b0c923a.pdf",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "O catálogo do Oroch publica torque como valor único (15,6 kgfm) sem separar combustível; o do Duster separa. Adotado o par do Duster."
+      }
+    },
+    {
+      "id": "renault-1.3-16v-tb-flex-tce",
+      "marca": "Renault",
+      "familia": "TCe 1.3 turbo (injeção direta)",
+      "cilindrada": "1.3",
+      "cilindradaCm3": 1332,
+      "cilindros": 4,
+      "valvulas": "16V",
+      "aspiracao": "TB",
+      "combustivel": "Flex",
+      "potencia": { "etanol": 163, "gasolina": 156, "rpm": 5500 },
+      "torque": { "etanol": 27.5, "gasolina": 25.5, "rpm": "1600 e 3750" },
+      "modelos": ["Duster"],
+      "anoModelo": "2026",
+      "fonte": {
+        "camada": 1,
+        "editor": "Renault do Brasil",
+        "documento": "Catálogo Duster abr/2026",
+        "url": "https://cdn.group.renault.com/ren/br/renault-new-cars/editorial/2026/catalogo/maio/AF-RMA02126A-Catalogo-Duster-ABR-26.pdf.asset.pdf/db69771ffa.pdf",
+        "verificadoEm": "2026-08-17"
+      }
+    },
+    {
+      "id": "vw-1.0-12v-na-flex-mpi",
+      "marca": "VW",
+      "familia": "EA211 1.0 MPI 12V",
+      "cilindrada": "1.0",
+      "cilindros": 3,
+      "valvulas": "12V",
+      "aspiracao": "NA",
+      "combustivel": "Flex",
+      "potencia": { "etanol": null, "gasolina": null, "unico": 84, "rpm": null },
+      "torqueNm": 101,
+      "modelos": ["Polo", "Tera"],
+      "anoModelo": "2026",
+      "fonte": {
+        "camada": "1-prosa",
+        "editor": "Volkswagen do Brasil",
+        "documento": "vw.com.br, conteúdo das páginas de Polo e Tera (AEM .model.json)",
+        "url": "https://www.vw.com.br/pt/carros/tera.model.json",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "A VW não publica ficha técnica tabelada em HTML/PDF acessível; o valor vem do texto comercial da própria VW. Publica número ÚNICO de potência (84 cv), sem o par flex, e torque em Nm, não kgfm. Precisa de confirmação em catálogo para virar constante com par flex."
+      }
+    },
+    {
+      "id": "vw-1.0-12v-tb-flex-170tsi",
+      "marca": "VW",
+      "familia": "EA211 1.0 TSI — badge 170 TSI",
+      "cilindrada": "1.0",
+      "cilindros": 3,
+      "valvulas": "12V",
+      "aspiracao": "TB",
+      "badge": "170 TSI",
+      "combustivel": "Flex",
+      "potencia": { "etanol": 116, "gasolina": 109, "rpm": null },
+      "torqueNm": 165,
+      "modelos": ["Virtus", "Tera"],
+      "anoModelo": "2026",
+      "fonte": {
+        "camada": "1-prosa",
+        "editor": "Volkswagen do Brasil",
+        "documento": "vw.com.br, páginas de Virtus e Tera",
+        "url": "https://www.vw.com.br/pt/carros/virtus.model.json",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "Par flex publicado (116 E / 109 G). Sem rpm. Torque em Nm."
+      }
+    },
+    {
+      "id": "vw-1.0-12v-tb-flex-200tsi",
+      "marca": "VW",
+      "familia": "EA211 1.0 TSI — badge 200 TSI",
+      "cilindrada": "1.0",
+      "cilindros": 3,
+      "valvulas": "12V",
+      "aspiracao": "TB",
+      "badge": "200 TSI",
+      "combustivel": "Flex",
+      "potencia": { "unico": 128, "rpm": null },
+      "modelos": ["T-Cross", "Nivus", "Polo", "Golf"],
+      "anoModelo": "2026",
+      "fonte": {
+        "camada": "1-prosa",
+        "editor": "Volkswagen do Brasil",
+        "documento": "vw.com.br, páginas de T-Cross e Nivus",
+        "url": "https://www.vw.com.br/pt/carros/t-cross.model.json",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "COLIDE com o 170 TSI na chave marca+cilindrada+válvulas+aspiração+combustível. Só o badge desempata."
+      }
+    },
+    {
+      "id": "vw-1.4-16v-tb-flex-250tsi",
+      "marca": "VW",
+      "familia": "EA211 1.4 TSI — badge 250 TSI",
+      "cilindrada": "1.4",
+      "cilindros": 4,
+      "valvulas": "16V",
+      "aspiracao": "TB",
+      "badge": "250 TSI",
+      "combustivel": "Flex",
+      "potencia": { "unico": 150, "rpm": null },
+      "modelos": ["Nivus GTS"],
+      "anoModelo": "2026",
+      "fonte": {
+        "camada": "1-prosa",
+        "editor": "Volkswagen do Brasil",
+        "documento": "vw.com.br, página do Nivus",
+        "url": "https://www.vw.com.br/pt/carros/nivus.model.json",
+        "verificadoEm": "2026-08-17"
+      }
+    },
+    {
+      "id": "fiat-2.2-tb-diesel-multijet",
+      "marca": "Fiat",
+      "familia": "Multijet 2.2 Turbodiesel",
+      "cilindrada": "2.2",
+      "cilindradaCm3": 2184,
+      "cilindros": 4,
+      "aspiracao": "TB",
+      "combustivel": "Diesel",
+      "potencia": { "unico": 200 },
+      "torqueNm": 400,
+      "modelos": ["Titano"],
+      "anoModelo": "2026",
+      "fonte": {
+        "camada": 1,
+        "editor": "Fiat / Stellantis Brasil",
+        "documento": "Ficha técnica Fiat Titano (PDF oficial)",
+        "url": "https://titano.fiat.com.br/noprecache/ficha-tecnica.pdf",
+        "verificadoEm": "2026-08-17",
+        "ressalva": "Único modelo Fiat com ficha técnica em PDF alcançável. Fiat publica torque em Nm neste documento — a própria Fiat não é consistente entre kgfm e Nm."
+      }
+    }
+  ],
+
+  "overridesPorModelo": {
+    "_nota": "Quando o mesmo (marca+cilindrada+válvulas+aspiração+combustível) tem valores diferentes por modelo, o modelo manda. Vazio nesta rodada porque só entrou motor cuja calibração foi verificada como igual entre os modelos listados."
+  },
+
+  "naoVerificado": {
+    "_nota": "Motores de alto volume que NÃO estão na tabela porque não consegui ler o valor em fonte camada 1 nesta rodada. Não são estimativas — são buracos. Cada um bloqueado pelo motivo indicado.",
+    "itens": [
+      { "marca": "Fiat", "motores": ["Firefly 1.0 6V", "Firefly 1.3 8V", "T200 1.0 turbo", "T270 1.3 turbo", "E.torQ 1.8 16V"], "modelos": ["Strada", "Argo", "Mobi", "Toro", "Pulse", "Fastback", "Cronos"], "bloqueio": "fiat.com.br e os subdomínios por modelo (argo.fiat.com.br etc.) são SPA de ~8 KB; media.stellantis.com devolve 403; o catálogo digital oficial do Argo é peça de marketing sem tabela de ficha técnica. Fiat é o maior buraco: sozinha responde por ~7 dos 30 nameplates de maior volume." },
+      { "marca": "Chevrolet", "motores": ["SPE/4 1.0 8V", "SPE/4 1.4 8V", "1.0 12V", "1.0 12V turbo", "1.2 12V", "1.2 12V turbo"], "modelos": ["Onix", "Onix Plus", "Prisma", "Tracker", "Spin"], "bloqueio": "chevrolet.com.br/carros/onix/ficha-tecnica devolve 301 para uma URL quebrada ('https://carros/onix/versoes'); WebFetch recebe 403. Newsroom (news.chevrolet.com.br) responde 200 mas não expõe ficha técnica em PDF na home." },
+      { "marca": "Toyota", "motores": ["2ZR-FE 1.8", "M20A 2.0", "2NR 1.5", "2GD-FTV 2.8 diesel", "híbridos"], "modelos": ["Corolla", "Corolla Cross", "Hilux", "Yaris"], "bloqueio": "toyota.com.br é SPA; toyota.com.br/imprensa devolve 403; toyotapressroom.com.br não resolve (falha de conexão, código 000)." },
+      { "marca": "Ford", "motores": ["1.0 Ti-VCT", "1.5 Dragon", "2.0 EcoBoost", "diesel Ranger"], "modelos": ["Ka", "Ranger", "EcoSport"], "bloqueio": "não sondado nesta rodada." },
+      { "marca": "Honda", "motores": ["1.5 turbo", "1.5 i-VTEC", "R18 1.8"], "modelos": ["HR-V", "City", "Fit"], "bloqueio": "honda.com.br devolve 403 tanto na home de automóveis quanto em /imprensa." },
+      { "marca": "Nissan", "motores": ["HR16DE 1.6", "HR12 1.0"], "modelos": ["Kicks", "Versa", "March"], "bloqueio": "imprensa.nissan.com.br não resolve (código 000)." },
+      { "marca": "Jeep", "motores": ["T270 1.3 turbo", "Tigershark 2.0", "MultiJet 2.0 diesel"], "modelos": ["Renegade", "Compass", "Commander"], "bloqueio": "jeep.com.br responde 200 mas o conteúdo de ficha técnica não está no HTML servido; mesma stack Stellantis da Fiat." },
+      { "marca": "Renault", "motores": ["TCe 1.0 turbo (Kardian)"], "modelos": ["Kardian"], "bloqueio": "renault.com.br cita 125 cv e 220 Nm em texto comercial, sem par flex e sem rpm; o catálogo Kardian MY26 existe em PDF e não foi lido nesta rodada." },
+      { "marca": "VW", "motores": ["EA211 1.6 MSI 16V", "EA111 1.0 8V"], "modelos": ["Gol", "Voyage", "Saveiro", "Polo", "Virtus"], "bloqueio": "não há mais página de Gol/Saveiro em vw.com.br com o texto de motor; modelos fora de linha somem do site do fabricante." }
+    ]
+  },
+
+  "fontesDescartadas": [
+    {
+      "fonte": "carrosnaweb.com.br",
+      "camada": 4,
+      "porQueParecia_boa": "É a única base sistemática em português com TODOS os cinco campos pedidos por versão: potência cv (G) e (A), torque kgfm (G) e (A), regime de potência, regime de torque, velocidade máxima e 0-100 km/h — além de código do motor, aspiração e válvulas. Cobre décadas do mercado brasileiro.",
+      "porQueNaoServe": "Renderiza os valores mais importantes como IMAGEM (<img src='../campoImagem/imgValor4a.asp'>), incluindo a potência a gasolina, o deslocamento e o peso. O torque e a potência a etanol vêm em texto. A ofuscação parcial é deliberada e sinaliza intenção contra coleta automatizada. Além disso é agregador: não é fonte de valor. Serve como referência de leitura manual e como oráculo de teste — se a nossa tabela discordar dela, vale investigar qual das duas está errada.",
+      "url": "https://www.carrosnaweb.com.br/resultcompara.asp?modelos=47037-48776&cont=0",
+      "verificadoEm": "2026-08-17"
+    },
+    {
+      "fonte": "Wikipédia (pt e en)",
+      "camada": 4,
+      "uso": "Boa para mapear FAMÍLIA de motor por modelo (Firefly, EA211, GSE T3/T4, Kappa, SCe/TCe, E.torQ), que é o que a hipótese precisava. Ruim como valor: o artigo em inglês do Honda HR-V lista o D16W1 de 1999 e o do Nissan Kicks só o e-Power, nenhum dos dois é o carro vendido no Brasil. Vários modelos brasileiros recentes (Tracker, Toro, Compass, Onix, Creta) não têm seção de motor utilizável.",
+      "verificadoEm": "2026-08-17"
+    }
+  ]
+}

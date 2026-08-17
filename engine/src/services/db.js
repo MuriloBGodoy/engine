@@ -321,6 +321,29 @@ const normalizeCar = (car) => ({
   brand: String(car.brand || "").trim().slice(0, 80),
   model: String(car.model || "").trim().slice(0, 120),
   year: String(car.year || "").trim().slice(0, 40),
+  // Códigos FIPE da versão. Chave canônica do veículo no Brasil: transforma
+  // qualquer consulta futura de ficha técnica de casamento por string em busca
+  // por chave.
+  //
+  // `null` NÃO é excepcional — é o estado da maior parte da base, cadastrada
+  // antes deste campo existir. Quem consumir precisa ter fallback por
+  // brand/model/year e nunca assumir que o campo está preenchido.
+  //
+  // Só grava se marca, modelo e ano vierem juntos: um trio incompleto aponta
+  // para um veículo diferente do que está escrito no card.
+  fipe:
+    car.fipe?.brandCode && car.fipe?.modelCode && car.fipe?.yearCode
+      ? {
+          brandCode: String(car.fipe.brandCode).trim().slice(0, 12),
+          modelCode: String(car.fipe.modelCode).trim().slice(0, 12),
+          // `2022-1` (gasolina/flex) ou `2022-3` (diesel): o sufixo é o
+          // combustível e faz parte da chave.
+          yearCode: String(car.fipe.yearCode).trim().slice(0, 12),
+          // `004278-1`. Vem só da resposta de preço e pode faltar se a
+          // chamada falhou — os três códigos acima já bastam para reconsultar.
+          code: String(car.fipe.code || "").trim().slice(0, 16),
+        }
+      : null,
   targetValue: Math.max(Number(car.targetValue) || 0, 0),
   savedValue: Math.max(Number(car.savedValue) || 0, 0),
   images: normalizeCarImages(car),
@@ -547,6 +570,23 @@ const legacyCommunityGoalId = (goal, userId = currentUserId) => {
   return `goal-${userId}-user-${carId}`;
 };
 
+// DECISÃO EXPLÍCITA: o código FIPE (`car.fipe`) NÃO entra no payload público.
+//
+// Não é pelo motivo que parece. O argumento óbvio seria "o código permite
+// descobrir o valor do carro dos outros" — e ele não se sustenta, porque
+// `targetValue` já é o preço FIPE e já é publicado aqui de propósito: é o
+// denominador da barra de progresso, é a feature.
+//
+// O motivo real é outro, e é de porta de mão única. Publicar um identificador
+// é irreversível na prática: dá para acrescentar um campo a uma coleção
+// pública depois, mas não dá para tirá-lo dos leitores que já copiaram. E hoje
+// ele não compra nada: a ficha técnica é derivada de `brand`/`model`/`year`
+// pelo parser em `services/fipeVersion.js`, caminho que precisa existir de
+// qualquer jeito porque a maior parte da base é anterior ao campo.
+//
+// Ou seja: publicar agora seria assumir um custo permanente por um ganho zero.
+// Se aparecer um consumo que a string não sirva, revisita-se — com o mesmo
+// critério de mínimo necessário que mantém `ownership` fora daqui.
 const communityCarPatch = (car) => ({
   carId: String(car.id),
   title: `${car.brand} ${car.model}`.trim(),

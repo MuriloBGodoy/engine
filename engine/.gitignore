@@ -18,6 +18,11 @@ dev-dist
 # produto. Fica só na máquina local.
 ui designs/
 
+# Amostra da FIPE baixada para medir o parser de versão. Não é versionada de
+# propósito: medir contra uma cópia velha é medir o passado. Rode
+# `node scripts/fetch-fipe-sample.mjs` para regerar.
+scripts/.cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
