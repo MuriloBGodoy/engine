@@ -86,23 +86,39 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!userId) {
-      engineDB.setCurrentUser(null);
-      setCars([]);
-      setSettings(engineDB.getDefaultSettings());
-      setDbLoading(false);
-      return;
-    }
+    let cancelado = false;
+
+    engineDB.setCurrentUser(userId || null);
+    // Limpa a garagem de forma SÍNCRONA ao sair da conta. Se isto esperasse o
+    // await abaixo, os carros da conta anterior ficariam na tela durante a
+    // leitura das preferências.
+    if (!userId) setCars([]);
 
     (async () => {
-        setDbLoading(true);
+      setDbLoading(true);
       try {
-        engineDB.setCurrentUser(userId);
+        // Convidado também tem preferências. Tema, idioma e região já eram
+        // GRAVADOS por `saveSettings` (o botão de tema chama), mas aqui a
+        // leitura era descartada e trocada pelo default — e o default é
+        // `theme: "dark"`. Resultado: quem navegava sem conta escolhia o tema
+        // claro e o perdia em toda recarga. `getSettings` já sabe ler o modo
+        // local sem usuário; só não estava sendo chamado.
+        if (!userId) {
+          const savedSettings = await engineDB.getSettings();
+          if (cancelado) return;
+          setSettings(savedSettings);
+          if (i18n.language !== savedSettings.preferences.language) {
+            i18n.changeLanguage(savedSettings.preferences.language);
+          }
+          return;
+        }
+
         await engineDB.migrateLegacyData(userId);
         const [savedCars, savedSettings] = await Promise.all([
           engineDB.getCars(),
           engineDB.getSettings(),
         ]);
+        if (cancelado) return;
         setCars(savedCars);
         setSettings(savedSettings);
         // O perfil público só era escrito ao salvar os ajustes — quem nunca
@@ -115,10 +131,16 @@ function App() {
         }
       } catch (error) {
         console.error(error);
+        // Sem preferências legíveis, o default é melhor que tela travada.
+        if (!cancelado) setSettings(engineDB.getDefaultSettings());
       } finally {
-        setDbLoading(false);
+        if (!cancelado) setDbLoading(false);
       }
     })();
+
+    return () => {
+      cancelado = true;
+    };
   }, [i18n, userId]);
 
   const handleOpenModal = (car = null) => {
