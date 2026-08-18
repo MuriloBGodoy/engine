@@ -204,15 +204,20 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
 
   const states = useMemo(() => getStates(country), [country]);
 
-  // Consumo do modelo, da base local do INMETRO — síncrono, então é valor
-  // derivado e não estado. Vinha só do backend, que em produção não existe, e
-  // mesmo em dev o número era exibido como dica e nunca entrava na conta: o
-  // combustível saía do padrão do tipo, igual para um Mobi e para uma Hilux.
+  // Consumo estimado do modelo — síncrono, então é valor derivado e não estado.
+  // NÃO é do INMETRO, apesar do que este comentário dizia até 17/08/2026: ver o
+  // cabeçalho de `services/consumption.js`, que documenta a auditoria. Vinha só
+  // do backend, que em produção não existe, e mesmo em dev o número era exibido
+  // como dica e nunca entrava na conta: o combustível saía do padrão do tipo,
+  // igual para um Mobi e para uma Hilux.
   const localConsumption = useMemo(() => consumptionFor(car?.model), [car?.model]);
 
-  // O backend continua sendo consultado por cima, porque pode ter base mais
-  // nova que a embarcada. Guarda o modelo junto para não aplicar a resposta de
-  // um carro no carro seguinte.
+  // O backend é consultado por cima e TEM PRECEDÊNCIA sobre a base embarcada.
+  // Isso era para ele poder ter base mais nova — mas hoje o `engine-api` serve
+  // exatamente o mesmo arquivo, sem o de-rotulamento, e devolve diesel para um
+  // Onix. Enquanto as duas bases forem a mesma, esta precedência só muda quem
+  // erra, não o quanto. Guarda o modelo junto para não aplicar a resposta de um
+  // carro no carro seguinte.
   useEffect(() => {
     if (!car?.model) return undefined;
     let alive = true;
