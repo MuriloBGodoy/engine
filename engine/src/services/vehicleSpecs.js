@@ -1,0 +1,575 @@
+/**
+ * Camada 1 da ficha técnica: FÁBRICA.
+ *
+ * Junta o que o parser leu da string da FIPE (`fipeVersion.js`) com as duas
+ * tabelas do Han — `engine-specs.json` (potência e torque, por MOTOR) e
+ * `vehicle-performance.json` (0-100 e velocidade máxima, por VEÍCULO). O
+ * resultado é um mapa de campos em que cada campo diz, além do valor, POR QUE
+ * ele não tem valor quando não tem.
+ *
+ * Essa distinção é o produto deste arquivo, não um detalhe de implementação:
+ *
+ *   - `value`  — temos número e sabemos de onde veio.
+ *   - `absent` — ninguém publica. A Fiat não publica 0-100 em ficha nenhuma;
+ *                isso não é buraco nosso, é buraco do mercado.
+ *   - `held`   — RETIDO. Existe número candidato, mas mais de um, e servir um
+ *                deles seria servir o motor errado com cara de certeza. É a
+ *                abstenção do parser chegando até a tela.
+ *
+ * `absent` e `held` parecem a mesma coisa e não são: do primeiro não há o que
+ * fazer; o segundo some no instante em que a pessoa disser qual é o motor dela.
+ * A tela precisa dos dois separados — é a textura 3 contra a textura 4 do
+ * protótipo do Jesse.
+ *
+ * NADA AQUI É EDITÁVEL. Fábrica é afirmação sobre a VERSÃO, não sobre o
+ * exemplar. O que a pessoa declara entra em `carSpecSheet.js`, por cima disto,
+ * e sinalizado como dela.
+ */
+
+import engineTable from "./engine-specs.json" with { type: "json" };
+import performanceTable from "./vehicle-performance.json" with { type: "json" };
+import { ASPIRATION, CONFIDENCE, FUEL, TRANSMISSION, parseFipeVersion } from "./fipeVersion.js";
+
+/** Estado de um campo da ficha. Mapeia 1:1 nas texturas do protótipo. */
+export const SPEC_STATUS = {
+  /** Textura 1 e 2: tem valor (a confiança separa confirmado de inferido). */
+  VALUE: "value",
+  /** Textura 3: não existe fonte. */
+  ABSENT: "absent",
+  /** Textura 4: existe fonte demais, e escolher seria chutar. */
+  HELD: "held",
+};
+
+/** Por que um campo ficou RETIDO. Vira frase na tela; aqui é só código. */
+export const HOLD_REASON = {
+  /** O parser se absteve na aspiração: o grupo tem versão com e sem turbo. */
+  ASPIRATION_UNKNOWN: "aspiration_unknown",
+  /** Sem cilindrada não há chave de motor. */
+  DISPLACEMENT_UNKNOWN: "displacement_unknown",
+  /** Duas linhas da tabela casam e nada as desempata. */
+  MULTIPLE_ENGINE_CANDIDATES: "multiple_engine_candidates",
+  MULTIPLE_PERFORMANCE_CANDIDATES: "multiple_performance_candidates",
+};
+
+/** Por que um campo ficou AUSENTE. */
+export const ABSENT_REASON = {
+  /** A tabela não tem linha para este motor. É o caso da maior parte da base. */
+  NO_ENGINE_ROW: "no_engine_row",
+  NO_PERFORMANCE_ROW: "no_performance_row",
+  /** A linha existe, mas o fabricante não publica este campo. */
+  FIELD_NOT_PUBLISHED: "field_not_published",
+  /**
+   * A linha existe para este motor, mas só cobre outro ano-modelo. Hyundai e
+   * Renault publicam só a ficha do MY corrente — ou seja, justamente o carro
+   * usado, que é a maior parte da Garagem, fica de fora. Merece frase própria
+   * porque a resposta honesta é "temos, mas de outro ano", não "não temos".
+   */
+  OUTSIDE_YEAR_WINDOW: "outside_year_window",
+  /** A FIPE simplesmente não escreveu (câmbio em 45%, portas em 45%). */
+  NOT_WRITTEN_BY_FIPE: "not_written_by_fipe",
+  /** Motor elétrico e híbrido não são endereçáveis pela chave de cilindrada. */
+  OUT_OF_TABLE_SCOPE: "out_of_table_scope",
+};
+
+/**
+ * Quão perto do carro a linha da tabela está.
+ *
+ * `model_verified` — o fabricante publicou este motor NESTE modelo.
+ * `engine_family`  — o motor casa, mas o documento é de outro modelo. Quase
+ *                    sempre certo (o mesmo EA211 roda em sete nameplates) e
+ *                    ainda assim uma inferência nossa, então desce de textura.
+ */
+export const MATCH_SCOPE = {
+  MODEL_VERIFIED: "model_verified",
+  ENGINE_FAMILY: "engine_family",
+};
+
+export const KGFM_TO_NM = 9.80665;
+
+export const toNm = (value, unit) =>
+  value === null || value === undefined
+    ? null
+    : unit === "Nm"
+      ? Number(value)
+      : Number(value) * KGFM_TO_NM;
+
+export const toKgfm = (value, unit) =>
+  value === null || value === undefined
+    ? null
+    : unit === "kgfm"
+      ? Number(value)
+      : Number(value) / KGFM_TO_NM;
+
+// ---------------------------------------------------------------------------
+// Tradução do vocabulário das tabelas para o do parser
+// ---------------------------------------------------------------------------
+
+const TABLE_ASPIRATION = { NA: ASPIRATION.NATURAL, TB: ASPIRATION.TURBO };
+const TABLE_FUEL = {
+  Flex: FUEL.FLEX,
+  Diesel: FUEL.DIESEL,
+  Gasolina: FUEL.GASOLINE,
+  Etanol: FUEL.ETHANOL,
+};
+
+/**
+ * Câmbio como a tabela de desempenho escreve, em texto livre de fabricante.
+ * `Manual 6` e `EDC (dupla embreagem)` são strings de catálogo, não enum.
+ */
+const parseTableTransmission = (raw) => {
+  const text = String(raw || "").toLowerCase();
+  if (!text) return null;
+  if (text.includes("cvt")) return TRANSMISSION.CVT;
+  if (text.includes("edc") || text.includes("dupla")) return TRANSMISSION.DUAL_CLUTCH;
+  if (text.includes("manual") || text.includes("mec")) return TRANSMISSION.MANUAL;
+  if (text.includes("autom")) return TRANSMISSION.AUTOMATIC;
+  return null;
+};
+
+/**
+ * `Aut.` na FIPE cobre automático de conversor, CVT e dupla embreagem — ela não
+ * distingue. Então um `Aut.` casa com qualquer um dos três; o que NÃO pode é
+ * casar com manual, porque é exatamente aí que o número muda (Duster 1.6:
+ * 11,5 s no manual, 13,1 s no CVT).
+ *
+ * Se sobrar mais de um candidato compatível, a saída é reter, não sortear.
+ */
+const AUTOMATIC_FAMILY = new Set([
+  TRANSMISSION.AUTOMATIC,
+  TRANSMISSION.CVT,
+  TRANSMISSION.DUAL_CLUTCH,
+  TRANSMISSION.AUTOMATED,
+]);
+
+const transmissionCompatible = (parsedValue, tableValue) => {
+  if (!tableValue) return true; // linha sem câmbio declarado é curinga
+  if (!parsedValue) return true; // não sabemos o nosso: não dá para descartar
+  if (parsedValue === tableValue) return true;
+  return AUTOMATIC_FAMILY.has(parsedValue) && AUTOMATIC_FAMILY.has(tableValue);
+};
+
+const inYearWindow = (year, from, to) => {
+  if (!year) return true; // sem ano não dá para descartar linha nenhuma
+  if (from && year < from) return false;
+  if (to && year > to) return false;
+  return true;
+};
+
+const normalizeName = (value) =>
+  String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+// ---------------------------------------------------------------------------
+// Motor: potência e torque
+// ---------------------------------------------------------------------------
+
+/**
+ * O badge é o desempatador quando a chave colide. `170 TSI` (116 cv) e
+ * `200 TSI` (128 cv) têm marca, cilindrada, válvulas, aspiração e combustível
+ * idênticos; o que os separa está escrito na string da FIPE e em nenhum outro
+ * lugar: `Tera 1.0 170 TSI Flex 12V 5p Mec.`.
+ */
+const badgeMatches = (badge, model) => {
+  if (!badge) return null;
+  const text = String(model || "");
+  // O campo aceita alternativas separadas por barra: `Turbo 200 / T200`.
+  const alternatives = String(badge)
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  for (const alternative of alternatives) {
+    const digits = alternative.match(/\d{3}/)?.[0];
+    if (digits && new RegExp(`\\b${digits}\\b`).test(text)) return true;
+    const bare = alternative.replace(/[^A-Za-z]/g, "");
+    if (bare.length >= 3 && new RegExp(`\\b${bare}\\b`, "i").test(text)) return true;
+  }
+  return false;
+};
+
+const engineRowMatches = (row, parsed) => {
+  if (row.brand !== parsed.brand?.value) return false;
+  if (Number(row.displacementL) !== parsed.displacement?.value) return false;
+  if (TABLE_ASPIRATION[row.aspiration] !== parsed.aspiration?.value) return false;
+  if (TABLE_FUEL[row.fuel] !== parsed.fuel?.value) return false;
+
+  // Válvulas entram na chave porque são o discriminador de geração (1.6 8V
+  // EA111 x 1.6 16V MSI). Quando a FIPE não escreveu, não dá para usar como
+  // filtro — vira só desempate mais adiante.
+  const rowValves = row.valves ? Number(String(row.valves).replace(/\D/g, "")) : null;
+  if (rowValves && parsed.valves?.value && rowValves !== parsed.valves.value) return false;
+
+  return true;
+};
+
+/**
+ * Aplica o override por modelo quando existe. A Saveiro 1.6 tem 120 cv no
+ * etanol contra 117 do Polo com o MESMO motor na chave; sem o override ela
+ * perderia 3 cv, que é pouco para o olho e é errado do mesmo jeito.
+ */
+const findOverride = (row, parsed) => {
+  const overrides = engineTable.overridesPorModelo || [];
+  const nameplate = normalizeName(parsed.nameplate?.value);
+  if (!nameplate) return null;
+
+  const key = [row.brand, row.displacementL, row.valves, row.aspiration, row.fuel]
+    .filter(Boolean)
+    .join(" / ");
+
+  return (
+    overrides.find((override) => {
+      if (normalizeName(override.overrides) !== normalizeName(key)) return false;
+      if (normalizeName(override.model) !== nameplate) return false;
+      if (!inYearWindow(parsed.modelYear?.value, override.yearFrom, override.yearTo)) return false;
+      const overrideTransmission = parseTableTransmission(override.transmission);
+      if (overrideTransmission && parsed.transmission?.value !== overrideTransmission) return false;
+      return true;
+    }) || null
+  );
+};
+
+/**
+ * Escolhe a linha de motor, ou não escolhe nenhuma.
+ *
+ * @returns {{row: object|null, scope: string|null, reason: string|null, override: object|null}}
+ */
+export function matchEngineRow(parsed) {
+  const fuel = parsed?.fuel?.value;
+  if (fuel === FUEL.ELECTRIC || fuel === FUEL.HYBRID || fuel === FUEL.PLUGIN_HYBRID) {
+    // Potência de híbrido é de sistema e BEV não tem cilindrada: a chave desta
+    // tabela não endereça nenhum dos dois. Dizer isso é melhor que casar por
+    // aproximação.
+    return { row: null, scope: null, reason: ABSENT_REASON.OUT_OF_TABLE_SCOPE, override: null };
+  }
+  if (!parsed?.displacement?.value) {
+    return { row: null, scope: null, reason: HOLD_REASON.DISPLACEMENT_UNKNOWN, override: null };
+  }
+  if (!parsed?.aspiration?.value) {
+    // Abstenção herdada do parser: 1.0 aspirado e 1.0 turbo diferem ~40%.
+    return { row: null, scope: null, reason: HOLD_REASON.ASPIRATION_UNKNOWN, override: null };
+  }
+
+  const all = (engineTable.engines || []).filter((row) => engineRowMatches(row, parsed));
+  if (!all.length) {
+    return { row: null, scope: null, reason: ABSENT_REASON.NO_ENGINE_ROW, override: null };
+  }
+
+  const inWindow = all.filter((row) =>
+    inYearWindow(parsed.modelYear?.value, row.yearFrom, row.yearTo),
+  );
+  if (!inWindow.length) {
+    return { row: null, scope: null, reason: ABSENT_REASON.OUTSIDE_YEAR_WINDOW, override: null };
+  }
+
+  let candidates = inWindow;
+
+  // 1º desempate: o badge escrito na própria string da FIPE.
+  if (candidates.length > 1) {
+    const byBadge = candidates.filter((row) => badgeMatches(row.badge, parsed.raw.model) === true);
+    if (byBadge.length === 1) candidates = byBadge;
+    else {
+      // Linha com badge que a string NÃO traz é candidata errada quando existe
+      // irmã sem badge exigido.
+      const withoutContradiction = candidates.filter(
+        (row) => badgeMatches(row.badge, parsed.raw.model) !== false,
+      );
+      if (withoutContradiction.length) candidates = withoutContradiction;
+    }
+  }
+
+  // 2º desempate: o modelo estar na lista verificada do documento.
+  const nameplate = normalizeName(parsed.nameplate?.value);
+  const listed = candidates.filter((row) =>
+    (row.models || []).some((model) => normalizeName(model) === nameplate),
+  );
+
+  if (listed.length === 1) {
+    const row = listed[0];
+    return { row, scope: MATCH_SCOPE.MODEL_VERIFIED, reason: null, override: findOverride(row, parsed) };
+  }
+  if (listed.length > 1) {
+    return { row: null, scope: null, reason: HOLD_REASON.MULTIPLE_ENGINE_CANDIDATES, override: null };
+  }
+  if (candidates.length === 1) {
+    const row = candidates[0];
+    return { row, scope: MATCH_SCOPE.ENGINE_FAMILY, reason: null, override: findOverride(row, parsed) };
+  }
+
+  return { row: null, scope: null, reason: HOLD_REASON.MULTIPLE_ENGINE_CANDIDATES, override: null };
+}
+
+// ---------------------------------------------------------------------------
+// Veículo: 0-100 e velocidade máxima
+// ---------------------------------------------------------------------------
+
+/**
+ * A versão na tabela de desempenho é texto de catálogo (`200 TSI`,
+ * `Intense Plus 1.6`, `1.0 12V aspirado`). Duas checagens bastam e nenhuma
+ * delas chuta: se o texto traz cilindrada, ela tem de bater; se traz marca de
+ * sobrealimentação, a aspiração tem de bater.
+ */
+const performanceVersionMatches = (row, parsed) => {
+  const version = String(row.version || "");
+  const displacement = version.match(/(?<!\d)(\d)\.(\d)(?!\d)/);
+  if (displacement) {
+    return Number(displacement[0]) === parsed.displacement?.value;
+  }
+
+  const looksTurbo = /\bTSI\b|\bTCe\b|\bTGDI\b|\bTurbo\b|\bT\d{3}\b/i.test(version);
+  const looksNatural = /aspirado|\bSCe\b|\bMSI\b/i.test(version);
+  if (looksTurbo) return parsed.aspiration?.value === ASPIRATION.TURBO;
+  if (looksNatural) return parsed.aspiration?.value === ASPIRATION.NATURAL;
+  return true;
+};
+
+export function matchPerformanceRow(parsed) {
+  const nameplate = normalizeName(parsed?.nameplate?.value);
+  if (!nameplate || !parsed?.brand?.value) {
+    return { row: null, reason: ABSENT_REASON.NO_PERFORMANCE_ROW };
+  }
+
+  const byVehicle = (performanceTable.performance || []).filter(
+    (row) =>
+      row.brand === parsed.brand.value &&
+      normalizeName(row.nameplate) === nameplate &&
+      performanceVersionMatches(row, parsed),
+  );
+  if (!byVehicle.length) return { row: null, reason: ABSENT_REASON.NO_PERFORMANCE_ROW };
+
+  const inWindow = byVehicle.filter((row) =>
+    inYearWindow(parsed.modelYear?.value, row.yearFrom, row.yearTo),
+  );
+  if (!inWindow.length) return { row: null, reason: ABSENT_REASON.OUTSIDE_YEAR_WINDOW };
+
+  const compatible = inWindow.filter((row) =>
+    transmissionCompatible(parsed.transmission?.value, parseTableTransmission(row.transmission)),
+  );
+  if (!compatible.length) return { row: null, reason: ABSENT_REASON.NO_PERFORMANCE_ROW };
+  if (compatible.length > 1) {
+    // Câmbio move 1,5 s e 11 km/h na mesma Duster. Com dois candidatos, o certo
+    // é a tela ficar sem número.
+    return { row: null, reason: HOLD_REASON.MULTIPLE_PERFORMANCE_CANDIDATES };
+  }
+  return { row: compatible[0], reason: null };
+}
+
+// ---------------------------------------------------------------------------
+// Montagem das células
+// ---------------------------------------------------------------------------
+
+const sourceOf = (row) =>
+  row
+    ? {
+        doc: row.sourceDoc || "",
+        url: row.source || "",
+        layer: row.sourceLayer ?? null,
+        date: row.sourceDate || null,
+        verifiedAt: row.verifiedAt || null,
+      }
+    : null;
+
+const HOLD_CODES = new Set(Object.values(HOLD_REASON));
+
+const emptyCell = (id, reason, extra = {}) => ({
+  id,
+  status: HOLD_CODES.has(reason) ? SPEC_STATUS.HELD : SPEC_STATUS.ABSENT,
+  reason,
+  value: null,
+  pair: null,
+  unit: null,
+  origin: null,
+  ...extra,
+});
+
+/**
+ * Célula com valor. `pair` existe porque flex é dois números, e o protótipo
+ * trata os dois como par simétrico em vez de eleger um principal. Par idêntico
+ * colapsa em valor único — repetir 17,5 dos dois lados é ruído.
+ */
+const valueCell = (id, { value, pair, unit, confidence, scope, source, note, fuelBasis }) => {
+  const collapsed =
+    pair && pair.ethanol !== null && pair.ethanol === pair.gasoline ? pair.ethanol : null;
+
+  return {
+    id,
+    status: SPEC_STATUS.VALUE,
+    reason: null,
+    origin: "factory",
+    method: "catalog",
+    value: collapsed ?? (pair ? null : (value ?? null)),
+    pair: collapsed ? null : (pair ?? null),
+    unit: unit ?? null,
+    fuelBasis: fuelBasis ?? null,
+    confidence: confidence || CONFIDENCE.EXPLICIT,
+    scope: scope || null,
+    source: source || null,
+    note: note || "",
+  };
+};
+
+const buildPair = (gasoline, ethanol) => {
+  if (gasoline === null && ethanol === null) return null;
+  if (gasoline !== null && ethanol === null) return null;
+  if (gasoline === null && ethanol !== null) return null;
+  return { gasoline, ethanol };
+};
+
+const num = (value) => (value === null || value === undefined ? null : Number(value));
+
+const powerCell = (match) => {
+  const { row, scope, reason, override } = match;
+  if (!row) return emptyCell("powerCv", reason);
+
+  const merged = { ...row, ...(override || {}) };
+  const gasoline = num(merged.powerGasolineCv);
+  const ethanol = num(merged.powerEthanolCv);
+  const diesel = num(merged.powerDieselCv);
+
+  if (gasoline === null && ethanol === null && diesel === null) {
+    return emptyCell("powerCv", ABSENT_REASON.FIELD_NOT_PUBLISHED);
+  }
+
+  const source = sourceOf(override || row);
+  if (diesel !== null && gasoline === null && ethanol === null) {
+    return valueCell("powerCv", {
+      value: diesel,
+      unit: "cv",
+      fuelBasis: "diesel",
+      scope,
+      source,
+      note: merged.engineFamily || "",
+    });
+  }
+
+  return valueCell("powerCv", {
+    value: ethanol ?? gasoline,
+    pair: buildPair(gasoline, ethanol),
+    unit: "cv",
+    fuelBasis: buildPair(gasoline, ethanol) ? null : ethanol !== null ? "ethanol" : "gasoline",
+    scope,
+    source,
+    note: merged.engineFamily || "",
+  });
+};
+
+const torqueCell = (match) => {
+  const { row, scope, reason, override } = match;
+  if (!row) return emptyCell("torque", reason);
+
+  const merged = { ...row, ...(override || {}) };
+  const unit = merged.torqueUnit || null;
+  const gasoline = num(merged.torqueGasoline);
+  const ethanol = num(merged.torqueEthanol);
+  const diesel = num(merged.torqueDiesel);
+
+  if (gasoline === null && ethanol === null && diesel === null) {
+    return emptyCell("torque", ABSENT_REASON.FIELD_NOT_PUBLISHED);
+  }
+
+  const source = sourceOf(override || row);
+  if (diesel !== null && gasoline === null && ethanol === null) {
+    return valueCell("torque", { value: diesel, unit, fuelBasis: "diesel", scope, source });
+  }
+
+  return valueCell("torque", {
+    value: ethanol ?? gasoline,
+    pair: buildPair(gasoline, ethanol),
+    unit,
+    fuelBasis: buildPair(gasoline, ethanol) ? null : ethanol !== null ? "ethanol" : "gasoline",
+    scope,
+    source,
+  });
+};
+
+const performanceCell = (id, match, keys) => {
+  const { row, reason } = match;
+  if (!row) return emptyCell(id, reason);
+
+  const single = num(row[keys.single]);
+  const gasoline = num(row[keys.gasoline]);
+  const ethanol = num(row[keys.ethanol]);
+
+  if (single === null && gasoline === null && ethanol === null) {
+    return emptyCell(id, ABSENT_REASON.FIELD_NOT_PUBLISHED);
+  }
+
+  return valueCell(id, {
+    value: single ?? ethanol ?? gasoline,
+    pair: single === null ? buildPair(gasoline, ethanol) : null,
+    unit: keys.unit,
+    fuelBasis:
+      single !== null || buildPair(gasoline, ethanol)
+        ? null
+        : ethanol !== null
+          ? "ethanol"
+          : "gasoline",
+    scope: MATCH_SCOPE.MODEL_VERIFIED,
+    source: sourceOf(row),
+  });
+};
+
+/** Campo que vem direto da string da FIPE, sem tabela nenhuma no meio. */
+const parsedCell = (id, parsedField, unit = null) =>
+  parsedField
+    ? valueCell(id, {
+        value: parsedField.value,
+        unit,
+        confidence: parsedField.confidence,
+        scope: MATCH_SCOPE.MODEL_VERIFIED,
+        source: { doc: "Tabela FIPE", url: "", layer: 4, date: null, verifiedAt: null },
+        note: parsedField.evidence || "",
+      })
+    : emptyCell(id, ABSENT_REASON.NOT_WRITTEN_BY_FIPE);
+
+/**
+ * Ficha de fábrica completa de um carro da Garagem.
+ *
+ * @param {{brand?: string, model?: string, year?: string}} car
+ * @param {{parsed?: object}} [options] parser já rodado, para não repetir
+ */
+export function getFactorySpecs(car, options = {}) {
+  const parsed = options.parsed || parseFipeVersion(car);
+  const engineMatch = matchEngineRow(parsed);
+  const perfMatch = matchPerformanceRow(parsed);
+
+  return {
+    parsed,
+    engineMatch,
+    performanceMatch: perfMatch,
+    fields: {
+      powerCv: powerCell(engineMatch),
+      torque: torqueCell(engineMatch),
+      accel0to100S: performanceCell("accel0to100S", perfMatch, {
+        single: "accel0to100Unico",
+        gasoline: "accel0to100Gasoline",
+        ethanol: "accel0to100Ethanol",
+        unit: "s",
+      }),
+      topSpeedKmh: performanceCell("topSpeedKmh", perfMatch, {
+        single: "topSpeedUnico",
+        gasoline: "topSpeedGasoline",
+        ethanol: "topSpeedEthanol",
+        unit: "km/h",
+      }),
+      displacement: parsedCell("displacement", parsed.displacement, "L"),
+      valves: parsedCell("valves", parsed.valves),
+      aspiration:
+        parsed.aspiration === null
+          ? emptyCell("aspiration", HOLD_REASON.ASPIRATION_UNKNOWN)
+          : parsedCell("aspiration", parsed.aspiration),
+      fuel: parsedCell("fuel", parsed.fuel),
+      transmission: parsedCell("transmission", parsed.transmission),
+      doors: parsedCell("doors", parsed.body.doors),
+      bodyStyle: parsedCell("bodyStyle", parsed.body.style),
+      drivetrain: parsedCell("drivetrain", parsed.drivetrain),
+      engineFamily: engineMatch.row
+        ? valueCell("engineFamily", {
+            value: (engineMatch.override || engineMatch.row).engineFamily || null,
+            scope: engineMatch.scope,
+            source: sourceOf(engineMatch.override || engineMatch.row),
+          })
+        : emptyCell("engineFamily", engineMatch.reason),
+    },
+  };
+}

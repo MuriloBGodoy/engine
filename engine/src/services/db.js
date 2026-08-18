@@ -26,6 +26,7 @@ import { auth, firestore } from "./firebase";
 import { inferLocation } from "./locations";
 import { normalizeOwnershipInputs, LIFE_SITUATION_TYPES } from "./ownership";
 import { normalizeExpense, normalizeExpenses } from "./expenses";
+import { normalizeSpecSheet, publicSpecSheet } from "./carSpecSheet";
 
 const defaultSettings = {
   profile: {
@@ -369,6 +370,13 @@ const normalizeCar = (car) => ({
   // mensal: sem limite o histórico cresceria para sempre dentro de um
   // documento que já carrega as fotos em base64.
   expenses: normalizeExpenses(car.expenses),
+  // Ficha técnica declarada pela pessoa: o que ela completou e o que ela
+  // MODIFICOU no exemplar. Mora aqui, e não numa coleção por versão como a
+  // ficha de fábrica, porque é dado de UM carro — não existe outro dono para
+  // reaproveitar. No pior caso — todos os campos, todos os chips e o texto no
+  // teto — são 2.750 bytes medidos: 0,3% do orçamento do documento, contra
+  // 200-700 KB de UMA foto em base64. Limites e faixas em `carSpecSheet.js`.
+  specs: normalizeSpecSheet(car.specs),
   // Simulação de custo real de posse (inputs do usuário), quando existir.
   ownership: car.ownership
     ? {
@@ -597,6 +605,27 @@ const communityCarPatch = (car) => ({
   images: normalizeCarImages(car),
   savedValue: car.savedValue,
   targetValue: car.targetValue,
+  // DECISÃO EXPLÍCITA, e ela vai no sentido CONTRÁRIO da de cima. A ficha
+  // declarada pelo dono ENTRA no payload público.
+  //
+  // `ownership` fica de fora porque é dinheiro e ninguém pediu para mostrar.
+  // A ficha declarada é o oposto disso: ela só existe porque a pessoa quis
+  // contar o que fez no carro dela, e a Comunidade é uma das três entradas da
+  // feature desde o primeiro briefing. Não publicar seria construir o campo e
+  // esconder justamente onde ele serve.
+  //
+  // O que torna isso seguro está no formato, não na moderação: `publicSpecSheet`
+  // só emite valor acompanhado de `origin` e `method`, e só para carro
+  // `owned`. Número declarado chega ao leitor sempre etiquetado como afirmação
+  // do dono — nunca como número verificado. Sem essa etiqueta a Comunidade
+  // viraria placar de cavalo inventado, e é a única coisa que este produto vem
+  // defendendo desde que o `consumption.js` foi desmascarado.
+  //
+  // Nada de FÁBRICA vai junto: quem lê deriva a camada 1 do mesmo `brand`/
+  // `model`/`year` que já é público, com o mesmo parser. Publicar a camada 1
+  // criaria uma cópia que envelhece sozinha quando a tabela do Han melhorar —
+  // que é exatamente o defeito do `fipe-consumption-db.json`.
+  specs: publicSpecSheet(car),
   updatedAt: serverTimestamp(),
 });
 
@@ -641,6 +670,10 @@ const normalizeCommunityGoal = (goal = {}) => {
     year: goal.year || "",
     image: goal.image || "",
     images: normalizeCarImages(goal),
+    // Ficha declarada do dono, quando ele publicou uma. Passa pela mesma
+    // normalização da escrita: post antigo, post adulterado e post de outra
+    // versão do app caem na mesma peneira, e valor sem `origin` não sobrevive.
+    specs: normalizeSpecSheet(goal.specs),
     savedValue: Number(goal.savedValue) || 0,
     targetValue: Number(goal.targetValue) || 0,
     streak: Number(goal.streak) || 1,
