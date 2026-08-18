@@ -442,6 +442,23 @@ const annualLicensing = (country, state) => {
 // achatado pela raiz porque o prêmio de terceiros varia menos que o de casco.
 // É um default grosseiro assumido: não conheço fonte que publique curva etária
 // de RCF isolada.
+//
+// O piso de R$ 700/ano e o teto de R$ 2.200 continuam SEM FONTE, e foram
+// procurados em 17/08/2026 por decomposição — o total não é publicado por
+// ninguém, mas as partes poderiam ser. Só uma fechou, e fechou em zero: custo
+// de emissão de apólice não é parcela a somar, porque cobrá-lo em separado do
+// prêmio está vedado desde 01/01/2013, com vedação expressa em norma vigente
+// para bilhete (Res. CNSP 413/2021, art. 6º). Sobra RCF + assistência 24h, e
+// as duas frentes que poderiam precificá-las responderam não: o AUTOSEG da
+// SUSEP voltou ao ar, mas as três tabelas da base são `arq_casco*` e não têm
+// uma única linha de responsabilidade civil; o Open Insurance criou o campo
+// `premiumRates` na v2 da API pública e todas as seguradoras que o servem
+// preenchem com zero. Mapa completo em SIMULADOR-FONTES.md, seção 4.
+//
+// Como uma das parcelas que se supunha embutidas aqui era zero, o material
+// levantado não sustenta subir o piso. Subir por precaução seria repetir o
+// IPVA cobrado de carro imune: erra para cima, e errar para cima também tira
+// da pessoa um carro que caberia no bolso dela.
 const thirdPartyPremium = (value, inputs, countryFactor) => {
   const ageRatio = INSURANCE_AGE_RATES[inputs.driverAgeBand] / INSURANCE_AGE_RATES["36-55"];
   const ageFactor = clamp(Math.sqrt(ageRatio), 0.85, 1.35);
@@ -510,11 +527,23 @@ const annualInsurance = (value, carAge, inputs, country, state) => {
   // calibragem ruim, era contradição interna — e bem na faixa de preço que o
   // público do Engine compra.
   //
-  // Isto NÃO é o piso absoluto que o prêmio real tem (RCF, assistência,
-  // emissão de apólice e IOF não escalam com o FIPE). Esse piso existe e é
-  // maior que este; não entrou porque não há fonte pública brasileira que o
-  // publique, e chutar aqui seria inventar número na linha que o próprio
-  // SIMULADOR-FONTES.md já marca como a menos confiável do simulador.
+  // Isto NÃO é o piso absoluto que o prêmio real tem: RCF e assistência 24h são
+  // preço de serviço e não vão a zero junto com o FIPE. As outras duas parcelas
+  // que este comentário listava saíram da conta em 17/08/2026, e nas duas o
+  // motivo é documental, não calibragem. Emissão de apólice não existe como
+  // cobrança separada do prêmio (vedada desde 01/01/2013; Res. CNSP 413/2021,
+  // art. 6º, para bilhete). E o IOF não é piso, é multiplicador: 7,38% sobre o
+  // prêmio pago (Decreto 6.306/2007, art. 22, § 1º, IV, redação do Decreto
+  // 6.339/2008), conferido no texto consolidado em 17/08/2026 — as alterações
+  // de IOF de 2025 pegaram crédito, câmbio e VGBL, e não "demais seguros".
+  //
+  // Consequência prática: o número que sai daqui fica DEFINIDO como prêmio
+  // total, o que a pessoa paga, com o IOF dentro. É assim que a cotação chega
+  // até ela e é contra isso que ela vai comparar. Isso é convenção declarada,
+  // não medição: a curva continua sem fonte. O que a convenção evita é a
+  // próxima calibragem entrar torta — estatística de seguradora costuma
+  // reportar prêmio líquido, e prêmio líquido só entra aqui multiplicado por
+  // 1,0738, senão a tela passa a mostrar 7,38% menos do que se paga.
   return { annual: Math.max(bounded, thirdParty), basis: "full" };
 };
 

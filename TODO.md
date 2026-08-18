@@ -226,27 +226,42 @@ Na ordem de retorno:
       descartado porque `monthly.insurance` alimenta o total e viraria `NaN`.
       Carro de 22 anos e R$ 20 mil em SP, condutor 18-25: seguro de R$ 136,20
       para **R$ 76,67/mês**, total de R$ 689,38 para R$ 629,85
-- [ ] **DECISÃO DO MURILO — piso absoluto do seguro.** Procurado em 17/08/2026,
-      **sem fonte** (CNseg só em imprensa; SUSEP fora do ar; SPVAT revogado em
-      definitivo pela LC 211/2024, então não há parcela obrigatória a somar). O
-      material da decisão está no `SIMULADOR-FONTES.md`, e ele reposiciona a
-      pergunta: um piso de R$ 1.200–1.800/ano quase **não toca o completo**, que
-      já sai acima disso sozinho. Quem tem piso sem fonte é o **terceiros**, com
-      os **R$ 700/ano** do `clamp` em `thirdPartyPremium`. A pergunta é se
-      R$ 700 cobre RCF + assistência 24h + emissão + IOF. Subir para R$ 1.200
-      custa +R$ 41,67/mês num carro de R$ 30 mil e +R$ 25,00 num de R$ 60 mil;
-      para R$ 1.800, +R$ 91,67 e +R$ 75,00. É a faixa de preço do público do
-      Engine
-- [ ] **AUTOSEG** para extrair os fatores relativos de faixa etária e região.
-      Reverificado de outra rede em 17/08/2026 e o modo de falha era outro: o
-      host `www2.susep.gov.br` **responde**, mas a aplicação `/menuestatistica`
-      devolve **HTTP 500** (`Could not load file or assembly
-      'System.Runtime.Serialization'`) — erro de deploy do lado deles, que
-      derruba SES e AUTOSEG juntos. Não adianta trocar de rede; só passa quando
-      a SUSEP consertar. O `dados.gov.br` segue em 401 por falta de chave
+- [x] ~~**Piso absoluto do seguro — os R$ 700/ano de `thirdPartyPremium`**~~ —
+      caçada de fonte feita em 17/08/2026 a pedido do Murilo. **O piso fica em
+      R$ 700 e nenhum número mudou** (efeito na tela: R$ 0,00/mês). Atacado por
+      decomposição, e duas das quatro parcelas supostas fecharam: **emissão de
+      apólice vale R$ 0** (cobrança separada do prêmio vedada desde 01/01/2013;
+      Res. CNSP 413/2021, art. 6º, para bilhete) e o **IOF é 7,38% do prêmio**
+      (Decreto 6.306/2007, art. 22, § 1º, IV — conferido no texto consolidado,
+      as mexidas de 2025 pegaram crédito, câmbio e VGBL, não "demais seguros"),
+      ou seja **multiplicador, não piso**. Sobraram RCF e assistência 24h, sem
+      fonte: o AUTOSEG voltou ao ar mas é **casco e só casco**, e o Open
+      Insurance publica o campo de prêmio com zero em todas as seguradoras. Como
+      uma das parcelas vale zero, o material aponta para **baixo**, não para
+      cima — subir seria inventar. Detalhe em `SIMULADOR-FONTES.md`, seção 4
+- [ ] **AUTOSEG voltou ao ar em 17/08/2026 (~17h40 BRT) — extrair os fatores
+      relativos de faixa etária e região.** SES e AUTOSEG devolvem 200; o
+      servidor oscila, então reconfira a data antes de concluir qualquer coisa.
+      O caminho de download que estava registrado era errado: o certo é
+      `redarq.asp?arq=Autoseg2021A.zip`, que redireciona para
+      `/download/estatisticas/`. A base está congelada no 2º semestre de 2020
+      (confirmado nos downloads **e** no formulário on-line, cujo último período
+      é 31/12/2020). Serve para `INSURANCE_AGE_RATES` e `INSURANCE_REGION_BR`,
+      porque publica prêmio médio E IS média por exposição — a razão entre os
+      dois é o prêmio como % do valor. Atenção: faixas do AUTOSEG são 18-25 /
+      26-35 / 36-45 / 46-55 / >55 e o motor usa 36-55 como faixa única; e
+      rotular como "base SUSEP 2020", ancorando o nível num parâmetro calibrável
+- [ ] **DECISÃO DO MURILO — chave do `dados.gov.br`.** Segue em 401
+      (reconfirmado 17/08/2026). O cadastro **não é auto-serviço anônimo**: sai
+      por conta gov.br, que exige CPF e nível de identidade, então é decisão
+      dele e não minha. Destravaria dois itens de uma vez: dado estruturado da
+      SUSEP e o PBEV estruturado da seção 6
 - [ ] **Franquia via Open Insurance** — API pública sem autenticação, chaveada
-      por CEP + FIPE + ano. Não traz prêmio, mas traz franquia, que hoje o
-      simulador ignora
+      por CEP + FIPE + ano. Não traz prêmio (o campo `premiumRates` existe na
+      v2/v3 e **todas** as seguradoras mandam zero, varrido em 17/08/2026), mas
+      traz franquia, pacote de assistência e o LMI de RCF, que hoje o simulador
+      ignora. O LMI vendido varia de R$ 5 mil a R$ 1 milhão — "seguro de
+      terceiros" não é um produto só, e o simulador não pergunta o LMI
 
 - [ ] **A base de consumo não é do INMETRO.** Desrotulada na tela em 14/08/2026
       (eram 24 tuplas distintas para 91 modelos, com diesel em Gol e Kwid).

@@ -443,12 +443,15 @@ completo.
 
 **Isso não resolve o piso de verdade.** Prêmio real tem componente que não
 escala com o FIPE: RCF (limites em R$ fixos, precificados pelo risco do
-condutor), assistência 24h e carro reserva (custo fixo de serviço), emissão de
-apólice, e IOF de 7,38% por cima. Como % → 0 quando o valor → 0, a fórmula
-continua errada no limite. A ordem de grandeza do piso é R$ 1.200 a R$ 1.800/ano
-— **estimativa, não fonte**: a CNseg publica prêmio médio agregado só em
-matéria de imprensa, e o resto que circula é conteúdo comercial de quem vende
-seguro. Não entrou no código por isso.
+condutor) e assistência 24h com carro reserva (custo fixo de serviço). Como
+% → 0 quando o valor → 0, a fórmula continua errada no limite. A ordem de
+grandeza de R$ 1.200 a R$ 1.800/ano é **estimativa, não fonte**, e não entrou no
+código por isso.
+
+Duas parcelas que esta seção listava aqui **saíram da conta em 17/08/2026**, e
+as duas por motivo documental — ver "Piso, decomposto" abaixo. Emissão de
+apólice não é parcela a somar, e o IOF de 7,38% existe mas é multiplicador, não
+piso.
 
 ### Casco em carro velho não existe — fechado em 17/08/2026
 
@@ -511,70 +514,197 @@ que também não tem fonte. Então a decisão real não é "criar um piso", é
 **"R$ 700/ano é pouco para RCF + assistência 24h + emissão + IOF?"**. Efeito de
 mudar: com piso de R$ 1.200 o carro de R$ 30 mil sobe R$ 41,67/mês e o de
 R$ 60 mil sobe R$ 25,00/mês; com R$ 1.800, R$ 91,67 e R$ 75,00. É a faixa de
-preço que o público do Engine compra, então não é decoração. **Decisão do
-Murilo**, porque continua sem fonte e o material está nesta tabela.
+preço que o público do Engine compra, então não é decoração.
 
-### Fonte de piso — o que foi procurado e o que respondeu
+**O Murilo decidiu procurar fonte antes de mexer, e a caçada foi feita em
+17/08/2026 — resultado abaixo. O piso ficou em R$ 700.** Não por inércia: das
+quatro parcelas que a pergunta supunha, uma vale zero por norma (emissão) e
+outra é multiplicador e não piso (IOF). Só as duas sem fonte é que decidiriam o
+valor, e as duas frentes que poderiam precificá-las responderam não. Mexer no
+número agora seria trocar um valor sem fonte por outro valor sem fonte, com a
+agravante de que o material levantado aponta para baixo, não para cima.
 
-- **SPVAT/DPVAT: dead end confirmado, e é uma boa notícia.** A LC 211/2024
-  revogou em definitivo a retomada do seguro obrigatório, então **não há**
-  parcela fixa anual de seguro obrigatório para somar ao custo de posse em 2026.
-  O simulador não tem essa linha e está certo em não ter. Registrado para não
-  ser "descoberto" de novo.
+### Piso, decomposto — caçada de 17/08/2026
+
+"Prêmio mínimo de seguro" não é publicado por ninguém, mas o número é soma de
+partes e algumas partes têm fonte primária. Atacado por decomposição. **Duas das
+quatro parcelas fecharam; as duas que sobraram são justamente as que decidiriam
+o valor, e nenhuma respondeu.**
+
+| parcela | situação | fonte |
+| --- | --- | --- |
+| Seguro obrigatório (SPVAT) | **R$ 0** — não existe | LC 211/2024 |
+| Emissão de apólice | **R$ 0** — não é cobrança separada | Res. CNSP 413/2021, art. 6º |
+| IOF | **7,38% do prêmio** — multiplicador, não piso | Decreto 6.306/2007, art. 22, § 1º, IV |
+| RCF + assistência 24h | **sem fonte** | — |
+
+**IOF: 7,38%, conferido no texto consolidado, não de memória.** Decreto
+6.306/2007, art. 22, § 1º, inciso IV: "nas demais operações de seguro: sete
+inteiros e trinta e oito centésimos por cento", redação do Decreto 6.339/2008.
+Seguro de automóvel cai em "demais operações" — os incisos nomeados são vida,
+acidentes pessoais e saúde. Base de cálculo é "o valor dos prêmios pagos"
+(art. 21); contribuinte é o segurado (art. 19) e a seguradora é responsável pela
+cobrança e pelo recolhimento (art. 20).
+
+Importava conferir porque **houve mexida recente em IOF e ela não pegou aqui**:
+os Decretos 12.466/2025 e 12.499/2025, o Decreto Legislativo 176/2025 que os
+sustou e a cautelar do STF na ADC 96 alteraram alínea "e" do inciso I e os
+incisos V e VI — todos sobre **VGBL** (vida com cobertura por sobrevivência) —
+além de crédito e câmbio. O inciso IV não foi tocado por nenhum deles.
+
+**Isso muda o modelo, e o achado é estrutural:** IOF é percentual sobre o
+prêmio, então nunca poderia justificar subir um piso absoluto. O motor não
+aplica IOF em lugar nenhum, e a conclusão **não** foi somá-lo: a curva de seguro
+não tem fonte, então não existe base para afirmar que o número de hoje é prêmio
+líquido. Multiplicar por 1,0738 mudaria toda a linha de seguro em +7,38% sem
+nenhuma evidência de que ela estivesse baixa — e afastaria a tela da cotação
+real, que chega para a pessoa como prêmio **total**. O que entrou no código foi
+a **convenção declarada**: o número devolvido é prêmio total, com IOF dentro, e
+quem for calibrar contra estatística de seguradora (que costuma reportar prêmio
+líquido) tem de multiplicar por 1,0738 antes.
+
+**Custo de apólice: R$ 0, e é regulado.** O teto era R$ 60 (Circular SUSEP
+176/2001), subiu para R$ 100 com a Circular 401/2010, que a Circular 432/2012
+suspendeu — voltando aos R$ 60 — e a cobrança em separado do prêmio foi extinta
+a partir de 01/01/2013. Em norma vigente a vedação expressa está na **Resolução
+CNSP 413/2021, art. 6º** ("É vedada a cobrança de custo de emissão na
+contratação de seguros por meio de bilhete"), verificada no PDF da própria
+SUSEP. A **Circular SUSEP 621/2021, art. 32, § 1º** proíbe cobrar qualquer
+valor adicional a título de custo administrativo de fracionamento do prêmio.
+Nenhuma das duas circulares do grupo automóvel (621/2021 e 639/2021) menciona
+IOF — não há definição regulatória de líquido vs. total, é prática contábil.
+
+Esta parcela **derruba** o argumento de subir o piso, em vez de sustentá-lo: uma
+das quatro coisas que se supunha embutidas nos R$ 700 vale zero.
+
 - **CNseg**: continua publicando prêmio médio agregado só em matéria de
-  imprensa.
-- **SUSEP**: ver abaixo — a aplicação de estatísticas está quebrada.
+  imprensa. Não revisitado nesta rodada.
+- **`dados.gov.br`**: segue exigindo chave (401 em
+  `/api/3/action/package_search?q=autoseg`, reconfirmado em 17/08/2026). O
+  cadastro **não é auto-serviço anônimo**: a chave sai por conta gov.br, que
+  exige CPF e nível de identidade. **É decisão do Murilo**, não minha — e
+  destravaria dois itens de uma vez (este e o PBEV estruturado da seção 6).
 
-### AUTOSEG e SES — o modo de falha era outro
+### AUTOSEG e SES — VOLTARAM AO AR (verificado em 17/08/2026, ~17h40 BRT)
 
-O inventário de 14/08 registrou `www2.susep.gov.br` como "inalcançável (falha de
-conexão)", e supôs rede. **Retestado em 17/08/2026 de outra rede: o host
-responde.** O que não funciona é a aplicação:
-
-```
-GET https://www2.susep.gov.br/menuestatistica/SES/principal.aspx      → 500
-GET https://www2.susep.gov.br/menuestatistica/Autoseg/principal.aspx  → 500
-    "Could not load file or assembly 'System.Runtime.Serialization,
-     Version=3.0.0.0 ...' Server Error in '/menuestatistica' Application."
-```
-
-É erro de deploy do ASP.NET no servidor da SUSEP, não bloqueio nem 404 — e
-derruba **SES e AUTOSEG juntos**, porque os dois moram na mesma aplicação. O
-HTTP direto no `/download/menuestatistica/autoseg/*.zip` não completa handshake.
-Corrigir o registro importa: "falha de rede" convida a tentar de outro lugar,
-"aplicação quebrada do lado deles" é coisa que só passa quando eles consertarem.
-
-A notícia da SUSEP de jun/2024 dizendo que a base de automóvel foi reaberta em
-caráter permanente no PDA 2024-2026 continua **não confirmada** pelo mesmo
-motivo, e o `dados.gov.br` segue exigindo chave de API (401 em
-`/api/3/action/package_search?q=autoseg`, reconfirmado em 17/08).
-
-**AUTOSEG está congelado em 2020.** Verificado semestre a semestre:
+**Este registro mudou duas vezes em quatro dias. A data vale mais que o
+estado.** Em 14/08 constava "inalcançável (falha de conexão)", supondo rede. Em
+17/08 pela manhã o host respondia mas a aplicação devolvia HTTP 500 (erro de
+deploy do ASP.NET, "Could not load file or assembly System.Runtime.Serialization",
+que derrubava SES e AUTOSEG juntos porque moram na mesma aplicação). **Na tarde
+de 17/08 as duas voltaram:**
 
 ```
-Autoseg2021A  200   ← 2º semestre de 2020, 535 MB
-Autoseg2021B  404
-... até 2026A 404
+GET https://www2.susep.gov.br/menuestatistica/SES/principal.aspx      → 200
+GET https://www2.susep.gov.br/menuestatistica/Autoseg/principal.aspx  → 200 (v5.3)
+GET https://www2.susep.gov.br/menuestatistica/Autoseg/menu1.aspx      → 200 (formulário completo)
 ```
 
-Os portais `gov.br/susep/dados-abertos` e `dados.susep.gov.br` retornam 404.
+O servidor oscila. Quem reencontrar isto fora do ar não descobriu nada novo —
+tente de novo depois, e ponha a data.
 
-O que ainda serve: os **fatores relativos** (razão 18-25 / 36-55, razão RJ / SC)
-envelhecem devagar. Extrair do arquivo de 2020 e ancorar o nível num parâmetro
-calibrável é melhor que os quatro números de hoje — e é honesto rotular como
-"base SUSEP 2020".
-
-**Open Insurance Brasil** tem API pública sem autenticação, chaveada por CEP +
-código FIPE + ano, com 13 seguradoras. Verificado:
+**O caminho de download registrado antes estava errado.** Não é
+`/download/menuestatistica/autoseg/*.zip` (404, e handshake que não completa).
+O link real da página é um redirect:
 
 ```
-GET https://open-api.portoseguro.com.br/open-insurance/products-services/v1/auto-insurance/01310100/0055336/2023
-→ 200, 158 KB
+GET https://www2.susep.gov.br/redarq.asp?arq=Autoseg2021A%2ezip
+→ 302 Location: https://www2.susep.gov.br/download/estatisticas/Autoseg2021A.zip
 ```
 
-**Mas não publica prêmio.** Das 104 chaves do payload, as únicas com "prem" são
-forma de pagamento. Publica **franquia** (`deductiblePercentage`), que o
-simulador ignora hoje e poderia mostrar como informação complementar.
+**AUTOSEG continua congelado em 2020, agora confirmado dos dois lados.** Os
+downloads param no `Autoseg2021A` (2º semestre de 2020, 535 MB), e o formulário
+de consulta on-line oferece 30 semestres cujo último período é `31/12/2020`. Não
+é limitação do arquivo: é o fim da base.
+
+**AUTOSEG é CASCO e só casco — e isto encerra o item do piso.** O dicionário de
+dados (`DEFINICOES_AUTOSEG.pdf`, baixado e lido em 17/08/2026) lista três
+tabelas principais: `arq_casco_comp`, `arq_casco3_comp` e `arq_casco4_comp`. A
+própria página diz "Esta versão 5.3 contém valores para a cobertura de CASCO".
+No PDF inteiro não há nenhuma ocorrência de RCF, RCD, terceiros, civil ou APP.
+Os campos são `EXPOSICAO1`, `PREMIO1`, `IS_MEDIA`, `FREQ_SIN1..4/9` e
+`INDENIZ1..4/9`, e o único prêmio é o de casco.
+
+Ou seja: **o AUTOSEG nunca ia responder qual é o piso de terceiros.** Não é
+fonte indisponível, é fonte que não contém o dado — encerramento por conteúdo,
+que é mais forte e mais durável que encerramento por indisponibilidade.
+
+O que o AUTOSEG **serve** é outra coisa, e agora está destravado: publica prêmio
+médio e importância segurada média, ponderados por exposição, cruzados por
+categoria tarifária, região, modelo, ano, sexo e faixa etária. Prêmio médio ÷ IS
+média **é** prêmio como % do valor do carro, que é a forma exata de
+`INSURANCE_AGE_RATES` (hoje 9,5 / 6,5 / 5,5 / 4,5, sem fonte) e de
+`INSURANCE_REGION_BR`. Duas ressalvas para quem for fazer: as faixas etárias do
+AUTOSEG são 18-25 / 26-35 / 36-45 / 46-55 / >55 e o motor usa 36-55 como faixa
+única, então há uma agregação ponderada a fazer; e o nível é de 2020 — rotular
+como "base SUSEP 2020" e ancorar o nível num parâmetro calibrável, porque os
+**fatores relativos** envelhecem devagar mas o nível não.
+
+A notícia da SUSEP de jun/2024 sobre reabertura permanente da base de automóvel
+no PDA 2024-2026 segue **não confirmada**: `dados.susep.gov.br` e
+`gov.br/susep/pt-br/central-de-conteudos/dados-abertos` continuam 404 em
+17/08/2026.
+
+### Open Insurance Brasil — o campo de prêmio existe, e vem vazio
+
+Reauditado a fundo em 17/08/2026. A passagem anterior tinha olhado só a **v1** de
+um participante e concluído "não publica prêmio"; a conclusão muda de forma,
+porque **a v1 realmente não tem o campo, mas a v2/v3 têm**.
+
+O spec oficial (repositório `br-openinsurance/areadesenvolvedor`, arquivo
+`documentation/source/files/swagger/auto-insurance.yaml`, hoje na versão 3.0.0)
+define `premiumRates` como `range_1..range_4`, cada faixa com `minimum`,
+`maximum` e `median`. A descrição do próprio campo diz que é "Taxa de Prêmio ...
+apenas para referência sobre o valor praticado no mercado para determinado
+produto e faixas de risco" e que "considera somente veículos leves, exceto motos
+e caminhões". Era exatamente faixa de prêmio publicada pela seguradora, em API
+pública sem autenticação.
+
+**Varrido o diretório inteiro de participantes**
+(`data.directory.opinbrasil.com.br/participants`: 38 organizações, 30 endpoints
+de `auto-insurance` ativos), com códigos FIPE reais e CEP 01310100:
+
+| seguradora | versão | produtos | `premiumRates` |
+| --- | --- | --- | --- |
+| Porto (Porto / Itaú / Azul) | v1.5 | 9 | campo **não existe** |
+| Porto (Porto / Itaú / Azul) | v1.6 | 24 | presente, **tudo `0.00`** |
+| Novo Seguros | v1.6 | 1 | presente, **tudo `0.00`** |
+| Safra (Alfa) | v1.6 e v2.0 | 2 | presente, **`1.00 / 2.00 / 3.00 / 4.00`** |
+| Bradesco, Allianz, Santander, Tokio, HDI | v1.6 e v2.0 | 0 | sem produto para os parâmetros |
+| Mapfre, Yelum, Indiana | v1.6 e v2.0 | — | 404 |
+| Zurich | v1.6 e v2.0 | — | 500 |
+
+O `1.00 / 2.00 / 3.00 / 4.00` da Safra é o **número da faixa**, não o prêmio. O
+payload da Novo Seguros é de teste: devolve sempre o mesmo Prisma 2019 seja qual
+for o código FIPE consultado, marca `targetAudiences: PESSOA_JURIDICA` e traz o
+símbolo de moeda como `د.إ` com descrição `BRL`.
+
+**Dead end, mas de um tipo diferente do anterior.** Não é "o dado não é
+publicado" — é "a obrigação existe, o campo existe, e o mercado inteiro preenche
+com zero". Não se resolve com engenharia; só muda se a SUSEP cobrar
+preenchimento. Vale revisitar em alguns meses olhando **só este campo**, que é
+uma varredura de dois minutos.
+
+Detalhes operacionais para quem voltar: a Porto exige o header `cache-control`
+(sem ele devolve 400 com a mensagem dizendo isso), e a Novo Seguros está com
+**certificado TLS expirado** — o payload dela só foi lido com verificação
+desativada, o que é aceitável para leitura de dado público mas precisa constar.
+
+**O que o Open Insurance DÁ**, e que o simulador ignora hoje: franquia
+(`deductiblePercentage`), pacote de assistência (`ATE_10_SERVICOS`,
+`ATE_20_SERVICOS`, `ACIMA_20_SERVICOS`) e os limites de RCF efetivamente
+vendidos. Da Porto, em 17/08/2026:
+
+```
+Porto Seguro Auto Tradicional   RCFV  LMI de R$ 5.000 a R$ 1.000.000
+Azul Auto Tradicional           RCFV  LMI de R$ 50.000 a R$ 500.000
+Azul Auto Roubo                 RCFV  LMI de R$ 50.000 a R$ 75.000
+```
+
+Isso é um recado para o modelo: **"seguro de terceiros" não é um produto só.** O
+LMI vendido varia 200x e o simulador não pergunta o LMI — então o piso de
+R$ 700, qualquer que fosse o valor certo, embute uma escolha de LMI que ninguém
+declarou. Isso pesa mais que o piso em si.
 
 Cotação real exige mTLS ICP-Brasil e registro de corretora na SUSEP. Não é
 problema de engenharia, é decisão de parceria comercial.
