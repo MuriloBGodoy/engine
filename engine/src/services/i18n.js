@@ -113,6 +113,8 @@ const resources = {
           no_performance_row: "Ninguém publicou medição de desempenho desta versão. No Brasil quem mede é revista, não fabricante.",
           field_not_published: "A montadora não publica este campo nesta versão.",
           outside_year_window: "Temos a ficha deste motor, mas só do ano-modelo atual — não do seu.",
+          no_row_for_this_model:
+            "Temos este motor na tabela, só que a ficha que temos dele é de outro modelo. Motor igual não quer dizer número igual: a mesma peça muda de calibração de um carro para o outro, então preferimos não mostrar o número do vizinho.",
           not_written_by_fipe: "A FIPE não escreve isso na string desta versão.",
           out_of_table_scope: "Motor elétrico e híbrido não entram na nossa tabela de cilindrada.",
         },
@@ -1096,6 +1098,8 @@ const resources = {
           no_performance_row: "Nobody published performance figures for this version. In Brazil magazines measure it, not manufacturers.",
           field_not_published: "The manufacturer doesn't publish this field for this version.",
           outside_year_window: "We have this engine's sheet, but only for the current model year — not yours.",
+          no_row_for_this_model:
+            "We have this engine in our table, but the sheet we have for it belongs to another model. Same engine doesn't mean same numbers: the very same part is calibrated differently from one car to the next, so we'd rather not show you your neighbour's figure.",
           not_written_by_fipe: "FIPE doesn't write this in the version string.",
           out_of_table_scope: "Electric and hybrid engines fall outside our displacement table.",
         },
@@ -2076,6 +2080,8 @@ const resources = {
           no_performance_row: "Nadie publicó mediciones de prestaciones de esta versión. En Brasil quien mide es la prensa, no el fabricante.",
           field_not_published: "El fabricante no publica este campo en esta versión.",
           outside_year_window: "Tenemos la ficha de este motor, pero solo del año-modelo actual — no del tuyo.",
+          no_row_for_this_model:
+            "Tenemos este motor en la tabla, pero la ficha que tenemos de él es de otro modelo. Motor igual no significa números iguales: la misma pieza cambia de calibración de un coche a otro, así que preferimos no mostrarte el número del vecino.",
           not_written_by_fipe: "FIPE no lo escribe en la cadena de esta versión.",
           out_of_table_scope: "Los motores eléctricos e híbridos quedan fuera de nuestra tabla de cilindrada.",
         },

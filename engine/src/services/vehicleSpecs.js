@@ -59,6 +59,18 @@ export const ABSENT_REASON = {
   /** A linha existe, mas o fabricante não publica este campo. */
   FIELD_NOT_PUBLISHED: "field_not_published",
   /**
+   * A tabela tem este motor, e o documento de onde ele saiu é de OUTRO modelo.
+   * Não é `no_engine_row` (que diz "não temos o motor") nem
+   * `field_not_published` (que acusa a montadora de não publicar): o número
+   * existe, publicado, e é do carro do vizinho.
+   *
+   * Motor igual não implica número igual — o Tracker e o Onix dividem bloco,
+   * curso, diâmetro e taxa de compressão e diferem 20 Nm; a Saveiro e o Polo
+   * dividem o EA211 1.6 e diferem 3 cv no etanol. Servir o do vizinho é
+   * exatamente o erro que este arquivo existe para não cometer.
+   */
+  NO_ROW_FOR_THIS_MODEL: "no_row_for_this_model",
+  /**
    * A linha existe para este motor, mas só cobre outro ano-modelo. Hyundai e
    * Renault publicam só a ficha do MY corrente — ou seja, justamente o carro
    * usado, que é a maior parte da Garagem, fica de fora. Merece frase própria
@@ -74,10 +86,14 @@ export const ABSENT_REASON = {
 /**
  * Quão perto do carro a linha da tabela está.
  *
- * `model_verified` — o fabricante publicou este motor NESTE modelo.
- * `engine_family`  — o motor casa, mas o documento é de outro modelo. Quase
- *                    sempre certo (o mesmo EA211 roda em sete nameplates) e
- *                    ainda assim uma inferência nossa, então desce de textura.
+ * `model_verified` — o fabricante publicou este motor NESTE modelo. É o único
+ *                    escopo que a tabela produz hoje, e é de propósito: ver
+ *                    `matchEngineRow`.
+ * `engine_family`  — o motor casa e o documento NÃO diz de que modelo é. Só
+ *                    acontece em linha sem `models`, que é a forma de a tabela
+ *                    declarar "isto vale para a família". Nenhuma linha usa
+ *                    isso hoje; o campo existe para quando o Han tiver uma
+ *                    fonte que fale de motor e não de carro.
  */
 export const MATCH_SCOPE = {
   MODEL_VERIFIED: "model_verified",
@@ -208,14 +224,50 @@ const engineRowMatches = (row, parsed) => {
 };
 
 /**
+ * A FIPE escreve a carroceria dentro do nome comercial (`ONIX HATCH`,
+ * `ONIX SEDAN Plus`); a montadora escreve só o nome (`Onix`, `Onix Plus`). São
+ * o mesmo carro e as duas grafias precisam casar, senão o filtro de modelo
+ * descarta linha certa por causa de vocabulário.
+ *
+ * Tabela curta e conferida uma a uma, não uma regra genérica de "tira a palavra
+ * de carroceria": `Palio Weekend` e `Palio` são carros diferentes, e uma regra
+ * assim juntaria os dois. Cada entrada aqui é uma afirmação sobre um carro
+ * específico e precisa ser defensável sozinha.
+ *
+ *   ONIX HATCH  -> Onix       — o hatch É o Onix.
+ *   ONIX SEDAN  -> Onix Plus  — desde 2020 o sedã do Onix se chama Onix Plus, e
+ *                               toda entrada `ONIX SEDAN` da FIPE traz `Plus`
+ *                               no nome. O sedã anterior era o Prisma, e a FIPE
+ *                               escreve PRISMA nele.
+ */
+const FIPE_NAMEPLATE_ALIAS = {
+  ONIXHATCH: "ONIX",
+  ONIXSEDAN: "ONIXPLUS",
+};
+
+/** Nomes normalizados pelos quais este carro atende. Nunca vazio se há nome. */
+const carNameplates = (parsed) => {
+  const nameplate = normalizeName(parsed?.nameplate?.value);
+  if (!nameplate) return [];
+  const alias = FIPE_NAMEPLATE_ALIAS[nameplate];
+  return alias ? [nameplate, alias] : [nameplate];
+};
+
+const listsAnyOf = (models, names) =>
+  (models || []).some((model) => names.includes(normalizeName(model)));
+
+/**
  * Aplica o override por modelo quando existe. A Saveiro 1.6 tem 120 cv no
  * etanol contra 117 do Polo com o MESMO motor na chave; sem o override ela
  * perderia 3 cv, que é pouco para o olho e é errado do mesmo jeito.
+ *
+ * O override é uma ficha DAQUELE modelo: quando ele casa, o carro está
+ * verificado no modelo mesmo que o `models` da linha-base não o cite. É por
+ * isso que a Saveiro sobrevive ao filtro de modelo.
  */
-const findOverride = (row, parsed) => {
+const findOverride = (row, parsed, names = carNameplates(parsed)) => {
   const overrides = engineTable.overridesPorModelo || [];
-  const nameplate = normalizeName(parsed.nameplate?.value);
-  if (!nameplate) return null;
+  if (!names.length) return null;
 
   const key = [row.brand, row.displacementL, row.valves, row.aspiration, row.fuel]
     .filter(Boolean)
@@ -224,7 +276,7 @@ const findOverride = (row, parsed) => {
   return (
     overrides.find((override) => {
       if (normalizeName(override.overrides) !== normalizeName(key)) return false;
-      if (normalizeName(override.model) !== nameplate) return false;
+      if (!names.includes(normalizeName(override.model))) return false;
       if (!inYearWindow(parsed.modelYear?.value, override.yearFrom, override.yearTo)) return false;
       const overrideTransmission = parseTableTransmission(override.transmission);
       if (overrideTransmission && parsed.transmission?.value !== overrideTransmission) return false;
@@ -259,7 +311,51 @@ export function matchEngineRow(parsed) {
     return { row: null, scope: null, reason: ABSENT_REASON.NO_ENGINE_ROW, override: null };
   }
 
-  const inWindow = all.filter((row) =>
+  // O `models` da linha é FILTRO ELIMINATÓRIO, não desempate.
+  //
+  // Era desempate, e servia número errado. Quando a janela de ano derrubava a
+  // concorrência e sobrava um único candidato, ele voltava como `engine_family`
+  // ainda que o `models` dele não citasse o carro — a AUSÊNCIA DE CONCORRÊNCIA
+  // promovia palpite a resposta. Dois casos medidos na base:
+  //
+  //   - Tracker 1.0 T de ano-modelo <=2025 recebia a linha do Onix: 160/165 Nm
+  //     no lugar dos 180/185 Nm dele. Mesmo bloco (999 cm³, 74 x 77,49 mm,
+  //     10,5:1) e 20 Nm de diferença.
+  //   - `up! Connect 1.0 TSI` recebia a linha 200 TSI do Polo: 128 cv no etanol
+  //     num carro de 105 cv. 22% a mais, e nada na tela dizia que era
+  //     inferência, porque a `scope` não é desenhada.
+  //
+  // Motor igual não implica número igual: a mesma peça muda de calibração, de
+  // escape e de homologação a cada aplicação. Quem publica potência é o modelo,
+  // não o motor. Então linha com `models` só responde pelos modelos que lista,
+  // e um override daquele modelo também admite a linha, porque o override É a
+  // ficha do modelo (é o que mantém a Saveiro 1.6 com os 120 cv dela).
+  //
+  // Linha SEM `models` segue curinga e sai como `engine_family`: é como a
+  // tabela diz "isto vale para a família". Nenhuma linha faz isso hoje, então o
+  // escopo some da base — de propósito, até que a tela saiba desenhá-lo.
+  //
+  // MODELO ANTES DE ANO, e a ordem é parte da resposta. Um Onix 1.0 turbo de
+  // 2022 tem linha de Onix na tabela, só que de outro ano-modelo: o certo é
+  // dizer "temos, mas de outro ano". Filtrando por ano primeiro, a linha do
+  // Onix sumia antes de ser vista e sobrava a de outro modelo — que é, aliás,
+  // por onde o número errado entrava.
+  const names = carNameplates(parsed);
+  const forThisModel = all.filter(
+    (row) =>
+      !(row.models || []).length ||
+      listsAnyOf(row.models, names) ||
+      findOverride(row, parsed, names),
+  );
+  if (!forThisModel.length) {
+    // Havia linha para o motor e nenhuma responde por este modelo. Não é "não
+    // temos o motor", é "o que temos é de outro carro" — e a diferença importa:
+    // a primeira frase é buraco nosso, a segunda é pedido de fonte com nome e
+    // sobrenome.
+    return { row: null, scope: null, reason: ABSENT_REASON.NO_ROW_FOR_THIS_MODEL, override: null };
+  }
+
+  const inWindow = forThisModel.filter((row) =>
     inYearWindow(parsed.modelYear?.value, row.yearFrom, row.yearTo),
   );
   if (!inWindow.length) {
@@ -282,24 +378,20 @@ export function matchEngineRow(parsed) {
     }
   }
 
-  // 2º desempate: o modelo estar na lista verificada do documento.
-  const nameplate = normalizeName(parsed.nameplate?.value);
-  const listed = candidates.filter((row) =>
-    (row.models || []).some((model) => normalizeName(model) === nameplate),
-  );
+  // 2º: linha que cita o modelo ganha de linha curinga. Todas as sobreviventes
+  // já respondem por este carro — o filtro por modelo aconteceu lá em cima —,
+  // então aqui só se separa o que é ficha do modelo do que é ficha de família.
+  const scoped = candidates.map((row) => ({
+    row,
+    override: findOverride(row, parsed, names),
+    scope: (row.models || []).length ? MATCH_SCOPE.MODEL_VERIFIED : MATCH_SCOPE.ENGINE_FAMILY,
+  }));
+  const verified = scoped.filter((item) => item.scope === MATCH_SCOPE.MODEL_VERIFIED);
+  const chosen = verified.length ? verified : scoped;
 
-  if (listed.length === 1) {
-    const row = listed[0];
-    return { row, scope: MATCH_SCOPE.MODEL_VERIFIED, reason: null, override: findOverride(row, parsed) };
+  if (chosen.length === 1) {
+    return { row: chosen[0].row, scope: chosen[0].scope, reason: null, override: chosen[0].override };
   }
-  if (listed.length > 1) {
-    return { row: null, scope: null, reason: HOLD_REASON.MULTIPLE_ENGINE_CANDIDATES, override: null };
-  }
-  if (candidates.length === 1) {
-    const row = candidates[0];
-    return { row, scope: MATCH_SCOPE.ENGINE_FAMILY, reason: null, override: findOverride(row, parsed) };
-  }
-
   return { row: null, scope: null, reason: HOLD_REASON.MULTIPLE_ENGINE_CANDIDATES, override: null };
 }
 

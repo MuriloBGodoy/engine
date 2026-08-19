@@ -136,6 +136,120 @@ console.log("== assertivas ==\n");
   check("onix 1.0: potência RETIDA, não ausente", onix.fields.powerCv.status, SPEC_STATUS.HELD);
   check("onix 1.0: motivo é a aspiração", onix.fields.powerCv.reason, HOLD_REASON.ASPIRATION_UNKNOWN);
 }
+
+// ---------------------------------------------------------------------------
+// `models` é filtro, não desempate — o bug que serviu número errado
+// ---------------------------------------------------------------------------
+{
+  // O caso que abriu a investigação: Tracker de ano-modelo <=2025 recebia a
+  // linha do Onix e mostrava 160/165 Nm. Mesmo bloco, 20 Nm de diferença.
+  const tracker = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "TRACKER 1.0 Turbo 12V Flex Aut.",
+    year: "2025 Gasolina",
+  });
+  check("tracker 2025: não recebe o torque do Onix", tracker.fields.torque.value, null);
+  check("tracker 2025: nem o par dele", tracker.fields.torque.pair, null);
+  check("tracker 2025: nem a potência", tracker.fields.powerCv.status, SPEC_STATUS.ABSENT);
+
+  // O ano em que existe documento do Tracker: aí sim, e pelo override, que é a
+  // ficha DAQUELE modelo — por isso o escopo é verificado no modelo.
+  const trackerNovo = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "TRACKER 1.0 Turbo 12V Flex Aut.",
+    year: "2026 Gasolina",
+  });
+  check("tracker 2026: 115,5 cv", trackerNovo.fields.powerCv.value, 115.5);
+  check("tracker 2026: 180/185 Nm, que são dele", trackerNovo.fields.torque.pair, {
+    gasoline: 180,
+    ethanol: 185,
+  });
+  check("tracker 2026: verificado no modelo", trackerNovo.fields.powerCv.scope, MATCH_SCOPE.MODEL_VERIFIED);
+}
+{
+  // O segundo caso, achado na medição: o up! TSI é 105 cv e recebia os 128 cv
+  // do Polo 200 TSI porque a janela de ano tinha derrubado a concorrência.
+  const up = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "up! Connect 1.0 TSI Total Flex 12V 5p",
+    year: "2018 Gasolina",
+  });
+  check("up! TSI: não recebe a potência do Polo", up.fields.powerCv.status, SPEC_STATUS.ABSENT);
+  check("up! TSI: e diz que a linha é de outro modelo", up.fields.powerCv.reason, ABSENT_REASON.NO_ROW_FOR_THIS_MODEL);
+}
+{
+  // A contrapartida do filtro: a Saveiro NÃO está no `models` da linha 1.6 16V
+  // (que é do Polo e do Virtus), e mesmo assim responde — porque existe
+  // override dela, e override é ficha do modelo.
+  const saveiro = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Saveiro Robust 1.6 Total Flex 16V CS",
+    year: "2022 Gasolina",
+  });
+  check("saveiro: sobrevive ao filtro pelo override", saveiro.fields.powerCv.pair, {
+    gasoline: 110,
+    ethanol: 120,
+  });
+  check("saveiro: e é verificada no modelo", saveiro.fields.powerCv.scope, MATCH_SCOPE.MODEL_VERIFIED);
+}
+{
+  // A FIPE escreve a carroceria no nome (`ONIX HATCH`, `ONIX SEDAN Plus`) e a
+  // Chevrolet não (`Onix`, `Onix Plus`). Sem o apelido, o carro mais vendido do
+  // Brasil não casa com a própria linha.
+  const hatch = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "ONIX HATCH LTZ 1.0 12V TB Flex 5p Aut.",
+    year: "2025 Gasolina",
+  });
+  check("onix hatch: casa com a linha 'Onix'", hatch.fields.powerCv.value, 115.5);
+  check("onix hatch: verificado no modelo", hatch.fields.powerCv.scope, MATCH_SCOPE.MODEL_VERIFIED);
+  check("onix hatch: 160/165 Nm, que são dele", hatch.fields.torque.pair, {
+    gasoline: 160,
+    ethanol: 165,
+  });
+
+  const sedan = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "ONIX SEDAN Plus LT 1.0 12V TB Flex Aut.",
+    year: "2025 Gasolina",
+  });
+  check("onix sedan: casa com a linha 'Onix Plus'", sedan.fields.powerCv.value, 115.5);
+
+  const antigo = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "ONIX HATCH ACTIV 1.4 8V Flex 5P Aut.",
+    year: "2017 Gasolina",
+  });
+  check("onix 1.4: verificado no modelo, não por família", antigo.fields.powerCv.scope, MATCH_SCOPE.MODEL_VERIFIED);
+}
+{
+  // Onix turbo de 2022: a linha do Onix existe, mas é MY2025+. A resposta é
+  // "temos, de outro ano" — e não "não temos", nem a linha de outro modelo.
+  const onix2022 = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "ONIX HATCH LTZ 1.0 12V TB Flex 5p Aut.",
+    year: "2022 Gasolina",
+  });
+  check("onix 2022: fora da janela, não fora da tabela", onix2022.fields.powerCv.reason, ABSENT_REASON.OUTSIDE_YEAR_WINDOW);
+}
+{
+  // MPI destrava o Tera de verdade: era `aspiration_unknown`, agora é ficha.
+  const tera = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Tera 1.0 MPI Flex 12V 5p Mec.",
+    year: "2025 Flex",
+  });
+  check("tera MPI: potência do Tera", tera.fields.powerCv.pair, { gasoline: 77, ethanol: 84 });
+
+  // E o Polo 1.0 MPI, que tem o mesmo motor e NÃO está na linha, continua sem
+  // número: o Polo MPI é 75/84 e a linha do Tera é 77/84.
+  const polo = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Polo 1.0 MPI Flex 12V 5p",
+    year: "2020 Flex",
+  });
+  check("polo MPI: destravou a aspiração e mesmo assim não chuta", polo.fields.powerCv.reason, ABSENT_REASON.NO_ROW_FOR_THIS_MODEL);
+}
 {
   // Janela de ano: a Hyundai só publica a ficha do MY corrente, então o HB20
   // usado — que é a maior parte da frota — fica fora. A resposta honesta é

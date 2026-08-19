@@ -231,6 +231,44 @@ const ASPIRATION_MARKERS = [
     brands: ["Land Rover", "Jaguar"],
   },
   { re: /\bKOMPRESSOR\b/i, value: ASPIRATION.SUPERCHARGED },
+
+  // -------------------------------------------------------------------------
+  // ASPIRAÇÃO NATURAL DECLARADA. Entram POR ÚLTIMO, e a posição é a garantia:
+  // qualquer marcador de sobrealimentação acima já retornou antes de chegar
+  // aqui, então `Golf GTi 1.8 Mi 20V Turbo` sai turbo mesmo tendo marcador de
+  // injeção.
+  //
+  // O que estes tokens declaram é a TOPOLOGIA DE INJEÇÃO (multiponto, ponto
+  // único), não a aspiração — e multiponto com turbo existe: o 1.4 T-Jet da
+  // Fiat e o 1.8 20V da VW são multiponto sobrealimentados. Portanto isto NÃO
+  // é uma lei de motor, é uma regra do vocabulário da FIPE, e vale só porque
+  // foi medida nele: 317 versões das 4.864 trazem um destes tokens e NENHUMA
+  // traz marcador de sobrealimentação junto (17/08/2026). Os turbo-multiponto
+  // da base escrevem `Turbo` com todas as letras — `Punto T-JET 1.4 16V Turbo`,
+  // `Golf GTI 1.8 Turbo`.
+  //
+  // Sai como DERIVED, não EXPLICIT: a string não escreveu "aspirado", ela
+  // escreveu "multiponto" e quem concluiu o resto foi a regra acima. DERIVED
+  // basta para escapar da abstenção por grupo ambíguo, que só age sobre
+  // INFERRED — a abstenção existe para o silêncio da FIPE, e aqui ela falou.
+  //
+  // FICARAM DE FORA, e cada exclusão tem contraexemplo medido na própria base:
+  //   `Mi`   — VW usa em turbo: `Gol 1000 Mi 16V 2p Turbo`, `Polo GTI 1.8 Mi
+  //            150cv 20V Turbo`. 12 ocorrências com turbo. É justamente o que
+  //            torna o grupo Volkswagen|GOL|1.0|gasoline ambíguo.
+  //   `i.e.` — `Uno Turbo 1.4 i.e.`, `Tempra Turbo 2.0 i.e.`. 3 em 20.
+  //   `EFI`  — mesma classe do `i.e.`: diz que a injeção é eletrônica e nada
+  //            sobre a mistura. Zero ganho medido (nenhum grupo ambíguo).
+  //   `Fire`, `8V`, `Fire EVO` — família e número de válvulas não são
+  //            aspiração. O 1.4 T-Jet é um Fire turbo e o Uno Turbo i.e. é um
+  //            8V turbo; os dois existiram e são brasileiros.
+  //   `SPE/4`, `E.torQ`, `aspirado` — não aparecem na base (0 ocorrências).
+  //            Entrariam só para engordar a lista.
+  {
+    re: /\b(MPI|MSI|MPFI|SPI|SFI)\b/i,
+    value: ASPIRATION.NATURAL,
+    confidence: CONFIDENCE.DERIVED,
+  },
 ];
 
 /**
@@ -495,7 +533,14 @@ function extractAspiration(model, fuelValue, modelYear, brandName, ambiguities) 
       if (/^T\.?$/i.test(matched.trim()) && TOTAL_FLEX_TRAP.test(model)) {
         continue;
       }
-      return field(marker.value, CONFIDENCE.EXPLICIT, `token ${matched.trim()}`);
+      const token = matched.trim();
+      return field(
+        marker.value,
+        marker.confidence || CONFIDENCE.EXPLICIT,
+        marker.value === ASPIRATION.NATURAL
+          ? `token ${token} (injeção multiponto) e nenhum marcador de sobrealimentação`
+          : `token ${token}`,
+      );
     }
   }
 
@@ -789,9 +834,12 @@ export function versionGroupKey(parsed) {
  * aspiração e combustível existem — e NUNCA para elétrico, porque motor
  * elétrico não tem cilindrada e casar por ela produziria lixo.
  *
- * O campo `confident` diz se a chave pode ser usada sozinha. Quando a
- * aspiração é INFERRED, quem consome precisa checar se a tabela tem mais de um
- * candidato para marca+cilindrada+válvulas; se tiver, abstenha-se.
+ * O campo `confident` diz se a chave pode ser usada sozinha. Só a aspiração
+ * INFERRED — a que veio da AUSÊNCIA de marcador — derruba a confiança; quem
+ * consome precisa então checar se a tabela tem mais de um candidato para
+ * marca+cilindrada+válvulas e, se tiver, abster-se. EXPLICIT (`TSI`, `TB`) e
+ * DERIVED (`MPI` sem marcador de sobrealimentação) valem sozinhas: nos dois
+ * casos a FIPE escreveu alguma coisa sobre o motor.
  */
 export function buildEngineKey(parsed) {
   const brand = parsed?.brand?.value;
@@ -812,7 +860,7 @@ export function buildEngineKey(parsed) {
       fuel,
     ].join("|"),
     confident:
-      parsed.aspiration.confidence === CONFIDENCE.EXPLICIT &&
+      parsed.aspiration.confidence !== CONFIDENCE.INFERRED &&
       parsed.displacement.confidence === CONFIDENCE.EXPLICIT,
   };
 }

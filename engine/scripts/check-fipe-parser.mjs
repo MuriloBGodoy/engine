@@ -193,6 +193,76 @@ console.log("-- carros impossíveis --");
   check("kwid: cilindros não inventados", val(p.cylinders), null);
 }
 
+// MPI / MSI / MPFI: a FIPE ESCREVEU multiponto. Sai aspirado como DERIVED —
+// não é leitura literal de "aspirado", é dedução de um token explícito mais a
+// ausência de qualquer marcador de sobrealimentação.
+{
+  const p = parseFipeVersion({
+    brand: "VW - VolksWagen",
+    model: "Tera 1.0 MPI Flex 12V 5p Mec.",
+    year: "2025 Flex",
+  });
+  check("tera MPI: aspirado", val(p.aspiration), ASPIRATION.NATURAL);
+  check("tera MPI: derivado, não inferido", conf(p.aspiration), CONFIDENCE.DERIVED);
+  check("tera MPI: sobrevive à abstenção do grupo", p.aspiration !== null, true);
+  check("tera MPI: chave utilizável", p.engineKey?.confident, true);
+}
+{
+  const p = parseFipeVersion({
+    brand: "VW - VolksWagen",
+    model: "VIRTUS 1.6 MSI Flex 16V 4p Aut.",
+    year: "2022 Flex",
+  });
+  check("virtus MSI: aspirado", val(p.aspiration), ASPIRATION.NATURAL);
+  check("virtus MSI: derivado", conf(p.aspiration), CONFIDENCE.DERIVED);
+}
+{
+  const p = parseFipeVersion({
+    brand: "GM - Chevrolet",
+    model: "Celta Life 1.0 MPFI VHC 8V 3p",
+    year: "2010 Gasolina",
+  });
+  check("celta MPFI: aspirado derivado", conf(p.aspiration), CONFIDENCE.DERIVED);
+}
+
+// O limite da regra acima, e o motivo de ela ser uma regra sobre o VOCABULÁRIO
+// da FIPE e não sobre motor: multiponto com turbo existe e é brasileiro. Nos
+// três casos o marcador de sobrealimentação vem antes na lista e ganha.
+{
+  const p = parseFipeVersion({
+    brand: "Fiat",
+    model: "Uno Turbo 1.4 i.e. 2p",
+    year: "1995 Gasolina",
+  });
+  check("uno turbo i.e. É turbo", val(p.aspiration), ASPIRATION.TURBO);
+}
+{
+  const p = parseFipeVersion({
+    brand: "VW - VolksWagen",
+    model: "Gol 1000 Mi 16V 2p Turbo",
+    year: "1997 Gasolina",
+  });
+  check("gol 1000 Mi turbo É turbo", val(p.aspiration), ASPIRATION.TURBO);
+}
+{
+  const p = parseFipeVersion({
+    brand: "Fiat",
+    model: "Punto T-JET 1.4 16V Turbo 5p",
+    year: "2012 Gasolina",
+  });
+  check("punto T-JET É turbo", val(p.aspiration), ASPIRATION.TURBO);
+}
+// E o Onix aspirado continua RETIDO: a FIPE não escreve MPI nele, e o grupo
+// tem irmão turbo. A correção do MPI não pode vazar para quem não tem marcador.
+{
+  const p = parseFipeVersion({
+    brand: "GM - Chevrolet",
+    model: "ONIX HATCH LT 1.0 12V Flex 5p Mec.",
+    year: "2022 Gasolina",
+  });
+  check("onix sem marcador: segue retido", p.aspiration, null);
+}
+
 // GDI puro é injeção direta, não turbo. Niro 1.6 GDI é aspirado.
 {
   const p = parseFipeVersion({
