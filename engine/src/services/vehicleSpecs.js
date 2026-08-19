@@ -82,6 +82,10 @@ export const ABSENT_REASON = {
 export const MATCH_SCOPE = {
   MODEL_VERIFIED: "model_verified",
   ENGINE_FAMILY: "engine_family",
+  // A própria string da FIPE declara a potência ("Lancer 2.0 16V 160cv Mec.").
+  // Não vem da nossa tabela e não tem par flex nem rpm, mas é explícita e não
+  // depende de acertar o motor — vale mais que abstenção.
+  FIPE_DECLARED: "fipe_declared",
 };
 
 export const KGFM_TO_NM = 9.80665;
@@ -417,9 +421,38 @@ const buildPair = (gasoline, ethanol) => {
 
 const num = (value) => (value === null || value === undefined ? null : Number(value));
 
-const powerCell = (match) => {
+/**
+ * Potência declarada na própria string da FIPE — 8,3% das versões trazem
+ * ("Palio EX 1.3 mpi Fire 8V 67cv 2p", "Lancer 2.0 16V 160cv Mec.").
+ *
+ * Serve de RECURSO quando a tabela de motores não responde, inclusive quando o
+ * motivo é abstenção de aspiração. A abstenção existe para não servir a
+ * potência do motor errado; aqui não há motor a acertar, o número está escrito
+ * no nome do veículo. Reter um valor explícito por causa de uma chave que nem
+ * seria consultada é esconder o que se sabe.
+ *
+ * Não substitui a tabela quando ela responde: lá vem par flex e rpm, aqui vem
+ * um número só, sem combustível declarado.
+ */
+const fipeDeclaredPowerCell = (parsed, reason) => {
+  const declarado = parsed?.declaredPowerCv;
+  if (!declarado || !Number.isFinite(Number(declarado.value))) {
+    return emptyCell("powerCv", reason);
+  }
+
+  return valueCell("powerCv", {
+    value: Number(declarado.value),
+    unit: "cv",
+    confidence: declarado.confidence || CONFIDENCE.EXPLICIT,
+    scope: MATCH_SCOPE.FIPE_DECLARED,
+    source: { doc: "Tabela FIPE", url: "", layer: 2, date: null, verifiedAt: null },
+    note: declarado.evidence || "",
+  });
+};
+
+const powerCell = (match, parsed) => {
   const { row, scope, reason, override } = match;
-  if (!row) return emptyCell("powerCv", reason);
+  if (!row) return fipeDeclaredPowerCell(parsed, reason);
 
   const merged = { ...row, ...(override || {}) };
   const gasoline = num(merged.powerGasolineCv);
@@ -427,7 +460,7 @@ const powerCell = (match) => {
   const diesel = num(merged.powerDieselCv);
 
   if (gasoline === null && ethanol === null && diesel === null) {
-    return emptyCell("powerCv", ABSENT_REASON.FIELD_NOT_PUBLISHED);
+    return fipeDeclaredPowerCell(parsed, ABSENT_REASON.FIELD_NOT_PUBLISHED);
   }
 
   const source = sourceOf(override || row);
@@ -538,7 +571,7 @@ export function getFactorySpecs(car, options = {}) {
     engineMatch,
     performanceMatch: perfMatch,
     fields: {
-      powerCv: powerCell(engineMatch),
+      powerCv: powerCell(engineMatch, parsed),
       torque: torqueCell(engineMatch),
       accel0to100S: performanceCell("accel0to100S", perfMatch, {
         single: "accel0to100Unico",
