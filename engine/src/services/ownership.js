@@ -285,12 +285,29 @@ const INSURANCE_AGE_RATES = {
 
 const USAGE_INSURANCE_FACTOR = { personal: 1, commute: 1.08, app: 1.35 };
 
-// Consumo padrão por combustível (km por litro; elétrico em km por kWh).
+// Consumo padrão por combustível (km por litro; elétrico em km por kWh), para
+// quando `consumption.js` não acha o carro na tabela do INMETRO.
+//
+// Quem cai aqui é, quase sempre, carro que a tabela de VEÍCULO NOVO não tem:
+// modelo fora de linha, motor que saiu do catálogo. Ou seja, carro mais velho
+// e menos eficiente que a frota nova. Logo o padrão não pode ser MELHOR que a
+// mediana da frota nova — se for, ele promete a um Ducato 2.8 de 2010 um
+// consumo que nem o diesel novo entrega, e a conta sai barata demais.
+//
+// Mediana medida sobre as 228 chaves de versão do PBE Veicular 2026
+// (18/08/2026): gasolina 11,1 · etanol 8,8 · diesel 10,0. O teto foi aplicado
+// onde o padrão o furava:
+//   gasolina  11,5 -> 11,1
+//   diesel    12,5 -> 10,0   (era 25% otimista, no sentido perigoso)
+//   etanol     8,0 mantido — já é mais conservador que os 8,8 medidos, e a
+//              razão 8,0/11,1 = 0,72 é a do poder calorífico, que é física.
+// Elétrico continua sem fonte: o PBE publica km por litro equivalente e não
+// declara a equivalência em kWh. Fica marcado como padrão grosseiro.
 export const DEFAULT_CONSUMPTION = {
-  gasoline: 11.5,
+  gasoline: 11.1,
   ethanol: 8,
-  diesel: 12.5,
-  electric: 6,
+  diesel: 10,
+  electric: 6, // sem fonte; ver consumption.js
 };
 
 // Situação de vida do usuário: define quanto da renda é saudável comprometer
@@ -649,6 +666,10 @@ const UNKNOWN_VARIATIONS = {
 };
 
 const RATE_SPREAD = [0.75, 1, 1.35];
+// ±20% não é palpite desde 18/08/2026: é o que a metodologia do PBE Veicular
+// declara ao explicar os fatores de ajuste que o INMETRO adotou da EPA — "90%
+// dos usuários conseguem resultados dentro de mais ou menos 20% dos consumos
+// declarados". A banda já era essa; agora ela tem fonte.
 const CONSUMPTION_SPREAD = [0.8, 1, 1.2];
 
 const variationsFor = (field, inputs, country) => {

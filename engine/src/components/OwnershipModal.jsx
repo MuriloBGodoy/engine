@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
   X,
   Wallet,
@@ -35,7 +35,6 @@ import {
 import { pickReferenceCar } from "../services/expenses";
 import { engineDB } from "../services/db";
 import { countries, getStates, DEFAULT_COUNTRY } from "../services/locations";
-import { fipeService } from "../services/fipeService";
 import { consumptionFor } from "../services/consumption";
 
 // `min-h-11` são os 44px de alvo de toque. O campo tinha 40 e, com o rótulo
@@ -188,7 +187,6 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
     () => car.ownership?.state || settings?.profile?.state || "",
   );
   const [saving, setSaving] = useState(false);
-  const [realConsumption, setRealConsumption] = useState(null);
   // Campos que a pessoa informou de verdade. Tudo que não está aqui é
   // suposição do modelo, e é o que alarga a faixa do resultado.
   const [touched, setTouched] = useState(
@@ -204,37 +202,18 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
 
   const states = useMemo(() => getStates(country), [country]);
 
-  // Consumo estimado do modelo — síncrono, então é valor derivado e não estado.
-  // NÃO é do INMETRO, apesar do que este comentário dizia até 17/08/2026: ver o
-  // cabeçalho de `services/consumption.js`, que documenta a auditoria. Vinha só
-  // do backend, que em produção não existe, e mesmo em dev o número era exibido
-  // como dica e nunca entrava na conta: o combustível saía do padrão do tipo,
-  // igual para um Mobi e para uma Hilux.
-  const localConsumption = useMemo(() => consumptionFor(car?.model), [car?.model]);
-
-  // O backend é consultado por cima e TEM PRECEDÊNCIA sobre a base embarcada.
-  // Isso era para ele poder ter base mais nova — mas hoje o `engine-api` serve
-  // exatamente o mesmo arquivo, sem o de-rotulamento, e devolve diesel para um
-  // Onix. Enquanto as duas bases forem a mesma, esta precedência só muda quem
-  // erra, não o quanto. Guarda o modelo junto para não aplicar a resposta de um
-  // carro no carro seguinte.
-  useEffect(() => {
-    if (!car?.model) return undefined;
-    let alive = true;
-    fipeService
-      .getConsumption(car.model)
-      .then((data) => {
-        if (alive && data) setRealConsumption({ model: car.model, data });
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [car?.model]);
-
-  const modelConsumption =
-    (realConsumption?.model === car?.model ? realConsumption.data : null) ||
-    localConsumption;
+  // Consumo do PBE Veicular (INMETRO) para esta versão — síncrono, então é
+  // valor derivado e não estado. Passa o carro inteiro porque marca, motor e
+  // ano fazem parte da chave: `ONIX HATCH LTZ 1.0 12V TB Flex` casa com o Onix
+  // 1.0 turbo da tabela, e um Strada 1.8 que a tabela de 2026 não tem devolve
+  // null em vez do 1.3 que ela tem.
+  //
+  // O `fipeService.getConsumption` saiu daqui. Ele consultava o backend Java,
+  // que TINHA PRECEDÊNCIA sobre a base local e serve o arquivo antigo — aquele
+  // que dá diesel para o Onix. Em produção o backend não existe e a chamada
+  // nunca respondia; em dev ela respondia e ganhava, então o dado falso vencia
+  // o verdadeiro justamente na máquina de quem estava conferindo.
+  const modelConsumption = useMemo(() => consumptionFor(car), [car]);
 
   // Renda e despesa são da pessoa e vivem em `settings`; a migração aceita o
   // valor antigo que ficou preso em `car.ownership.monthlyIncome`.
@@ -391,17 +370,21 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
   const carName = `${car.brand} ${car.model}`;
 
   // De onde vem o km/l que está valendo, para a tela dizer a verdade sobre a
-  // procedência. A base embutida era anunciada como "consumo real INMETRO" e
-  // não é: são 24 tuplas distintas para 91 modelos (Corolla, T-Cross e um
-  // Mercedes C180 com o mesmo número), e há valor de diesel em Gol, Uno e
-  // Kwid, que não têm versão diesel. É estimativa por categoria, e agora a
-  // tela chama pelo nome — este é o número que decide dois terços da conta.
+  // procedência. São três coisas diferentes e elas não podem parecer a mesma:
+  // o que a pessoa mediu, o que o INMETRO mediu nesta versão e o que é média
+  // geral. O rótulo `Dated` existe porque a tabela é de 2026: num carro de
+  // 2015 o número é da versão ATUAL do mesmo modelo, e isso precisa estar
+  // escrito, não subentendido.
   const modelKmPerLiter = modelConsumption?.[inputs.fuelType];
   const consumptionSource = inputs.userConsumption
     ? "User"
-    : modelKmPerLiter
-      ? "Estimate"
-      : "Default";
+    : !modelKmPerLiter
+      ? "Default"
+      : modelConsumption.dated
+        ? "InmetroDated"
+        : modelConsumption.match === "model"
+          ? "InmetroModel"
+          : "Inmetro";
   const shownConsumption = (
     inputs.userConsumption ||
     modelKmPerLiter ||
@@ -591,11 +574,16 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   label={
                     <div className="flex items-center gap-1.5">
                       {t("ownership.fields.consumption")}
-                      <InfoTip text={t(`ownership.fields.consumption${consumptionSource}`)} />
+                      <InfoTip
+                        text={t(`ownership.fields.consumption${consumptionSource}`, {
+                          year: modelConsumption?.tableYear,
+                        })}
+                      />
                     </div>
                   }
                   hint={t(`ownership.fields.consumption${consumptionSource}Hint`, {
                     value: shownConsumption,
+                    year: modelConsumption?.tableYear,
                   })}
                 >
                   <input

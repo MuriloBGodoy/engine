@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "fetch:consumption": "node scripts/fetch-fipe-consumption.js",
+    "fetch:consumption": "node scripts/fetch-inmetro-consumption.mjs --report",
     "fetch:fipe-sample": "node scripts/fetch-fipe-sample.mjs",
     "check:fipe-parser": "node scripts/check-fipe-parser.mjs",
     "icons": "node scripts/generate-pwa-icons.mjs"

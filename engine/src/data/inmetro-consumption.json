@@ -1,0 +1,3431 @@
+{
+ "source": "INMETRO/CONPET - Programa Brasileiro de Etiquetagem Veicular (PBE Veicular)",
+ "sourceUrl": "https://dados.inmetro.gov.br/programa_brasileiro_de_etiquetagem/VEICULOS_2026.csv",
+ "tableYear": 2026,
+ "generatedAt": "2026-08-18",
+ "cityWeight": 0.55,
+ "notes": "km/l ja ajustados pelo INMETRO para uso real (Portaria Inmetro 169/2023); o proprio orgao declara que 90% dos motoristas ficam a +-20% do valor publicado. Combinado = media harmonica 55% cidade / 45% estrada, peso derivado da coluna de consumo energetico da propria tabela. Eletricos fora: o PBE publica km por litro equivalente e nao declara a equivalencia em kWh.",
+ "records": {
+  "total": 839,
+  "combustion": 682
+ },
+ "versions": {
+  "FIAT|MOBI|1.0|n": {
+   "gasoline": 14.8,
+   "ethanol": 10.4,
+   "gasolineCityHwy": [
+    14.2,
+    15.4
+   ],
+   "n": 2
+  },
+  "FIAT|ARGO|1.0|n": {
+   "gasoline": 14,
+   "ethanol": 9.8,
+   "gasolineCityHwy": [
+    13.6,
+    14.5
+   ],
+   "n": 2
+  },
+  "FIAT|ARGO|1.3|n": {
+   "gasoline": 13.6,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.8,
+    14.5
+   ],
+   "n": 4
+  },
+  "HYUNDAI|HB20|1.0|n": {
+   "gasoline": 14.2,
+   "ethanol": 10.2,
+   "gasolineCityHwy": [
+    13.3,
+    15.4
+   ],
+   "n": 5
+  },
+  "MINI|JCW|2.0|n": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    9.8,
+    12.2
+   ],
+   "n": 4
+  },
+  "MINI|COOPER|2.0|n": {
+   "gasoline": 12.6,
+   "gasolineCityHwy": [
+    11.5,
+    14.3
+   ],
+   "n": 6
+  },
+  "PEUGEOT|208|1.0|n": {
+   "gasoline": 13.5,
+   "ethanol": 9.4,
+   "gasolineCityHwy": [
+    12.8,
+    14.5
+   ],
+   "n": 4
+  },
+  "PEUGEOT|208|1.0|h": {
+   "gasoline": 13.4,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    13,
+    13.8
+   ],
+   "n": 1
+  },
+  "AUDI|A3 SPOTBACK|2.0|n": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    10.2,
+    12.4
+   ],
+   "n": 2
+  },
+  "BMW|M135|2.0|n": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    9.7,
+    12.7
+   ],
+   "n": 1
+  },
+  "CHEVROLET|ONIX|1.0|n": {
+   "gasoline": 13.4,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.1,
+    15.3
+   ],
+   "n": 8
+  },
+  "CHEVROLET|ONIX PLUS|1.0|n": {
+   "gasoline": 13.7,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.2,
+    16
+   ],
+   "n": 6
+  },
+  "CHEVROLET|SPIN|1.8|n": {
+   "gasoline": 11.3,
+   "ethanol": 7.9,
+   "gasolineCityHwy": [
+    10.1,
+    13.1
+   ],
+   "n": 5
+  },
+  "FIAT|CRONOS|1.0|n": {
+   "gasoline": 14.4,
+   "ethanol": 10.3,
+   "gasolineCityHwy": [
+    13.4,
+    15.9
+   ],
+   "n": 2
+  },
+  "FIAT|CRONOS|1.3|n": {
+   "gasoline": 13.4,
+   "ethanol": 9.7,
+   "gasolineCityHwy": [
+    12.6,
+    14.6
+   ],
+   "n": 3
+  },
+  "HONDA|CITY|1.5|n": {
+   "gasoline": 13.9,
+   "ethanol": 9.7,
+   "gasolineCityHwy": [
+    13.2,
+    15
+   ],
+   "n": 9
+  },
+  "HONDA|HR V|1.5|n": {
+   "gasoline": 12.1,
+   "ethanol": 8.5,
+   "gasolineCityHwy": [
+    11.5,
+    13
+   ],
+   "n": 6
+  },
+  "HYUNDAI|HB20S|1.0|n": {
+   "gasoline": 14.1,
+   "ethanol": 10,
+   "gasolineCityHwy": [
+    13.2,
+    15.3
+   ],
+   "n": 4
+  },
+  "HYUNDAI|KONA|1.6|h": {
+   "gasoline": 17.2,
+   "gasolineCityHwy": [
+    18.4,
+    16
+   ],
+   "n": 2
+  },
+  "KIA|NIRO|1.6|h": {
+   "gasoline": 17.2,
+   "gasolineCityHwy": [
+    18.3,
+    15.9
+   ],
+   "n": 4
+  },
+  "NISSAN|VERSA|1.6|n": {
+   "gasoline": 12.8,
+   "ethanol": 8.9,
+   "gasolineCityHwy": [
+    11.5,
+    15
+   ],
+   "n": 4
+  },
+  "TOYOTA|GR YARIS|1.6|n": {
+   "gasoline": 8.9,
+   "gasolineCityHwy": [
+    8.2,
+    9.9
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|VIRTUS|1.0|n": {
+   "gasoline": 13.3,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.2,
+    14.9
+   ],
+   "n": 5
+  },
+  "VOLKSWAGEN|VIRTUS|1.4|n": {
+   "gasoline": 12.7,
+   "ethanol": 8.8,
+   "gasolineCityHwy": [
+    11.7,
+    14
+   ],
+   "n": 1
+  },
+  "VOLKSWAGEN|POLO|1.0|n": {
+   "gasoline": 14.3,
+   "ethanol": 9.9,
+   "gasolineCityHwy": [
+    13.1,
+    15.9
+   ],
+   "n": 6
+  },
+  "VOLKSWAGEN|TERA|1.0|n": {
+   "gasoline": 13.5,
+   "ethanol": 9.4,
+   "gasolineCityHwy": [
+    12.5,
+    14.8
+   ],
+   "n": 4
+  },
+  "AUDI|A3 SEDAN|2.0|n": {
+   "gasoline": 11.2,
+   "gasolineCityHwy": [
+    10.1,
+    12.9
+   ],
+   "n": 3
+  },
+  "AUDI|RS3 SEDAN|2.5|n": {
+   "gasoline": 8.3,
+   "gasolineCityHwy": [
+    7.3,
+    9.9
+   ],
+   "n": 2
+  },
+  "BMW|220|2.0|n": {
+   "gasoline": 12.7,
+   "gasolineCityHwy": [
+    11.4,
+    14.9
+   ],
+   "n": 2
+  },
+  "BMW|M235|2.0|n": {
+   "gasoline": 10.2,
+   "gasolineCityHwy": [
+    8.9,
+    12.3
+   ],
+   "n": 1
+  },
+  "BMW|X2|2.0|n": {
+   "gasoline": 10.6,
+   "gasolineCityHwy": [
+    9.4,
+    12.4
+   ],
+   "n": 2
+  },
+  "CHERY|TIGGO 7|1.5|h": {
+   "gasoline": 11.7,
+   "ethanol": 8,
+   "gasolineCityHwy": [
+    11.7,
+    11.7
+   ],
+   "n": 2
+  },
+  "HONDA|CIVIC|2.0|h": {
+   "gasoline": 17.2,
+   "gasolineCityHwy": [
+    18.4,
+    15.9
+   ],
+   "n": 1
+  },
+  "HONDA|ZR V|2.0|n": {
+   "gasoline": 11.2,
+   "gasolineCityHwy": [
+    10.4,
+    12.3
+   ],
+   "n": 1
+  },
+  "JAECOO|7|1.5|h": {
+   "gasoline": 14.3,
+   "gasolineCityHwy": [
+    15.1,
+    13.5
+   ],
+   "n": 2
+  },
+  "LEXUS|UX 300H|2.0|h": {
+   "gasoline": 16.2,
+   "gasolineCityHwy": [
+    17.3,
+    14.9
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG A45S 4M|2.0|n": {
+   "gasoline": 9.2,
+   "gasolineCityHwy": [
+    8.3,
+    10.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLA200|1.3|h": {
+   "gasoline": 11.8,
+   "gasolineCityHwy": [
+    11.4,
+    12.4
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG GLA35 4M|2.0|h": {
+   "gasoline": 9.6,
+   "gasolineCityHwy": [
+    8.8,
+    10.8
+   ],
+   "n": 1
+  },
+  "NISSAN|SENTRA|2.0|n": {
+   "gasoline": 12.2,
+   "gasolineCityHwy": [
+    11,
+    14
+   ],
+   "n": 3
+  },
+  "OMODA|5|1.5|h": {
+   "gasoline": 14.1,
+   "gasolineCityHwy": [
+    15.1,
+    13.2
+   ],
+   "n": 3
+  },
+  "TOYOTA|COROLLA|1.8|h": {
+   "gasoline": 16.4,
+   "ethanol": 11.6,
+   "gasolineCityHwy": [
+    17.5,
+    15.2
+   ],
+   "n": 3
+  },
+  "TOYOTA|COROLLA|2.0|n": {
+   "gasoline": 12.8,
+   "ethanol": 9,
+   "gasolineCityHwy": [
+    11.6,
+    14.6
+   ],
+   "n": 5
+  },
+  "TOYOTA|COROLLA|1.6|n": {
+   "gasoline": 9.5,
+   "gasolineCityHwy": [
+    8.6,
+    10.9
+   ],
+   "n": 1
+  },
+  "TOYOTA|COROLLA CROSS|1.8|h": {
+   "gasoline": 15.3,
+   "ethanol": 10.7,
+   "gasolineCityHwy": [
+    16.6,
+    14
+   ],
+   "n": 2
+  },
+  "TOYOTA|COROLLA CROSS|2.0|n": {
+   "gasoline": 12.2,
+   "ethanol": 8.5,
+   "gasolineCityHwy": [
+    11.5,
+    13.1
+   ],
+   "n": 4
+  },
+  "AUDI|A5|2.0|n": {
+   "gasoline": 9.7,
+   "gasolineCityHwy": [
+    8.7,
+    11.3
+   ],
+   "n": 1
+  },
+  "AUDI|RS 6 AVANT|4.0|h": {
+   "gasoline": 6.6,
+   "gasolineCityHwy": [
+    5.9,
+    7.8
+   ],
+   "n": 1
+  },
+  "AUDI|Q5 SUV|2.0|n": {
+   "gasoline": 9.1,
+   "gasolineCityHwy": [
+    8.3,
+    10.2
+   ],
+   "n": 2
+  },
+  "AUDI|Q5 SPORTBACK|2.0|n": {
+   "gasoline": 9.1,
+   "gasolineCityHwy": [
+    8.3,
+    10.2
+   ],
+   "n": 2
+  },
+  "AUDI|SQ5 SUV|3.0|n": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.2,
+    9.2
+   ],
+   "n": 1
+  },
+  "AUDI|SQ5 SPORTBACK|3.0|n": {
+   "gasoline": 7.7,
+   "gasolineCityHwy": [
+    6.9,
+    8.9
+   ],
+   "n": 1
+  },
+  "AUDI|Q7|3.0|h": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7,
+    8.6
+   ],
+   "n": 1
+  },
+  "AUDI|Q8 SPORTBACK|3.0|h": {
+   "gasoline": 7.2,
+   "gasolineCityHwy": [
+    6.8,
+    7.7
+   ],
+   "n": 1
+  },
+  "AUDI|RSQ8|4.0|n": {
+   "gasoline": 5.9,
+   "gasolineCityHwy": [
+    5.3,
+    7
+   ],
+   "n": 1
+  },
+  "BMW|420I|2.0|n": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    9.8,
+    12.5
+   ],
+   "n": 1
+  },
+  "BMW|530E|2.0|h": {
+   "gasoline": 11.5,
+   "gasolineCityHwy": [
+    10.9,
+    12.3
+   ],
+   "n": 1
+  },
+  "BMW|320I|2.0|n": {
+   "gasoline": 11.7,
+   "ethanol": 8.1,
+   "gasolineCityHwy": [
+    10.7,
+    13.2
+   ],
+   "n": 4
+  },
+  "BMW|330E|2.0|h": {
+   "gasoline": 9.9,
+   "gasolineCityHwy": [
+    9.2,
+    10.8
+   ],
+   "n": 1
+  },
+  "BYD|ATTO 8|1.5|h": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    11.4,
+    10.8
+   ],
+   "n": 1
+  },
+  "BYD|SONG PLUS|1.5|h": {
+   "gasoline": 12.1,
+   "gasolineCityHwy": [
+    13.6,
+    10.6
+   ],
+   "n": 2
+  },
+  "BYD|SONG PRO|1.5|h": {
+   "gasoline": 13.1,
+   "gasolineCityHwy": [
+    14.8,
+    11.5
+   ],
+   "n": 2
+  },
+  "BYD|KING|1.5|h": {
+   "gasoline": 15,
+   "gasolineCityHwy": [
+    16.7,
+    13.2
+   ],
+   "n": 2
+  },
+  "CHEVROLET|EQUINOX|1.5|n": {
+   "gasoline": 9.7,
+   "gasolineCityHwy": [
+    9,
+    10.7
+   ],
+   "n": 2
+  },
+  "FORD|TERRITORY|1.5|n": {
+   "gasoline": 9.8,
+   "gasolineCityHwy": [
+    8.8,
+    11.2
+   ],
+   "n": 1
+  },
+  "HONDA|ACCORD|2.0|h": {
+   "gasoline": 16.6,
+   "gasolineCityHwy": [
+    17.5,
+    15.6
+   ],
+   "n": 1
+  },
+  "JETOUR|S06 DM|1.5|h": {
+   "gasoline": 13.4,
+   "gasolineCityHwy": [
+    14,
+    12.6
+   ],
+   "n": 2
+  },
+  "LEAPMOTOR|C10|1.5|h": {
+   "gasoline": 12,
+   "gasolineCityHwy": [
+    12,
+    12
+   ],
+   "n": 1
+  },
+  "LEXUS|NX350H|2.5|h": {
+   "gasoline": 14.8,
+   "gasolineCityHwy": [
+    15.7,
+    13.8
+   ],
+   "n": 3
+  },
+  "LEXUS|NX 450H PLUG IN|2.5|h": {
+   "gasoline": 13.8,
+   "gasolineCityHwy": [
+    14.5,
+    13.1
+   ],
+   "n": 1
+  },
+  "LEXUS|RX500H|2.4|h": {
+   "gasoline": 10.9,
+   "gasolineCityHwy": [
+    10.8,
+    11
+   ],
+   "n": 1
+  },
+  "LEXUS|RX450H PLUG IN|2.5|h": {
+   "gasoline": 13.4,
+   "gasolineCityHwy": [
+    14.1,
+    12.6
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|CLA200|1.3|h": {
+   "gasoline": 12.8,
+   "gasolineCityHwy": [
+    12,
+    14
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG CLA35 4M|2.0|h": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    8.1,
+    11.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG CLA45S 4M|2.0|n": {
+   "gasoline": 9.1,
+   "gasolineCityHwy": [
+    8.1,
+    10.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|C200|1.5|h": {
+   "gasoline": 12.4,
+   "gasolineCityHwy": [
+    11.4,
+    14.1
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|C300|2.0|h": {
+   "gasoline": 11.8,
+   "gasolineCityHwy": [
+    10.8,
+    13.4
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG C63S EP|2.0|h": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7.2,
+    8.1
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|E300|2.0|h": {
+   "gasoline": 11,
+   "gasolineCityHwy": [
+    9.9,
+    12.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG S63 EP|4.0|h": {
+   "gasoline": 7,
+   "gasolineCityHwy": [
+    6.5,
+    7.8
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLB220 4M|2.0|h": {
+   "gasoline": 11.4,
+   "gasolineCityHwy": [
+    10.4,
+    13
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG GLB35 4M|2.0|h": {
+   "gasoline": 9,
+   "gasolineCityHwy": [
+    8.4,
+    9.8
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GLC43|2.0|h": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.3,
+    9.1
+   ],
+   "n": 3
+  },
+  "MERCEDES BENZ|AMG GLC63S EP|2.0|h": {
+   "gasoline": 7.4,
+   "gasolineCityHwy": [
+    7.2,
+    7.8
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GLE53 4M|3.0|h": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.3,
+    8.9
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GLE63 S CO|4.0|h": {
+   "gasoline": 6.5,
+   "gasolineCityHwy": [
+    5.9,
+    7.3
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLS450 4M|3.0|h": {
+   "gasoline": 8.1,
+   "gasolineCityHwy": [
+    7.5,
+    9
+   ],
+   "n": 1
+  },
+  "MITSUBISHI|OUTLANDER|2.4|h": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    11.6,
+    10.4
+   ],
+   "n": 2
+  },
+  "OMODA|7|1.5|h": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    14,
+    11.9
+   ],
+   "n": 2
+  },
+  "PORSCHE|MACAN|2.9|n": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7,
+    8.4
+   ],
+   "n": 2
+  },
+  "PORSCHE|MACAN|2.0|n": {
+   "gasoline": 7.8,
+   "gasolineCityHwy": [
+    7.3,
+    8.5
+   ],
+   "n": 2
+  },
+  "RENAULT|KOLEOS|1.5|h": {
+   "gasoline": 12.6,
+   "gasolineCityHwy": [
+    13.1,
+    12.1
+   ],
+   "n": 1
+  },
+  "TOYOTA|RAV4|2.5|h": {
+   "gasoline": 14.7,
+   "gasolineCityHwy": [
+    15.3,
+    14.1
+   ],
+   "n": 2
+  },
+  "TOYOTA|RAV4|2.5|n": {
+   "gasoline": 14.8,
+   "gasolineCityHwy": [
+    16.1,
+    13.5
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|JETTA|2.0|n": {
+   "gasoline": 11.5,
+   "gasolineCityHwy": [
+    10.3,
+    13.4
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 5X|1.5|h": {
+   "gasoline": 11.6,
+   "ethanol": 8.3,
+   "gasolineCityHwy": [
+    11.4,
+    11.8
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 5X|1.5|n": {
+   "gasoline": 10.7,
+   "ethanol": 7.1,
+   "gasolineCityHwy": [
+    10,
+    11.7
+   ],
+   "n": 2
+  },
+  "CHEVROLET|TRACKER|1.0|n": {
+   "gasoline": 12.4,
+   "ethanol": 8.8,
+   "gasolineCityHwy": [
+    11.5,
+    13.8
+   ],
+   "n": 5
+  },
+  "CHEVROLET|TRACKER|1.2|n": {
+   "gasoline": 12.1,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11,
+    13.7
+   ],
+   "n": 3
+  },
+  "CITROEN|BASALT|1.0|n": {
+   "gasoline": 12.7,
+   "ethanol": 8.9,
+   "gasolineCityHwy": [
+    12.1,
+    13.7
+   ],
+   "n": 5
+  },
+  "CITROEN|C3|1.0|n": {
+   "gasoline": 13.7,
+   "ethanol": 9.8,
+   "gasolineCityHwy": [
+    13.2,
+    14.5
+   ],
+   "n": 8
+  },
+  "CITROEN|AIRCROSS|1.0|n": {
+   "gasoline": 12,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.2,
+    13
+   ],
+   "n": 8
+  },
+  "FIAT|FASTBACK|1.0|n": {
+   "gasoline": 13,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12.1,
+    14.3
+   ],
+   "n": 1
+  },
+  "FIAT|FASTBACK|1.0|h": {
+   "gasoline": 13.2,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    12.6,
+    13.9
+   ],
+   "n": 2
+  },
+  "FIAT|FASTBACK|1.3|n": {
+   "gasoline": 11.9,
+   "ethanol": 8.3,
+   "gasolineCityHwy": [
+    11,
+    13.2
+   ],
+   "n": 2
+  },
+  "FIAT|PULSE|1.3|n": {
+   "gasoline": 13.4,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.6,
+    14.5
+   ],
+   "n": 3
+  },
+  "FIAT|PULSE|1.0|h": {
+   "gasoline": 13.9,
+   "ethanol": 9.6,
+   "gasolineCityHwy": [
+    13.4,
+    14.4
+   ],
+   "n": 2
+  },
+  "FIAT|PULSE|1.0|n": {
+   "gasoline": 13.1,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.3,
+    14.4
+   ],
+   "n": 1
+  },
+  "HONDA|WR V|1.5|n": {
+   "gasoline": 12.3,
+   "ethanol": 8.5,
+   "gasolineCityHwy": [
+    12,
+    12.8
+   ],
+   "n": 2
+  },
+  "HYUNDAI|CRETA|1.0|n": {
+   "gasoline": 12.3,
+   "ethanol": 8.6,
+   "gasolineCityHwy": [
+    12,
+    12.7
+   ],
+   "n": 5
+  },
+  "HYUNDAI|CRETA|1.6|n": {
+   "gasoline": 12.5,
+   "ethanol": 8.7,
+   "gasolineCityHwy": [
+    11.7,
+    13.6
+   ],
+   "n": 2
+  },
+  "JEEP|RENEGADE|1.3|h": {
+   "gasoline": 11.8,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.9,
+    11.8
+   ],
+   "n": 3
+  },
+  "JEEP|RENEGADE|1.3|n": {
+   "gasoline": 11.5,
+   "ethanol": 8.1,
+   "gasolineCityHwy": [
+    11,
+    12.2
+   ],
+   "n": 10
+  },
+  "NISSAN|KICKS|1.0|n": {
+   "gasoline": 12.7,
+   "ethanol": 9,
+   "gasolineCityHwy": [
+    11.7,
+    14.3
+   ],
+   "n": 4
+  },
+  "NISSAN|KAIT|1.6|n": {
+   "gasoline": 12.3,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.3,
+    13.7
+   ],
+   "n": 6
+  },
+  "PEUGEOT|2008|1.0|n": {
+   "gasoline": 12.9,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12,
+    14.1
+   ],
+   "n": 3
+  },
+  "PEUGEOT|2008|1.0|h": {
+   "gasoline": 13.3,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    13,
+    13.7
+   ],
+   "n": 1
+  },
+  "RENAULT|KWID|1.0|n": {
+   "gasoline": 14.9,
+   "ethanol": 10.5,
+   "gasolineCityHwy": [
+    14.4,
+    15.4
+   ],
+   "n": 6
+  },
+  "RENAULT|KARDIAN|1.0|n": {
+   "gasoline": 13.3,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.7,
+    13.9
+   ],
+   "n": 5
+  },
+  "TOYOTA|YARIS CROSS|1.5|n": {
+   "gasoline": 13.3,
+   "ethanol": 9.4,
+   "gasolineCityHwy": [
+    12.6,
+    14.3
+   ],
+   "n": 3
+  },
+  "TOYOTA|YARIS CROSS|1.5|h": {
+   "gasoline": 16.6,
+   "ethanol": 11.9,
+   "gasolineCityHwy": [
+    17.9,
+    15.3
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|T CROSS|1.4|n": {
+   "gasoline": 12.8,
+   "ethanol": 8.8,
+   "gasolineCityHwy": [
+    11.8,
+    14.2
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|T CROSS|1.0|n": {
+   "gasoline": 13,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.1,
+    14.5
+   ],
+   "n": 3
+  },
+  "VOLKSWAGEN|NIVUS|1.0|n": {
+   "gasoline": 13.3,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    12.4,
+    14.8
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|NIVUS|1.4|n": {
+   "gasoline": 12.7,
+   "ethanol": 8.8,
+   "gasolineCityHwy": [
+    11.6,
+    14.2
+   ],
+   "n": 1
+  },
+  "BMW|X1|2.0|n": {
+   "gasoline": 11.5,
+   "gasolineCityHwy": [
+    10.3,
+    13.5
+   ],
+   "n": 6
+  },
+  "CHANGAN|UNI T|1.5|n": {
+   "gasoline": 11.3,
+   "ethanol": 7.7,
+   "gasolineCityHwy": [
+    10.5,
+    12.4
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 7|1.6|n": {
+   "gasoline": 11.6,
+   "gasolineCityHwy": [
+    10.5,
+    13.3
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 7|1.5|n": {
+   "gasoline": 11.3,
+   "ethanol": 7.4,
+   "gasolineCityHwy": [
+    10.4,
+    12.6
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 8|1.6|n": {
+   "gasoline": 11,
+   "gasolineCityHwy": [
+    10,
+    12.5
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 8|1.5|h": {
+   "gasoline": 11.6,
+   "gasolineCityHwy": [
+    11.8,
+    11.3
+   ],
+   "n": 1
+  },
+  "GAC|GS3|1.5|n": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    10.2,
+    11.6
+   ],
+   "n": 2
+  },
+  "GAC|GS4|2.0|h": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    14.1,
+    11.8
+   ],
+   "n": 2
+  },
+  "GWM|WEY|1.5|h": {
+   "gasoline": 10,
+   "gasolineCityHwy": [
+    10.8,
+    9.1
+   ],
+   "n": 1
+  },
+  "GWM|HAVAL H6|1.5|h": {
+   "gasoline": 12.9,
+   "gasolineCityHwy": [
+    14.1,
+    11.4
+   ],
+   "n": 6
+  },
+  "HONDA|CR V|2.0|h": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    14.1,
+    11.8
+   ],
+   "n": 1
+  },
+  "JEEP|COMMANDER|1.3|n": {
+   "gasoline": 10.6,
+   "ethanol": 7.5,
+   "gasolineCityHwy": [
+    10,
+    11.5
+   ],
+   "n": 3
+  },
+  "JEEP|COMMANDER|1.3|h": {
+   "gasoline": 11.1,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    11,
+    11.2
+   ],
+   "n": 2
+  },
+  "JEEP|COMPASS|1.3|n": {
+   "gasoline": 10.9,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    10.1,
+    12.1
+   ],
+   "n": 4
+  },
+  "JETOUR|T1 I DM|1.5|h": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    13.6,
+    12.2
+   ],
+   "n": 2
+  },
+  "JETOUR|T2 I DM|1.5|h": {
+   "gasoline": 11,
+   "gasolineCityHwy": [
+    11.4,
+    10.5
+   ],
+   "n": 2
+  },
+  "KIA|SPORTAGE|1.6|h": {
+   "gasoline": 12.8,
+   "gasolineCityHwy": [
+    12.5,
+    13.2
+   ],
+   "n": 5
+  },
+  "MITSUBISHI|ECLIPSE CROSS|1.5|n": {
+   "gasoline": 10.7,
+   "gasolineCityHwy": [
+    10.3,
+    11.3
+   ],
+   "n": 6
+  },
+  "RENAULT|DUSTER|1.6|n": {
+   "gasoline": 11.1,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    10.8,
+    11.4
+   ],
+   "n": 9
+  },
+  "RENAULT|DUSTER|1.3|n": {
+   "gasoline": 11.5,
+   "ethanol": 8,
+   "gasolineCityHwy": [
+    10.9,
+    12.3
+   ],
+   "n": 3
+  },
+  "RENAULT|BOREAL|1.3|n": {
+   "gasoline": 12.2,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.2,
+    13.6
+   ],
+   "n": 3
+  },
+  "VOLKSWAGEN|TAOS|1.4|n": {
+   "gasoline": 12,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.1,
+    13.3
+   ],
+   "n": 2
+  },
+  "BMW|X3|3.0|h": {
+   "gasoline": 10.2,
+   "gasolineCityHwy": [
+    9.6,
+    10.9
+   ],
+   "n": 1
+  },
+  "BMW|X3|2.0|h": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    10.4,
+    12.2
+   ],
+   "n": 1
+  },
+  "BMW|X5|3.0|h": {
+   "gasoline": 9.5,
+   "gasolineCityHwy": [
+    9.2,
+    9.9
+   ],
+   "n": 4
+  },
+  "BMW|X6|3.0|h": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    9,
+    10.1
+   ],
+   "n": 2
+  },
+  "BMW|X7|3.0|h": {
+   "gasoline": 8.3,
+   "gasolineCityHwy": [
+    8,
+    8.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLC300 4M|2.0|h": {
+   "gasoline": 10.4,
+   "gasolineCityHwy": [
+    9.5,
+    11.8
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|GLE450D|3.0|h": {
+   "diesel": 11.5,
+   "n": 2
+  },
+  "PORSCHE|CAYENNE|4.0|n": {
+   "gasoline": 6.8,
+   "gasolineCityHwy": [
+    5.9,
+    8.2
+   ],
+   "n": 5
+  },
+  "PORSCHE|CAYENNE|3.0|h": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.7,
+    8.2
+   ],
+   "n": 8
+  },
+  "PORSCHE|CAYENNE|3.0|n": {
+   "gasoline": 7.5,
+   "gasolineCityHwy": [
+    6.9,
+    8.5
+   ],
+   "n": 2
+  },
+  "PORSCHE|CAYENNE|4.0|h": {
+   "gasoline": 7.7,
+   "gasolineCityHwy": [
+    7.4,
+    8.1
+   ],
+   "n": 2
+  },
+  "VOLVO|XC60|2.0|h": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    9.5,
+    9.4
+   ],
+   "n": 10
+  },
+  "VOLVO|XC90|2.0|h": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    9.4,
+    9.3
+   ],
+   "n": 15
+  },
+  "CHEVROLET|TRAILBLAZER|2.8|d": {
+   "diesel": 10.3,
+   "n": 2
+  },
+  "DENZA|B5|1.5|h": {
+   "gasoline": 8.2,
+   "gasolineCityHwy": [
+    8.4,
+    7.9
+   ],
+   "n": 1
+  },
+  "FORD|BRONCO SPORT|2.0|n": {
+   "gasoline": 9.3,
+   "gasolineCityHwy": [
+    8.4,
+    10.7
+   ],
+   "n": 1
+  },
+  "GWM|TANK 300|2.0|h": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7.5,
+    7.7
+   ],
+   "n": 1
+  },
+  "GWM|HAVAL H9|2.4|d": {
+   "diesel": 9.6,
+   "n": 1
+  },
+  "JEEP|COMMANDER|2.0|n": {
+   "gasoline": 9,
+   "ethanol": 6.4,
+   "gasolineCityHwy": [
+    8.1,
+    10.5
+   ],
+   "n": 2
+  },
+  "JEEP|COMMANDER|2.2|d": {
+   "diesel": 11.5,
+   "n": 1
+  },
+  "JEEP|COMPASS|2.0|n": {
+   "gasoline": 9.4,
+   "ethanol": 6.6,
+   "gasolineCityHwy": [
+    8.5,
+    10.9
+   ],
+   "n": 2
+  },
+  "JEEP|WRANGLER|2.0|n": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    7.2,
+    7.5
+   ],
+   "n": 1
+  },
+  "LAND ROVER|RANGE ROVER|3.0|h": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.5,
+    8.4
+   ],
+   "n": 4
+  },
+  "LAND ROVER|DEFENDER 90 D350|3.0|h": {
+   "diesel": 9.7,
+   "n": 1
+  },
+  "LAND ROVER|DEFENDER 130 D350|3.0|h": {
+   "diesel": 9.9,
+   "n": 2
+  },
+  "LAND ROVER|VELAR|2.0|h": {
+   "gasoline": 8.7,
+   "gasolineCityHwy": [
+    8.3,
+    9.3
+   ],
+   "n": 1
+  },
+  "LAND ROVER|DEFENDER 110 D350|3.0|h": {
+   "diesel": 9.7,
+   "n": 3
+  },
+  "LAND ROVER|DISCOVERY|3.0|h": {
+   "diesel": 10.4,
+   "n": 2
+  },
+  "LAND ROVER|RANGE ROVER SPORT|3.0|h": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.5,
+    8.4
+   ],
+   "n": 5
+  },
+  "LAND ROVER|EVOQUE|2.0|n": {
+   "gasoline": 8.2,
+   "ethanol": 5.7,
+   "gasolineCityHwy": [
+    7.4,
+    9.4
+   ],
+   "n": 1
+  },
+  "LAND ROVER|DISCOVERY SPORT|2.0|n": {
+   "gasoline": 8.1,
+   "ethanol": 5.7,
+   "gasolineCityHwy": [
+    7.2,
+    9.6
+   ],
+   "n": 4
+  },
+  "MERCEDES BENZ|AMG G63|4.0|h": {
+   "gasoline": 5.6,
+   "gasolineCityHwy": [
+    5.3,
+    6
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG G63 4M|4.0|h": {
+   "gasoline": 5.7,
+   "gasolineCityHwy": [
+    5.4,
+    6.2
+   ],
+   "n": 2
+  },
+  "TOYOTA|SW4|2.8|d": {
+   "diesel": 9.8,
+   "n": 2
+  },
+  "VOLKSWAGEN|TIGUAN|2.0|n": {
+   "gasoline": 10.1,
+   "gasolineCityHwy": [
+    8.9,
+    12.1
+   ],
+   "n": 1
+  },
+  "CITROEN|JUMPER|2.2|d": {
+   "diesel": 10.6,
+   "n": 6
+  },
+  "CITROEN|JUMPY|2.2|d": {
+   "diesel": 12.9,
+   "n": 2
+  },
+  "FIAT|DUCATO|2.2|d": {
+   "diesel": 10.6,
+   "n": 6
+  },
+  "FIAT|FIORINO|1.3|n": {
+   "gasoline": 12.9,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12.4,
+    13.6
+   ],
+   "n": 1
+  },
+  "FIAT|SCUDO|2.2|d": {
+   "diesel": 12.9,
+   "n": 2
+  },
+  "FORD|TRANSIT|2.0|d": {
+   "diesel": 9.8,
+   "n": 4
+  },
+  "KIA|BONGO K2500 4X4 SC|2.5|d": {
+   "diesel": 8.4,
+   "n": 2
+  },
+  "MERCEDES BENZ|315CDI STREET|2.0|d": {
+   "diesel": 9.9,
+   "n": 2
+  },
+  "PEUGEOT|BOXER|2.2|d": {
+   "diesel": 10.6,
+   "n": 5
+  },
+  "PEUGEOT|EXPERT|2.2|d": {
+   "diesel": 12.9,
+   "n": 2
+  },
+  "PEUGEOT|PARTRAPID|1.3|n": {
+   "gasoline": 12.9,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12.4,
+    13.6
+   ],
+   "n": 1
+  },
+  "RENAULT|MASTER|2.3|d": {
+   "diesel": 10,
+   "n": 13
+  },
+  "RENAULT|KANGOO|1.6|n": {
+   "gasoline": 11.3,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    11,
+    11.7
+   ],
+   "n": 3
+  },
+  "TOYOTA|HIACE|2.8|d": {
+   "diesel": 9.2,
+   "n": 2
+  },
+  "CHEVROLET|MONTANA|1.2|n": {
+   "gasoline": 12,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11,
+    13.5
+   ],
+   "n": 5
+  },
+  "FIAT|STRADA|1.3|n": {
+   "gasoline": 13.5,
+   "ethanol": 9.4,
+   "gasolineCityHwy": [
+    12.8,
+    14.4
+   ],
+   "n": 5
+  },
+  "FIAT|STRADA|1.0|n": {
+   "gasoline": 12.4,
+   "ethanol": 8.7,
+   "gasolineCityHwy": [
+    11.9,
+    13.1
+   ],
+   "n": 2
+  },
+  "RENAULT|OROCH|1.6|n": {
+   "gasoline": 11.5,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    11.3,
+    11.7
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|SAVEIRO|1.6|n": {
+   "gasoline": 11.8,
+   "ethanol": 8.2,
+   "gasolineCityHwy": [
+    11.3,
+    12.4
+   ],
+   "n": 4
+  },
+  "BYD|SHARK|1.5|h": {
+   "gasoline": 8.6,
+   "gasolineCityHwy": [
+    8.7,
+    8.5
+   ],
+   "n": 4
+  },
+  "CHEVROLET|S10|2.8|d": {
+   "diesel": 9.9,
+   "n": 7
+  },
+  "CHEVROLET|SILVERADO|5.3|n": {
+   "gasoline": 6.5,
+   "gasolineCityHwy": [
+    6,
+    7.2
+   ],
+   "n": 1
+  },
+  "FIAT|TITANO|2.2|d": {
+   "diesel": 10.3,
+   "n": 3
+  },
+  "FIAT|TORO|1.3|n": {
+   "gasoline": 10,
+   "ethanol": 7,
+   "gasolineCityHwy": [
+    9.4,
+    10.8
+   ],
+   "n": 4
+  },
+  "FIAT|TORO|2.2|d": {
+   "diesel": 11.7,
+   "n": 3
+  },
+  "FORD|RANGER|2.0|d": {
+   "diesel": 10.7,
+   "n": 9
+  },
+  "FORD|RANGER|3.0|d": {
+   "diesel": 9.2,
+   "n": 4
+  },
+  "FORD|MAVERICK|2.0|n": {
+   "gasoline": 9.5,
+   "gasolineCityHwy": [
+    8.5,
+    11
+   ],
+   "n": 2
+  },
+  "FORD|F150|5.0|n": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    6.5,
+    8.5
+   ],
+   "n": 3
+  },
+  "FOTON|TUNLAND|2.0|h": {
+   "diesel": 9.2,
+   "n": 2
+  },
+  "GWM|POER P30|2.4|d": {
+   "diesel": 9.8,
+   "n": 2
+  },
+  "JAC|HUNTER|2.0|d": {
+   "diesel": 9.5,
+   "n": 8
+  },
+  "JEEP|GLADIATOR|3.6|n": {
+   "gasoline": 6.6,
+   "gasolineCityHwy": [
+    6.3,
+    7.1
+   ],
+   "n": 1
+  },
+  "MITSUBISHI|TRITON|2.4|d": {
+   "diesel": 10.4,
+   "n": 8
+  },
+  "RAM|1500|3.0|n": {
+   "gasoline": 6.4,
+   "gasolineCityHwy": [
+    6,
+    7
+   ],
+   "n": 3
+  },
+  "RAM|RAMPAGE|2.2|d": {
+   "diesel": 11.7,
+   "n": 3
+  },
+  "RAM|RAMPAGE|2.0|n": {
+   "gasoline": 8.8,
+   "ethanol": 6.2,
+   "gasolineCityHwy": [
+    8.2,
+    9.9
+   ],
+   "n": 7
+  },
+  "RAM|DAKOTA|2.2|d": {
+   "diesel": 10.1,
+   "n": 2
+  },
+  "TOYOTA|HILUX|2.8|d": {
+   "diesel": 9.6,
+   "n": 10
+  },
+  "VOLKSWAGEN|AMAROK|3.0|d": {
+   "diesel": 8.7,
+   "n": 3
+  },
+  "BMW|M3|3.0|n": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7,
+    9.3
+   ],
+   "n": 2
+  },
+  "BMW|M2|3.0|n": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.2,
+    9.3
+   ],
+   "n": 2
+  },
+  "FERRARI|296|3.0|h": {
+   "gasoline": 6.9,
+   "gasolineCityHwy": [
+    6.2,
+    8.2
+   ],
+   "n": 2
+  },
+  "FERRARI|PUROSANGUE|6.5|n": {
+   "gasoline": 4.7,
+   "gasolineCityHwy": [
+    4.1,
+    5.6
+   ],
+   "n": 1
+  },
+  "FERRARI|12CILINDRI|6.5|n": {
+   "gasoline": 5.4,
+   "gasolineCityHwy": [
+    4.7,
+    6.6
+   ],
+   "n": 2
+  },
+  "FERRARI|ROMA|3.9|n": {
+   "gasoline": 7.4,
+   "gasolineCityHwy": [
+    6.7,
+    8.7
+   ],
+   "n": 1
+  },
+  "FORD|MUSTANG|5.0|n": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    6.4,
+    8.9
+   ],
+   "n": 2
+  },
+  "MCLAREN|ARTURA|3.0|h": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    6.5,
+    8.5
+   ],
+   "n": 2
+  },
+  "MCLAREN|750S|4.0|n": {
+   "gasoline": 6.5,
+   "gasolineCityHwy": [
+    5.9,
+    7.4
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG SL63S EP|4.0|h": {
+   "gasoline": 6.7,
+   "gasolineCityHwy": [
+    6.2,
+    7.4
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GT63S EP|4.0|h": {
+   "gasoline": 6.9,
+   "gasolineCityHwy": [
+    6.4,
+    7.6
+   ],
+   "n": 2
+  },
+  "PORSCHE|911|3.0|n": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    6.9,
+    9.5
+   ],
+   "n": 7
+  },
+  "PORSCHE|911|4.0|n": {
+   "gasoline": 6,
+   "gasolineCityHwy": [
+    5.4,
+    6.9
+   ],
+   "n": 4
+  },
+  "PORSCHE|911|3.6|h": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.2,
+    9.2
+   ],
+   "n": 5
+  },
+  "PORSCHE|BOXSTER|4.0|n": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.1,
+    8.9
+   ],
+   "n": 2
+  },
+  "PORSCHE|CAYMAN|4.0|n": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.1,
+    8.9
+   ],
+   "n": 1
+  },
+  "PORSCHE|PANAMERA|4.0|h": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    6.9,
+    8.7
+   ],
+   "n": 2
+  },
+  "PORSCHE|PANAMERA|2.9|h": {
+   "gasoline": 8.5,
+   "gasolineCityHwy": [
+    8,
+    9.3
+   ],
+   "n": 2
+  }
+ },
+ "models": {
+  "FIAT|MOBI": {
+   "gasoline": 14.8,
+   "ethanol": 10.4,
+   "gasolineCityHwy": [
+    14.2,
+    15.4
+   ],
+   "n": 2
+  },
+  "FIAT|ARGO": {
+   "gasoline": 13.6,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.9,
+    14.5
+   ],
+   "n": 6
+  },
+  "HYUNDAI|HB20": {
+   "gasoline": 14.2,
+   "ethanol": 10.2,
+   "gasolineCityHwy": [
+    13.3,
+    15.4
+   ],
+   "n": 5
+  },
+  "MINI|JCW": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    9.8,
+    12.2
+   ],
+   "n": 4
+  },
+  "MINI|COOPER": {
+   "gasoline": 12.6,
+   "gasolineCityHwy": [
+    11.5,
+    14.3
+   ],
+   "n": 6
+  },
+  "PEUGEOT|208": {
+   "gasoline": 13.4,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    13,
+    13.8
+   ],
+   "n": 5
+  },
+  "AUDI|A3 SPOTBACK": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    10.2,
+    12.4
+   ],
+   "n": 2
+  },
+  "BMW|M135": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    9.7,
+    12.7
+   ],
+   "n": 1
+  },
+  "CHEVROLET|ONIX": {
+   "gasoline": 13.4,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.1,
+    15.3
+   ],
+   "n": 8
+  },
+  "CHEVROLET|ONIX PLUS": {
+   "gasoline": 13.7,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.2,
+    16
+   ],
+   "n": 6
+  },
+  "CHEVROLET|SPIN": {
+   "gasoline": 11.3,
+   "ethanol": 7.9,
+   "gasolineCityHwy": [
+    10.1,
+    13.1
+   ],
+   "n": 5
+  },
+  "FIAT|CRONOS": {
+   "gasoline": 14.3,
+   "ethanol": 10,
+   "gasolineCityHwy": [
+    13.3,
+    15.7
+   ],
+   "n": 5
+  },
+  "HONDA|CITY": {
+   "gasoline": 13.9,
+   "ethanol": 9.7,
+   "gasolineCityHwy": [
+    13.2,
+    15
+   ],
+   "n": 9
+  },
+  "HONDA|HR V": {
+   "gasoline": 12.1,
+   "ethanol": 8.5,
+   "gasolineCityHwy": [
+    11.5,
+    13
+   ],
+   "n": 6
+  },
+  "HYUNDAI|HB20S": {
+   "gasoline": 14.1,
+   "ethanol": 10,
+   "gasolineCityHwy": [
+    13.2,
+    15.3
+   ],
+   "n": 4
+  },
+  "HYUNDAI|KONA": {
+   "gasoline": 17.2,
+   "gasolineCityHwy": [
+    18.4,
+    16
+   ],
+   "n": 2
+  },
+  "KIA|NIRO": {
+   "gasoline": 17.2,
+   "gasolineCityHwy": [
+    18.3,
+    15.9
+   ],
+   "n": 4
+  },
+  "NISSAN|VERSA": {
+   "gasoline": 12.8,
+   "ethanol": 8.9,
+   "gasolineCityHwy": [
+    11.5,
+    15
+   ],
+   "n": 4
+  },
+  "TOYOTA|GR YARIS": {
+   "gasoline": 8.9,
+   "gasolineCityHwy": [
+    8.2,
+    9.9
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|VIRTUS": {
+   "gasoline": 13.2,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.2,
+    14.8
+   ],
+   "n": 6
+  },
+  "VOLKSWAGEN|POLO": {
+   "gasoline": 14.3,
+   "ethanol": 9.9,
+   "gasolineCityHwy": [
+    13.1,
+    15.9
+   ],
+   "n": 6
+  },
+  "VOLKSWAGEN|TERA": {
+   "gasoline": 13.5,
+   "ethanol": 9.4,
+   "gasolineCityHwy": [
+    12.5,
+    14.8
+   ],
+   "n": 4
+  },
+  "AUDI|A3 SEDAN": {
+   "gasoline": 11.2,
+   "gasolineCityHwy": [
+    10.1,
+    12.9
+   ],
+   "n": 3
+  },
+  "AUDI|RS3 SEDAN": {
+   "gasoline": 8.3,
+   "gasolineCityHwy": [
+    7.3,
+    9.9
+   ],
+   "n": 2
+  },
+  "BMW|220": {
+   "gasoline": 12.7,
+   "gasolineCityHwy": [
+    11.4,
+    14.9
+   ],
+   "n": 2
+  },
+  "BMW|M235": {
+   "gasoline": 10.2,
+   "gasolineCityHwy": [
+    8.9,
+    12.3
+   ],
+   "n": 1
+  },
+  "BMW|X2": {
+   "gasoline": 10.6,
+   "gasolineCityHwy": [
+    9.4,
+    12.4
+   ],
+   "n": 2
+  },
+  "CHERY|TIGGO 7": {
+   "gasoline": 11.4,
+   "ethanol": 7.7,
+   "gasolineCityHwy": [
+    10.8,
+    12.2
+   ],
+   "n": 4
+  },
+  "HONDA|CIVIC": {
+   "gasoline": 17.2,
+   "gasolineCityHwy": [
+    18.4,
+    15.9
+   ],
+   "n": 1
+  },
+  "HONDA|ZR V": {
+   "gasoline": 11.2,
+   "gasolineCityHwy": [
+    10.4,
+    12.3
+   ],
+   "n": 1
+  },
+  "JAECOO|7": {
+   "gasoline": 14.3,
+   "gasolineCityHwy": [
+    15.1,
+    13.5
+   ],
+   "n": 2
+  },
+  "LEXUS|UX 300H": {
+   "gasoline": 16.2,
+   "gasolineCityHwy": [
+    17.3,
+    14.9
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG A45S 4M": {
+   "gasoline": 9.2,
+   "gasolineCityHwy": [
+    8.3,
+    10.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLA200": {
+   "gasoline": 11.8,
+   "gasolineCityHwy": [
+    11.4,
+    12.4
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG GLA35 4M": {
+   "gasoline": 9.6,
+   "gasolineCityHwy": [
+    8.8,
+    10.8
+   ],
+   "n": 1
+  },
+  "NISSAN|SENTRA": {
+   "gasoline": 12.2,
+   "gasolineCityHwy": [
+    11,
+    14
+   ],
+   "n": 3
+  },
+  "OMODA|5": {
+   "gasoline": 14.1,
+   "gasolineCityHwy": [
+    15.1,
+    13.2
+   ],
+   "n": 3
+  },
+  "TOYOTA|COROLLA": {
+   "gasoline": 12.8,
+   "ethanol": 9,
+   "gasolineCityHwy": [
+    11.6,
+    14.6
+   ],
+   "n": 9
+  },
+  "TOYOTA|COROLLA CROSS": {
+   "gasoline": 12.2,
+   "ethanol": 8.5,
+   "gasolineCityHwy": [
+    11.5,
+    13.1
+   ],
+   "n": 6
+  },
+  "AUDI|A5": {
+   "gasoline": 9.7,
+   "gasolineCityHwy": [
+    8.7,
+    11.3
+   ],
+   "n": 1
+  },
+  "AUDI|RS 6 AVANT": {
+   "gasoline": 6.6,
+   "gasolineCityHwy": [
+    5.9,
+    7.8
+   ],
+   "n": 1
+  },
+  "AUDI|Q5 SUV": {
+   "gasoline": 9.1,
+   "gasolineCityHwy": [
+    8.3,
+    10.2
+   ],
+   "n": 2
+  },
+  "AUDI|Q5 SPORTBACK": {
+   "gasoline": 9.1,
+   "gasolineCityHwy": [
+    8.3,
+    10.2
+   ],
+   "n": 2
+  },
+  "AUDI|SQ5 SUV": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.2,
+    9.2
+   ],
+   "n": 1
+  },
+  "AUDI|SQ5 SPORTBACK": {
+   "gasoline": 7.7,
+   "gasolineCityHwy": [
+    6.9,
+    8.9
+   ],
+   "n": 1
+  },
+  "AUDI|Q7": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7,
+    8.6
+   ],
+   "n": 1
+  },
+  "AUDI|Q8 SPORTBACK": {
+   "gasoline": 7.2,
+   "gasolineCityHwy": [
+    6.8,
+    7.7
+   ],
+   "n": 1
+  },
+  "AUDI|RSQ8": {
+   "gasoline": 5.9,
+   "gasolineCityHwy": [
+    5.3,
+    7
+   ],
+   "n": 1
+  },
+  "BMW|420I": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    9.8,
+    12.5
+   ],
+   "n": 1
+  },
+  "BMW|530E": {
+   "gasoline": 11.5,
+   "gasolineCityHwy": [
+    10.9,
+    12.3
+   ],
+   "n": 1
+  },
+  "BMW|320I": {
+   "gasoline": 11.7,
+   "ethanol": 8.1,
+   "gasolineCityHwy": [
+    10.7,
+    13.2
+   ],
+   "n": 4
+  },
+  "BMW|330E": {
+   "gasoline": 9.9,
+   "gasolineCityHwy": [
+    9.2,
+    10.8
+   ],
+   "n": 1
+  },
+  "BYD|ATTO 8": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    11.4,
+    10.8
+   ],
+   "n": 1
+  },
+  "BYD|SONG PLUS": {
+   "gasoline": 12.1,
+   "gasolineCityHwy": [
+    13.6,
+    10.6
+   ],
+   "n": 2
+  },
+  "BYD|SONG PRO": {
+   "gasoline": 13.1,
+   "gasolineCityHwy": [
+    14.8,
+    11.5
+   ],
+   "n": 2
+  },
+  "BYD|KING": {
+   "gasoline": 15,
+   "gasolineCityHwy": [
+    16.7,
+    13.2
+   ],
+   "n": 2
+  },
+  "CHEVROLET|EQUINOX": {
+   "gasoline": 9.7,
+   "gasolineCityHwy": [
+    9,
+    10.7
+   ],
+   "n": 2
+  },
+  "FORD|TERRITORY": {
+   "gasoline": 9.8,
+   "gasolineCityHwy": [
+    8.8,
+    11.2
+   ],
+   "n": 1
+  },
+  "HONDA|ACCORD": {
+   "gasoline": 16.6,
+   "gasolineCityHwy": [
+    17.5,
+    15.6
+   ],
+   "n": 1
+  },
+  "JETOUR|S06 DM": {
+   "gasoline": 13.4,
+   "gasolineCityHwy": [
+    14,
+    12.6
+   ],
+   "n": 2
+  },
+  "LEAPMOTOR|C10": {
+   "gasoline": 12,
+   "gasolineCityHwy": [
+    12,
+    12
+   ],
+   "n": 1
+  },
+  "LEXUS|NX350H": {
+   "gasoline": 14.8,
+   "gasolineCityHwy": [
+    15.7,
+    13.8
+   ],
+   "n": 3
+  },
+  "LEXUS|NX 450H PLUG IN": {
+   "gasoline": 13.8,
+   "gasolineCityHwy": [
+    14.5,
+    13.1
+   ],
+   "n": 1
+  },
+  "LEXUS|RX500H": {
+   "gasoline": 10.9,
+   "gasolineCityHwy": [
+    10.8,
+    11
+   ],
+   "n": 1
+  },
+  "LEXUS|RX450H PLUG IN": {
+   "gasoline": 13.4,
+   "gasolineCityHwy": [
+    14.1,
+    12.6
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|CLA200": {
+   "gasoline": 12.8,
+   "gasolineCityHwy": [
+    12,
+    14
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG CLA35 4M": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    8.1,
+    11.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG CLA45S 4M": {
+   "gasoline": 9.1,
+   "gasolineCityHwy": [
+    8.1,
+    10.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|C200": {
+   "gasoline": 12.4,
+   "gasolineCityHwy": [
+    11.4,
+    14.1
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|C300": {
+   "gasoline": 11.8,
+   "gasolineCityHwy": [
+    10.8,
+    13.4
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG C63S EP": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7.2,
+    8.1
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|E300": {
+   "gasoline": 11,
+   "gasolineCityHwy": [
+    9.9,
+    12.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG S63 EP": {
+   "gasoline": 7,
+   "gasolineCityHwy": [
+    6.5,
+    7.8
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLB220 4M": {
+   "gasoline": 11.4,
+   "gasolineCityHwy": [
+    10.4,
+    13
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG GLB35 4M": {
+   "gasoline": 9,
+   "gasolineCityHwy": [
+    8.4,
+    9.8
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GLC43": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.3,
+    9.1
+   ],
+   "n": 3
+  },
+  "MERCEDES BENZ|AMG GLC63S EP": {
+   "gasoline": 7.4,
+   "gasolineCityHwy": [
+    7.2,
+    7.8
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GLE53 4M": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.3,
+    8.9
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GLE63 S CO": {
+   "gasoline": 6.5,
+   "gasolineCityHwy": [
+    5.9,
+    7.3
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLS450 4M": {
+   "gasoline": 8.1,
+   "gasolineCityHwy": [
+    7.5,
+    9
+   ],
+   "n": 1
+  },
+  "MITSUBISHI|OUTLANDER": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    11.6,
+    10.4
+   ],
+   "n": 2
+  },
+  "OMODA|7": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    14,
+    11.9
+   ],
+   "n": 2
+  },
+  "PORSCHE|MACAN": {
+   "gasoline": 7.7,
+   "gasolineCityHwy": [
+    7.2,
+    8.4
+   ],
+   "n": 4
+  },
+  "RENAULT|KOLEOS": {
+   "gasoline": 12.6,
+   "gasolineCityHwy": [
+    13.1,
+    12.1
+   ],
+   "n": 1
+  },
+  "TOYOTA|RAV4": {
+   "gasoline": 14.8,
+   "gasolineCityHwy": [
+    15.7,
+    13.8
+   ],
+   "n": 4
+  },
+  "VOLKSWAGEN|JETTA": {
+   "gasoline": 11.5,
+   "gasolineCityHwy": [
+    10.3,
+    13.4
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 5X": {
+   "gasoline": 10.7,
+   "ethanol": 7.1,
+   "gasolineCityHwy": [
+    10,
+    11.7
+   ],
+   "n": 3
+  },
+  "CHEVROLET|TRACKER": {
+   "gasoline": 12.4,
+   "ethanol": 8.8,
+   "gasolineCityHwy": [
+    11.5,
+    13.8
+   ],
+   "n": 8
+  },
+  "CITROEN|BASALT": {
+   "gasoline": 12.7,
+   "ethanol": 8.9,
+   "gasolineCityHwy": [
+    12.1,
+    13.7
+   ],
+   "n": 5
+  },
+  "CITROEN|C3": {
+   "gasoline": 13.7,
+   "ethanol": 9.8,
+   "gasolineCityHwy": [
+    13.2,
+    14.5
+   ],
+   "n": 8
+  },
+  "CITROEN|AIRCROSS": {
+   "gasoline": 12,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.2,
+    13
+   ],
+   "n": 8
+  },
+  "FIAT|FASTBACK": {
+   "gasoline": 13,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12.1,
+    13.9
+   ],
+   "n": 5
+  },
+  "FIAT|PULSE": {
+   "gasoline": 13.6,
+   "ethanol": 9.5,
+   "gasolineCityHwy": [
+    12.8,
+    14.4
+   ],
+   "n": 6
+  },
+  "HONDA|WR V": {
+   "gasoline": 12.3,
+   "ethanol": 8.5,
+   "gasolineCityHwy": [
+    12,
+    12.8
+   ],
+   "n": 2
+  },
+  "HYUNDAI|CRETA": {
+   "gasoline": 12.3,
+   "ethanol": 8.6,
+   "gasolineCityHwy": [
+    12,
+    12.7
+   ],
+   "n": 7
+  },
+  "JEEP|RENEGADE": {
+   "gasoline": 11.7,
+   "ethanol": 8.3,
+   "gasolineCityHwy": [
+    11.1,
+    12
+   ],
+   "n": 13
+  },
+  "NISSAN|KICKS": {
+   "gasoline": 12.7,
+   "ethanol": 9,
+   "gasolineCityHwy": [
+    11.7,
+    14.3
+   ],
+   "n": 4
+  },
+  "NISSAN|KAIT": {
+   "gasoline": 12.3,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.3,
+    13.7
+   ],
+   "n": 6
+  },
+  "PEUGEOT|2008": {
+   "gasoline": 12.9,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12,
+    14.1
+   ],
+   "n": 4
+  },
+  "RENAULT|KWID": {
+   "gasoline": 14.9,
+   "ethanol": 10.5,
+   "gasolineCityHwy": [
+    14.4,
+    15.4
+   ],
+   "n": 6
+  },
+  "RENAULT|KARDIAN": {
+   "gasoline": 13.3,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.7,
+    13.9
+   ],
+   "n": 5
+  },
+  "TOYOTA|YARIS CROSS": {
+   "gasoline": 13.3,
+   "ethanol": 9.4,
+   "gasolineCityHwy": [
+    12.6,
+    14.3
+   ],
+   "n": 5
+  },
+  "VOLKSWAGEN|T CROSS": {
+   "gasoline": 13,
+   "ethanol": 9.2,
+   "gasolineCityHwy": [
+    12.1,
+    14.5
+   ],
+   "n": 5
+  },
+  "VOLKSWAGEN|NIVUS": {
+   "gasoline": 13.3,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    12.4,
+    14.8
+   ],
+   "n": 3
+  },
+  "BMW|X1": {
+   "gasoline": 11.5,
+   "gasolineCityHwy": [
+    10.3,
+    13.5
+   ],
+   "n": 6
+  },
+  "CHANGAN|UNI T": {
+   "gasoline": 11.3,
+   "ethanol": 7.7,
+   "gasolineCityHwy": [
+    10.5,
+    12.4
+   ],
+   "n": 1
+  },
+  "CHERY|TIGGO 8": {
+   "gasoline": 11.3,
+   "gasolineCityHwy": [
+    10.9,
+    11.9
+   ],
+   "n": 2
+  },
+  "GAC|GS3": {
+   "gasoline": 10.8,
+   "gasolineCityHwy": [
+    10.2,
+    11.6
+   ],
+   "n": 2
+  },
+  "GAC|GS4": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    14.1,
+    11.8
+   ],
+   "n": 2
+  },
+  "GWM|WEY": {
+   "gasoline": 10,
+   "gasolineCityHwy": [
+    10.8,
+    9.1
+   ],
+   "n": 1
+  },
+  "GWM|HAVAL H6": {
+   "gasoline": 12.9,
+   "gasolineCityHwy": [
+    14.1,
+    11.4
+   ],
+   "n": 6
+  },
+  "HONDA|CR V": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    14.1,
+    11.8
+   ],
+   "n": 1
+  },
+  "JEEP|COMMANDER": {
+   "gasoline": 10.6,
+   "ethanol": 7.5,
+   "diesel": 11.5,
+   "gasolineCityHwy": [
+    10,
+    11.2
+   ],
+   "n": 8
+  },
+  "JEEP|COMPASS": {
+   "gasoline": 10.9,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    10.1,
+    12.1
+   ],
+   "n": 6
+  },
+  "JETOUR|T1 I DM": {
+   "gasoline": 13,
+   "gasolineCityHwy": [
+    13.6,
+    12.2
+   ],
+   "n": 2
+  },
+  "JETOUR|T2 I DM": {
+   "gasoline": 11,
+   "gasolineCityHwy": [
+    11.4,
+    10.5
+   ],
+   "n": 2
+  },
+  "KIA|SPORTAGE": {
+   "gasoline": 12.8,
+   "gasolineCityHwy": [
+    12.5,
+    13.2
+   ],
+   "n": 5
+  },
+  "MITSUBISHI|ECLIPSE CROSS": {
+   "gasoline": 10.7,
+   "gasolineCityHwy": [
+    10.3,
+    11.3
+   ],
+   "n": 6
+  },
+  "RENAULT|DUSTER": {
+   "gasoline": 11.3,
+   "ethanol": 7.9,
+   "gasolineCityHwy": [
+    10.9,
+    11.8
+   ],
+   "n": 12
+  },
+  "RENAULT|BOREAL": {
+   "gasoline": 12.2,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.2,
+    13.6
+   ],
+   "n": 3
+  },
+  "VOLKSWAGEN|TAOS": {
+   "gasoline": 12,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11.1,
+    13.3
+   ],
+   "n": 2
+  },
+  "BMW|X3": {
+   "gasoline": 10.6,
+   "gasolineCityHwy": [
+    10,
+    11.5
+   ],
+   "n": 2
+  },
+  "BMW|X5": {
+   "gasoline": 9.5,
+   "gasolineCityHwy": [
+    9.2,
+    9.9
+   ],
+   "n": 4
+  },
+  "BMW|X6": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    9,
+    10.1
+   ],
+   "n": 2
+  },
+  "BMW|X7": {
+   "gasoline": 8.3,
+   "gasolineCityHwy": [
+    8,
+    8.7
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|GLC300 4M": {
+   "gasoline": 10.4,
+   "gasolineCityHwy": [
+    9.5,
+    11.8
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|GLE450D": {
+   "diesel": 11.5,
+   "n": 2
+  },
+  "PORSCHE|CAYENNE": {
+   "gasoline": 7.7,
+   "gasolineCityHwy": [
+    7.4,
+    8.2
+   ],
+   "n": 17
+  },
+  "VOLVO|XC60": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    9.5,
+    9.4
+   ],
+   "n": 10
+  },
+  "VOLVO|XC90": {
+   "gasoline": 9.4,
+   "gasolineCityHwy": [
+    9.4,
+    9.3
+   ],
+   "n": 15
+  },
+  "CHEVROLET|TRAILBLAZER": {
+   "diesel": 10.3,
+   "n": 2
+  },
+  "DENZA|B5": {
+   "gasoline": 8.2,
+   "gasolineCityHwy": [
+    8.4,
+    7.9
+   ],
+   "n": 1
+  },
+  "FORD|BRONCO SPORT": {
+   "gasoline": 9.3,
+   "gasolineCityHwy": [
+    8.4,
+    10.7
+   ],
+   "n": 1
+  },
+  "GWM|TANK 300": {
+   "gasoline": 7.6,
+   "gasolineCityHwy": [
+    7.5,
+    7.7
+   ],
+   "n": 1
+  },
+  "GWM|HAVAL H9": {
+   "diesel": 9.6,
+   "n": 1
+  },
+  "JEEP|WRANGLER": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    7.2,
+    7.5
+   ],
+   "n": 1
+  },
+  "LAND ROVER|RANGE ROVER": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.5,
+    8.4
+   ],
+   "n": 4
+  },
+  "LAND ROVER|DEFENDER 90 D350": {
+   "diesel": 9.7,
+   "n": 1
+  },
+  "LAND ROVER|DEFENDER 130 D350": {
+   "diesel": 9.9,
+   "n": 2
+  },
+  "LAND ROVER|VELAR": {
+   "gasoline": 8.7,
+   "gasolineCityHwy": [
+    8.3,
+    9.3
+   ],
+   "n": 1
+  },
+  "LAND ROVER|DEFENDER 110 D350": {
+   "diesel": 9.7,
+   "n": 3
+  },
+  "LAND ROVER|DISCOVERY": {
+   "diesel": 10.4,
+   "n": 2
+  },
+  "LAND ROVER|RANGE ROVER SPORT": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.5,
+    8.4
+   ],
+   "n": 5
+  },
+  "LAND ROVER|EVOQUE": {
+   "gasoline": 8.2,
+   "ethanol": 5.7,
+   "gasolineCityHwy": [
+    7.4,
+    9.4
+   ],
+   "n": 1
+  },
+  "LAND ROVER|DISCOVERY SPORT": {
+   "gasoline": 8.1,
+   "ethanol": 5.7,
+   "gasolineCityHwy": [
+    7.2,
+    9.6
+   ],
+   "n": 4
+  },
+  "MERCEDES BENZ|AMG G63": {
+   "gasoline": 5.6,
+   "gasolineCityHwy": [
+    5.3,
+    6
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG G63 4M": {
+   "gasoline": 5.7,
+   "gasolineCityHwy": [
+    5.4,
+    6.2
+   ],
+   "n": 2
+  },
+  "TOYOTA|SW4": {
+   "diesel": 9.8,
+   "n": 2
+  },
+  "VOLKSWAGEN|TIGUAN": {
+   "gasoline": 10.1,
+   "gasolineCityHwy": [
+    8.9,
+    12.1
+   ],
+   "n": 1
+  },
+  "KIA|CARNIVAL": {
+   "gasoline": 11.1,
+   "gasolineCityHwy": [
+    11.9,
+    10.2
+   ],
+   "n": 3
+  },
+  "CITROEN|JUMPER": {
+   "diesel": 10.6,
+   "n": 6
+  },
+  "CITROEN|JUMPY": {
+   "diesel": 12.9,
+   "n": 2
+  },
+  "FIAT|DUCATO": {
+   "diesel": 10.6,
+   "n": 6
+  },
+  "FIAT|FIORINO": {
+   "gasoline": 12.9,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12.4,
+    13.6
+   ],
+   "n": 1
+  },
+  "FIAT|SCUDO": {
+   "diesel": 12.9,
+   "n": 2
+  },
+  "FORD|TRANSIT": {
+   "diesel": 9.8,
+   "n": 4
+  },
+  "KIA|BONGO K2500 4X4 SC": {
+   "diesel": 8.4,
+   "n": 2
+  },
+  "MERCEDES BENZ|315CDI STREET": {
+   "diesel": 9.9,
+   "n": 2
+  },
+  "PEUGEOT|BOXER": {
+   "diesel": 10.6,
+   "n": 5
+  },
+  "PEUGEOT|EXPERT": {
+   "diesel": 12.9,
+   "n": 2
+  },
+  "PEUGEOT|PARTRAPID": {
+   "gasoline": 12.9,
+   "ethanol": 9.1,
+   "gasolineCityHwy": [
+    12.4,
+    13.6
+   ],
+   "n": 1
+  },
+  "RENAULT|MASTER": {
+   "diesel": 10,
+   "n": 13
+  },
+  "RENAULT|KANGOO": {
+   "gasoline": 11.3,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    11,
+    11.7
+   ],
+   "n": 3
+  },
+  "TOYOTA|HIACE": {
+   "diesel": 9.2,
+   "n": 2
+  },
+  "CHEVROLET|MONTANA": {
+   "gasoline": 12,
+   "ethanol": 8.4,
+   "gasolineCityHwy": [
+    11,
+    13.5
+   ],
+   "n": 5
+  },
+  "FIAT|STRADA": {
+   "gasoline": 13.1,
+   "ethanol": 9.3,
+   "gasolineCityHwy": [
+    12.6,
+    13.9
+   ],
+   "n": 7
+  },
+  "RENAULT|OROCH": {
+   "gasoline": 11.5,
+   "ethanol": 7.8,
+   "gasolineCityHwy": [
+    11.3,
+    11.7
+   ],
+   "n": 2
+  },
+  "VOLKSWAGEN|SAVEIRO": {
+   "gasoline": 11.8,
+   "ethanol": 8.2,
+   "gasolineCityHwy": [
+    11.3,
+    12.4
+   ],
+   "n": 4
+  },
+  "BYD|SHARK": {
+   "gasoline": 8.6,
+   "gasolineCityHwy": [
+    8.7,
+    8.5
+   ],
+   "n": 4
+  },
+  "CHEVROLET|S10": {
+   "diesel": 9.9,
+   "n": 7
+  },
+  "CHEVROLET|SILVERADO": {
+   "gasoline": 6.5,
+   "gasolineCityHwy": [
+    6,
+    7.2
+   ],
+   "n": 1
+  },
+  "FIAT|TITANO": {
+   "diesel": 10.3,
+   "n": 3
+  },
+  "FIAT|TORO": {
+   "gasoline": 10,
+   "ethanol": 7,
+   "diesel": 11.7,
+   "gasolineCityHwy": [
+    9.4,
+    10.8
+   ],
+   "n": 7
+  },
+  "FORD|RANGER": {
+   "diesel": 10,
+   "n": 13
+  },
+  "FORD|MAVERICK": {
+   "gasoline": 9.5,
+   "gasolineCityHwy": [
+    8.5,
+    11
+   ],
+   "n": 2
+  },
+  "FORD|F150": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    6.5,
+    8.5
+   ],
+   "n": 3
+  },
+  "FOTON|TUNLAND": {
+   "diesel": 9.2,
+   "n": 2
+  },
+  "GWM|POER P30": {
+   "diesel": 9.8,
+   "n": 2
+  },
+  "JAC|HUNTER": {
+   "diesel": 9.5,
+   "n": 8
+  },
+  "JEEP|GLADIATOR": {
+   "gasoline": 6.6,
+   "gasolineCityHwy": [
+    6.3,
+    7.1
+   ],
+   "n": 1
+  },
+  "MITSUBISHI|TRITON": {
+   "diesel": 10.4,
+   "n": 8
+  },
+  "RAM|1500": {
+   "gasoline": 6.4,
+   "gasolineCityHwy": [
+    6,
+    7
+   ],
+   "n": 3
+  },
+  "RAM|RAMPAGE": {
+   "gasoline": 8.8,
+   "ethanol": 6.2,
+   "diesel": 11.7,
+   "gasolineCityHwy": [
+    8.2,
+    9.9
+   ],
+   "n": 10
+  },
+  "RAM|DAKOTA": {
+   "diesel": 10.1,
+   "n": 2
+  },
+  "TOYOTA|HILUX": {
+   "diesel": 9.6,
+   "n": 10
+  },
+  "VOLKSWAGEN|AMAROK": {
+   "diesel": 8.7,
+   "n": 3
+  },
+  "BMW|M3": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7,
+    9.3
+   ],
+   "n": 2
+  },
+  "BMW|M2": {
+   "gasoline": 8,
+   "gasolineCityHwy": [
+    7.2,
+    9.3
+   ],
+   "n": 2
+  },
+  "FERRARI|296": {
+   "gasoline": 6.9,
+   "gasolineCityHwy": [
+    6.2,
+    8.2
+   ],
+   "n": 2
+  },
+  "FERRARI|PUROSANGUE": {
+   "gasoline": 4.7,
+   "gasolineCityHwy": [
+    4.1,
+    5.6
+   ],
+   "n": 1
+  },
+  "FERRARI|12CILINDRI": {
+   "gasoline": 5.4,
+   "gasolineCityHwy": [
+    4.7,
+    6.6
+   ],
+   "n": 2
+  },
+  "FERRARI|ROMA": {
+   "gasoline": 7.4,
+   "gasolineCityHwy": [
+    6.7,
+    8.7
+   ],
+   "n": 1
+  },
+  "FORD|MUSTANG": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    6.4,
+    8.9
+   ],
+   "n": 2
+  },
+  "MCLAREN|ARTURA": {
+   "gasoline": 7.3,
+   "gasolineCityHwy": [
+    6.5,
+    8.5
+   ],
+   "n": 2
+  },
+  "MCLAREN|750S": {
+   "gasoline": 6.5,
+   "gasolineCityHwy": [
+    5.9,
+    7.4
+   ],
+   "n": 2
+  },
+  "MERCEDES BENZ|AMG SL63S EP": {
+   "gasoline": 6.7,
+   "gasolineCityHwy": [
+    6.2,
+    7.4
+   ],
+   "n": 1
+  },
+  "MERCEDES BENZ|AMG GT63S EP": {
+   "gasoline": 6.9,
+   "gasolineCityHwy": [
+    6.4,
+    7.6
+   ],
+   "n": 2
+  },
+  "PORSCHE|911": {
+   "gasoline": 7.8,
+   "gasolineCityHwy": [
+    6.9,
+    9.2
+   ],
+   "n": 16
+  },
+  "PORSCHE|BOXSTER": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.1,
+    8.9
+   ],
+   "n": 2
+  },
+  "PORSCHE|CAYMAN": {
+   "gasoline": 7.9,
+   "gasolineCityHwy": [
+    7.1,
+    8.9
+   ],
+   "n": 1
+  },
+  "PORSCHE|PANAMERA": {
+   "gasoline": 8.1,
+   "gasolineCityHwy": [
+    7.5,
+    9
+   ],
+   "n": 4
+  }
+ }
+}
