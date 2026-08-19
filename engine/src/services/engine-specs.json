@@ -1,8 +1,8 @@
 {
   "_meta": {
     "descricao": "Potência e torque por MOTOR. Chaveada por marca + cilindrada + válvulas + aspiração + combustível + janela de ano. Desempenho (0-100 e velocidade máxima) NÃO está aqui — é propriedade do veículo, não do motor, e vive em vehicle-performance.json.",
-    "compiladoEm": "2026-08-17",
-    "versao": "0.2.0-parcial",
+    "compiladoEm": "2026-08-18",
+    "versao": "0.3.0-parcial",
     "escopo": "Só motor a combustão. Híbrido e elétrico ficam de fora: potência de híbrido é de sistema (térmico + elétrico) e BEV não tem cilindrada, então nenhum dos dois é endereçável por esta chave.",
     "regra": "Nada de estimativa. Se o fabricante não publica um campo, o campo é null. Célula vazia a tela desenha; número inventado ela não desmente.",
     "chave": {
@@ -27,7 +27,7 @@
       "torqueRpm": "string, porque fabricante publica faixa ('2000-3500') e às vezes rpm diferente por combustível.",
       "norma": "Quando o documento declara (NBR ISO 1585, ABNT, ISO/ABNT, CEE), o campo 'norma' guarda. Nem todo fabricante declara."
     },
-    "limitacaoDeJanela": "Problema real de cobertura, não detalhe: fabricante publica a ficha do ano-modelo CORRENTE e tira as antigas do ar. Hyundai só tem 26/27; Renault só os catálogos de 2025/2026. A Volkswagen é a exceção útil — nunca removeu as fichas de lançamento, então há documento datado de 2017, 2018, 2019 e 2020 no ar. Resultado: as janelas da Hyundai e da Renault começam em 2025/2026 e NÃO cobrem o carro usado, que é a maior parte da Garagem. Fechar isso exige fonte histórica (imprensa da época ou Archive), e é trabalho separado.",
+    "limitacaoDeJanela": "Problema real de cobertura, não detalhe: fabricante publica a ficha do ano-modelo CORRENTE e tira as antigas do ar. Hyundai só tem 26/27; Renault só os catálogos de 2025/2026 — as janelas dessas duas começam em 2025/2026 e NÃO cobrem o carro usado, que é a maior parte da Garagem. ATUALIZAÇÃO 0.3.0, duas exceções únteis a mais: (1) VOLKSWAGEN — já sabíamos que nunca removeu as fichas de lançamento (2017-2020); nesta rodada apareceu documento de DEZEMBRO DE 2015 (Gol 1.6 8V) no mesmo CDN, o que empurra o histórico acessível da VW mais para trás do que se supunha. (2) CHEVROLET — o DAM de manuais mantém TRÊS anos-modelo simultâneos no ar (2024, 2025 e 2026) para sete nameplates. Não é histórico profundo, mas é três vezes o da Hyundai, e foi o que permitiu provar que o 1.0 aspirado mudou de calibração entre MY25 e MY26. Lição geral: MANUAL DO PROPRIETÁRIO é fonte de dado de motor e envelhece melhor que ficha técnica, porque a montadora tem obrigação de mantê-lo disponível para quem já comprou o carro. Ver metodosDeBusca.",
     "colisoesConhecidas": [
       {
         "chave": "Volkswagen / 1.0 / 12V / TB / Flex",
@@ -36,7 +36,7 @@
           "200 TSI (128 cv E)"
         ],
         "desempate": "badge. A string da FIPE traz literalmente: 'Tera 1.0 170 TSI Flex 12V 5p Mec.', 'Nivus Comfortline 1.0 200 TSI Flex Aut.'. Token /\\b(\\d{3})\\s?TSI\\b/.",
-        "residual": "'Polo Comfortline TSI 1.0 Flex 12V Aut.' e 'Golf Comfortline 1.0 TSI Total Flex Mec.' não trazem badge. Aí a chave fica ambígua e a tela mostra buraco."
+        "residual": "'Polo Comfortline TSI 1.0 Flex 12V Aut.' e 'Golf Comfortline 1.0 TSI Total Flex Mec.' não trazem badge. Aí a chave fica ambígua e a tela mostra buraco. ATUALIZAÇÃO 0.3.0: as DUAS badges agora têm linha própria e verificada (170 TSI = 109/116 cv; 200 TSI = 116/128 cv), então o desempate por badge passou a produzir número em vez de buraco. O residual continua sendo a string SEM badge ('Polo Comfortline TSI 1.0 Flex 12V Aut.', 'Golf Comfortline 1.0 TSI Total Flex Mec.'): aí a chave segue ambígua e a tela deve continuar mostrando buraco, porque agora escolher errado custa 12 cv em vez de custar um vazio."
       },
       {
         "chave": "Volkswagen / 1.6 / 16V / NA / Flex",
@@ -54,6 +54,15 @@
           "SCe 1.0 do Sandero/Logan (não verificado)"
         ],
         "desempate": "nameplate. Sandero e Logan saíram de linha no Brasil e sumiram do site da Renault — não há catálogo oficial no ar para confirmar."
+      },
+      {
+        "chave": "Chevrolet / 1.0 / 12V / TB / Flex",
+        "motores": [
+          "1.0 T do Onix e Onix Plus (115,5 CV @5.500; 160/165 Nm @2.000-4.500)",
+          "1.0 T do Tracker (115,5 CV @5.000; 180/185 Nm @1.800-3.500)"
+        ],
+        "desempate": "nameplate. Ver overridesPorModelo. A potência é idêntica (85 kW nos dois) e só o torque e as rotações separam — ou seja, quem comparar só o cv conclui que é o mesmo motor e erra 20 Nm.",
+        "comoDescobri": "Lendo o capítulo \"Dados do motor\" de três manuais do proprietário da Chevrolet do Brasil (Onix 2026, Onix Plus 2026, Tracker 2026). Mesmo bloco declarado nos três (999 cm³, 74 x 77,49 mm, 10,5:1, 3 cilindros), duas calibrações."
       }
     ],
     "colisaoFiat13": {
@@ -63,6 +72,51 @@
       "oQueNaoE": "Não é câmbio. Quando vi Argo MT (101/109) contra Argo CVT (98/107) a hipótese óbvia foi 'o câmbio muda a potência'. A ficha da Strada 1.3 MANUAL derruba isso: ela usa a calibração B. Se eu tivesse parado no primeiro par, teria reportado uma regra falsa.",
       "hipoteseNaoVerificada": "Provavelmente é ano-modelo — a Fiat revisou o Firefly 1.3 e o documento do Argo MT seria o mais antigo. INFERÊNCIA, não fato: nenhum dos dois PDFs traz data, que é exatamente o que impede de fechar a janela de ano.",
       "oQueFazerAgora": "Tratar B como a linha base (dois documentos concordam) e A como override explícito do Argo Drive 1.3 MT. Quem resolver isso precisa de fichas datadas."
+    },
+    "metodosDeBusca": {
+      "porQueIssoEstaAqui": "Cada linha desta tabela custou uma caçada. Estes são os caminhos que funcionaram e os que estão comprovadamente fechados, para ninguém repetir a caçada.",
+      "funcionam": [
+        {
+          "metodo": "MANUAL DO PROPRIETÁRIO como fonte de potência e torque",
+          "detalhe": "Foi o que destravou a Chevrolet inteira, depois de a ficha técnica ter falhado. O capítulo \"Dados do motor\" (GM) ou \"Dados técnicos\" (VW) traz par flex, rpm e norma — exatamente os campos desta tabela — e é camada 1 sem discussão, hospedado no domínio da montadora. Vantagem sobre a ficha: a montadora precisa manter o manual no ar para quem já comprou, então o histórico dura mais. TENTAR ISSO PRIMEIRO nas marcas que faltam (Toyota, Honda, Nissan, Ford).",
+          "chevrolet": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/<modelo>/01-pdfs/<ano>/<modelo>-<ano>-manual-do-propietario.pdf — ATENÇÃO ao nome: é 'propietario' (sem o segundo r) e o do Tracker 2026 é 'propieatrio' (com erro de digitação da própria GM). Alguns anos ganham uma pasta a mais: .../<ano>/manual-do-propietario/<arquivo>.pdf. Confirmados no ar em 18/08/2026: onix 2024/2025/2026, onix-plus 2026, tracker 2024/2025/2026, montana 2024/2025/2026, spin 2024/2025, s10 2024/2025, equinox 2024/2025/2026.",
+          "volkswagen": "https://www.vw.com.br/idhub/content/dam/onehub_pkw/importers/br/literatura-de-bordo/manual-<modelo>/<arquivo>.pdf"
+        },
+        {
+          "metodo": "AEM: o nome do arquivo depois de 'file.res' é IGNORADO",
+          "detalhe": "No media.chevrolet.com, .../_jcr_content/iconrow/textfile/file.res/QUALQUERCOISA.pdf devolve o mesmo PDF. Ou seja: para sondar uma árvore AEM basta acertar PÁGINA + COMPONENTE, nunca o nome do arquivo. Reduz o espaço de busca em ordens de grandeza. Verificado em 18/08/2026."
+        },
+        {
+          "metodo": "Datar PDF sem data da Stellantis pelo sufixo hexadecimal do upload",
+          "detalhe": "Em media.stellantis.com/uploads/... o sufixo do nome de arquivo é um timestamp Unix em hexadecimal. 620464c3 = 09/02/2022; 661d4a80 = 15/04/2024; 63c81dca = 18/01/2023; 6177fd1d = 26/10/2021. Isso resolve parcialmente o 'sourceDate: null' das linhas Fiat, que existe porque as fichas da Stellantis não trazem data impressa. É INFERÊNCIA sobre a data de UPLOAD, não sobre a data do dado — mas dá um limite superior confiável."
+        },
+        {
+          "metodo": "Achar arquivo de CDN com nome-hash pelo TÍTULO INTERNO do PDF",
+          "detalhe": "A CDN da VW hospeda muita ficha com nome de hash (033f1f0ef5533125a5ec4ac6f41e82d5.pdf = Virtus GTS). Adivinhar é impossível, mas os buscadores indexam o título interno do PDF, que costuma ser o código de projeto ('Ficha Técnica VW27X GTS', 'Ficha Técnica VW216 LA K v2', 'Ficha Técnica VW230 LA K1 MY17'). Buscar pelo host + código de projeto acha o que a sondagem por nome nunca acharia."
+        }
+      ],
+      "fechados": [
+        {
+          "caminho": "API do newsroom da VW (newsroom-cms-br.itd.vw.com.br/v1/api/)",
+          "estado": "401 em tudo, menos technology/json. Testei models, models/json, search, search/json, subtechnology/json, press-release, presskit, vehicle, vehicles, model/json, car/json em 18/08/2026 — todos 401. Confirma o que a versão 0.2.0 já registrava. NÃO reabrir."
+        },
+        {
+          "caminho": "Enumerar a CDN da VW (vw-digital-cdn-br.itd.vw.com.br)",
+          "estado": "É bucket S3 com ListBucket negado: ?list-type=2 devolve AccessDenied em todos os prefixos. Arquivo inexistente devolve 403 (não 404), então nem dá para distinguir 'não existe' de 'sem permissão'. Sondei 429 nomes plausíveis para o 1.0 MPI (quatro convenções de prefixo x modelo x motor x ano x câmbio) e deu ZERO — com controle positivo passando nas quatro URLs boas conhecidas, ou seja, o método estava certo e o alvo não existe com esses nomes. Ir pelo título interno (ver 'funcionam') ou pelo manual."
+        },
+        {
+          "caminho": "Árvore antiga do media.chevrolet.com (/content/media/br/pt/.../carros/<modelo>/<ano>/)",
+          "estado": "Abandonada por volta de 2018 e majoritariamente release de imprensa, não ficha. Varri 17 nameplates x 14 anos (2013-2026) com o truque do file.res e achei três páginas vivas: onix/2014 (a ficha de 2013 que a tabela já usa), cobalt/2015 e cobalt/2017 — estas duas são releases, com potência só em prosa ('até 102 cavalos e 13 mkgf'), sem par flex nem rpm, portanto inúteis para esta tabela. As páginas .html do domínio redirecionam todas para news.chevrolet.com.br/newsroom.html. NÃO há ficha do Onix moderno aí. Resolvido pelo manual do proprietário."
+        },
+        {
+          "caminho": "Servlet JSON do AEM da Chevrolet (.1.json / .2.json / .infinity.json)",
+          "estado": "404 — desabilitado. Não dá para listar a árvore."
+        }
+      ],
+      "cuidado": {
+        "wafDaChevrolet": "media.chevrolet.com tem WAF que bloqueia varredura paralela e, quando bloqueia, devolve uma página HTML 'Access Denied' COM Content-Type: application/pdf. Ou seja, um probe que confia no status 200 + content-type registra falso positivo. Validar sempre o magic byte '%PDF' e varrer com concorrência 2 e User-Agent de browser. Perdi uma varredura inteira por causa disso.",
+        "documentosRehospedados": "Algumas fichas oficiais só existem hoje rehospedadas em blog camada 4 (carroscomcamanzi.com.br). O documento é autêntico — template VW/GM, NBR ISO 1585, marca de classificação 'INTERNAL' — mas a procedência não é verificável no publicador. Regra adotada: rehospedado NUNCA é 'source', só entra como 'crossCheck' e sempre com a ressalva escrita na própria string. Toda linha desta versão tem 'source' em domínio do fabricante."
+      }
     }
   },
   "engines": [
@@ -516,7 +570,7 @@
       "sourceDate": null,
       "verifiedAt": "2026-08-17",
       "crossCheck": null,
-      "note": "Fonte única — linha marcada. O documento publica '270 Nm (27,5 kgfm)', então aqui o kgfm é do próprio fabricante, não conversão minha. O mesmo T270 equipa Pulse Abarth, Fastback, Renegade e Compass com potências que NÃO verifiquei — models fica só com o Toro."
+      "note": "Fonte única para a aplicação Toro — linha marcada. O documento publica '270 Nm (27,5 kgfm)', então aqui o kgfm é do próprio fabricante, não conversão minha. ATUALIZAÇÃO 0.3.0: a pendência 'o mesmo T270 equipa Renegade e Compass com potências que NÃO verifiquei' FOI RESOLVIDA — seis fichas oficiais Jeep confirmam exatamente os mesmos 180/185 cv @5.750 e 27,5 kgfm @1.750. Ver a linha Jeep/1.3/16V/TB, que existe separada porque 'brand' entra na chave. Pulse Abarth e Fastback continuam NÃO verificados."
     },
     {
       "brand": "Chevrolet",
@@ -582,6 +636,332 @@
       "crossCheck": "Ficha oficial da Strada Volcano Cabine Dupla 1.3 Flex (manual) traz 98,0 cv (gasolina) @6.000 / 107,0 cv (etanol) @6.250 e 129 Nm @4.250 (gasolina) / 134 Nm @4.000 (etanol) — 129 Nm = 13,2 kgfm e 134 Nm = 13,7 kgfm, idêntico. Dois documentos camada 1.",
       "crossCheckUrl": "https://www.media.stellantis.com/br-pt/download-model-document/259",
       "note": "Ver 'colisaoFiat13' no _meta. Esta é a calibração BAIXA e é a mais comum."
+    },
+    {
+      "brand": "Chevrolet",
+      "displacementL": "1.0",
+      "valves": "12V",
+      "aspiration": "TB",
+      "fuel": "Flex",
+      "yearFrom": 2025,
+      "yearTo": null,
+      "engineFamily": "1.0 turbo 3 cilindros, injecao direta (\"1.0 T\" na nomenclatura do fabricante)",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": 115.5,
+      "powerEthanolCv": 115.5,
+      "powerDieselCv": null,
+      "powerRpm": "5500",
+      "torqueGasoline": 160,
+      "torqueEthanol": 165,
+      "torqueUnit": "Nm",
+      "torqueRpm": "2000-4500 (gasolina) / 2000-5000 (etanol)",
+      "norma": "ABNT - NBR ISO 1585",
+      "models": [
+        "Onix",
+        "Onix Plus"
+      ],
+      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/onix-plus/01-pdfs/2026/manual-do-propietario/onixplus-2026-manual-do-propietario.pdf",
+      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Onix Plus 2026, capítulo \"Dados do motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "Manual do Proprietário Onix 2026 traz exatamente os mesmos números (115,5 CV / 85 kW a 5.500 rpm, gasolina e etanol; 160 Nm a 2.000-4.500 gasolina e 165 Nm a 2.000-5.000 etanol). Dois nameplates, dois documentos camada 1 do próprio fabricante. O Manual do Onix 2025 traz os mesmos 85 kW e os mesmos 160/165 Nm, imprimindo 115,6 CV e a rotação de torque como \"2.000 rpm\" sem faixa.",
+      "crossCheckUrl": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/onix/01-pdfs/2026/manual-do-propietario/onix-2026-manual-do-propietario.pdf",
+      "note": "NÃO VALE PARA O TRACKER — ver override e colisão. O Tracker usa o MESMO bloco 999 cm³ 74 x 77,49 mm 10,5:1 com outra calibração: 180/185 Nm a 1.800-3.500 e potência a 5.000 rpm. A potência é 85 kW nos três documentos; 115,5 e 115,6 CV são arredondamentos do mesmo 85 kW (85 kW = 115,57 CV). Torque em Nm porque o manual publica só em Nm, sem kgfm. 'valves':'12V' NÃO está no manual — vem da string da FIPE e da ficha do Tracker, que declara \"Válvulas, total: 12\" para este mesmo bloco de 999 cm³; é inferência declarada. yearFrom=2025 é o documento mais antigo que alcancei, não o início do motor: o 1.0 turbo equipa o Onix desde 2020 e os anos 2020-2024 seguem NÃO verificados.",
+      "riscoConhecido": "NEUTRALIZADO, mas vale saber por quê. Em matchEngineRow, quando sobra um único candidato o código o devolve com escopo ENGINE_FAMILY mesmo que o nameplate NÃO esteja em 'models' — ou seja, 'models' não é filtro duro. Por causa disso, um Tracker até MY25 recebia os 160/165 Nm desta linha em vez dos 180/185 dele. A correção foi por DADO, não por código: existe agora uma linha Chevrolet/1.0/12V/TB/Flex com models=['Tracker'], yearTo=2025 e todos os campos nulos, que ganha o desempate por nameplate e faz a tela mostrar ausência. O conserto de raiz continua sendo do matcher (dono: Brian): 'models', quando preenchido, deveria excluir quem não está nele."
+    },
+    {
+      "brand": "Chevrolet",
+      "displacementL": "1.0",
+      "valves": "12V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "engineFamily": "1.0 aspirado 3 cilindros (\"1.0\" na nomenclatura do fabricante)",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": 79.6,
+      "powerEthanolCv": 81.6,
+      "powerDieselCv": null,
+      "powerRpm": "6400",
+      "torqueGasoline": 100,
+      "torqueEthanol": 104,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4000",
+      "norma": "ABNT - NBR ISO 1585",
+      "models": [
+        "Onix",
+        "Onix Plus"
+      ],
+      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/onix/01-pdfs/2026/manual-do-propietario/onix-2026-manual-do-propietario.pdf",
+      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Onix 2026, capítulo \"Dados do motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "Manual do Proprietário Onix Plus 2026 traz os mesmos 79,6 CV (58,5 kW) gasolina / 81,6 CV (60 kW) etanol a 6.400 rpm e os mesmos 100 Nm (gasolina) / 104 Nm (etanol) a 4.000 rpm. Dois nameplates, dois documentos camada 1.",
+      "crossCheckUrl": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/onix-plus/01-pdfs/2026/manual-do-propietario/onixplus-2026-manual-do-propietario.pdf",
+      "note": "Taxa de compressão 12,5:1 (o manual declara). Torque em Nm porque o manual não publica kgfm. 'valves':'12V' vem da string da FIPE — nenhum documento Chevrolet que alcancei declara o número de válvulas do 1.0 aspirado; é inferência declarada. Janela abre em 2026 de propósito: ver a linha MY25, que tem números DIFERENTES na gasolina."
+    },
+    {
+      "brand": "Chevrolet",
+      "displacementL": "1.0",
+      "valves": "12V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2025,
+      "yearTo": 2025,
+      "engineFamily": "1.0 aspirado 3 cilindros (\"1.0\" na nomenclatura do fabricante) — calibração MY25",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": 77.5,
+      "powerEthanolCv": 81.6,
+      "powerDieselCv": null,
+      "powerRpm": "6400",
+      "torqueGasoline": 95,
+      "torqueEthanol": 104,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4100",
+      "norma": "ABNT - NBR ISO 1585",
+      "models": [
+        "Onix"
+      ],
+      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/onix/01-pdfs/2025/onix-2025-manual-do-propietario.pdf",
+      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Onix 2025, capítulo \"Dados do motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2025",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": null,
+      "note": "Fonte única — linha marcada. Existe de propósito, separada da linha MY26: o MESMO nameplate muda de 77,5 CV / 95 Nm @4.100 (MY25) para 79,6 CV / 100 Nm @4.000 (MY26) na GASOLINA, enquanto o etanol fica igual (81,6 CV / 104 Nm). Como cheguei nisso: comparei Onix 2025 x Onix 2026 (mesmo nameplate, anos diferentes) e Onix 2026 x Onix Plus 2026 (mesmo ano, nameplates diferentes). O primeiro par diverge e o segundo não — logo o discriminador é ANO-MODELO, não nameplate. Se eu tivesse só Onix 2025 e Onix Plus 2026 teria concluído errado que era nameplate."
+    },
+    {
+      "brand": "Chevrolet",
+      "displacementL": "1.2",
+      "valves": "12V",
+      "aspiration": "TB",
+      "fuel": "Flex",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "engineFamily": "1.2 turbo 3 cilindros, injecao direta (\"1.2 T\" na nomenclatura do fabricante)",
+      "cylinders": 3,
+      "displacementCm3": 1199,
+      "powerGasolineCv": 139,
+      "powerEthanolCv": 141,
+      "powerDieselCv": null,
+      "powerRpm": "5000",
+      "torqueGasoline": 220,
+      "torqueEthanol": 225,
+      "torqueUnit": "Nm",
+      "torqueRpm": "2500-4000",
+      "norma": "ABNT - NBR ISO 1585",
+      "models": [
+        "Tracker",
+        "Montana"
+      ],
+      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/tracker/01-pdfs/2026/tracker-2026-manual-do-propieatrio.pdf",
+      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Tracker 2026, capítulo \"Dados do motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "Manual do Proprietário Montana 2026 traz exatamente 139 CV (102 kW) a 5.000 rpm gasolina / 141 CV (104 kW) a 5.000 rpm etanol e 220 Nm (gasolina) / 225 Nm (etanol) a 2.500-4.000 rpm. Dois nameplates, dois documentos camada 1. Confere também com a ficha técnica MY26 do Tracker, que publica os mesmos números em mkgf (22,9 etanol / 22,4 gasolina = 225 / 220 Nm).",
+      "crossCheckUrl": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/montana/01-pdfs/2026/montana-2026-manual-do-propietario.pdf",
+      "note": "75 x 90,50 mm, 10,5:1. Torque em Nm porque o manual não publica kgfm. 'valves':'12V' vem da ficha técnica MY26 do Tracker, que declara \"Válvulas, total: 12\". ATENÇÃO: o manual do Tracker 2025 documenta um 1.2 T de 132/133 CV a 5.500 rpm ALÉM deste de 139/141 — são calibrações distintas convivendo, e a tabela do MY25 tem mais colunas do que a camada de texto do PDF permite mapear com segurança. Anos anteriores a 2026 ficam NÃO verificados de propósito."
+    },
+    {
+      "brand": "Volkswagen",
+      "displacementL": "1.6",
+      "valves": "8V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2015,
+      "yearTo": null,
+      "engineFamily": "1.6 8V Total Flex (o documento não nomeia a família)",
+      "cylinders": 4,
+      "displacementCm3": 1598,
+      "powerGasolineCv": 101,
+      "powerEthanolCv": 104,
+      "powerDieselCv": null,
+      "powerRpm": "5250",
+      "torqueGasoline": 15.4,
+      "torqueEthanol": 15.6,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "2500",
+      "norma": "NBR ISO 1585",
+      "models": [
+        "Gol"
+      ],
+      "source": "https://vw-digital-cdn-br.itd.vw.com.br/assets/newsroom-cdn-br-ps/Ficha%20T%C3%A9cnica_Novo%20Gol_1.6.pdf",
+      "sourceDoc": "Volkswagen do Brasil — Ficha Técnica Gol 1.6l 76kW Manual 4 Portas, Dados Oficiais 16/Dezembro/2015",
+      "sourceLayer": 1,
+      "sourceDate": "2015-12",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": null,
+      "note": "Fonte única — linha marcada. Motor NOVO na tabela e distinto do 1.6 16V que já existia: o documento declara \"4 / Em linha / 2\" válvulas por cilindro (8V) e taxa 12,1:1, contra 4 válvulas por cilindro (16V) e 11,5:1 do 1.6 MSI. A ficha publica 151 Nm (15,4 kgfm) e 153 Nm (15,6 kgfm); mantive kgfm para ficar igual às outras linhas VW. models fica só com o Gol: o Voyage usava o mesmo motor mas não achei ficha dele. O título interno do PDF é \"Ficha Técnica VW230 LA K1 MY17\" — VW230 é o código de projeto do Gol; o documento é de dez/2015 e se declara MY17. BADGE DELIBERADAMENTE AUSENTE: 'badgeMatches' no vehicleSpecs.js so casa por um grupo de tres digitos ou por tres letras seguidas; um badge '1.6 8V' nao tem nem um nem outro e devolveria SEMPRE false, derrubando esta linha do desempate. Sem badge ela devolve null, sobrevive ao filtro de contradicao e e' escolhida pelo nameplate (Gol), que e' o comportamento certo."
+    },
+    {
+      "brand": "Volkswagen",
+      "displacementL": "1.4",
+      "valves": "16V",
+      "aspiration": "TB",
+      "badge": "250 TSI",
+      "fuel": "Flex",
+      "yearFrom": 2019,
+      "yearTo": null,
+      "engineFamily": "EA211 1.4 TSI (110 kW)",
+      "cylinders": 4,
+      "displacementCm3": 1395,
+      "powerGasolineCv": 150,
+      "powerEthanolCv": 150,
+      "powerDieselCv": null,
+      "powerRpm": "5000 (gasolina) / 4500-6000 (etanol)",
+      "torqueGasoline": 25.5,
+      "torqueEthanol": 25.5,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "1500-3800 (gasolina) / 1500-4000 (etanol)",
+      "norma": "NBR ISO 1585",
+      "models": [
+        "Virtus"
+      ],
+      "source": "https://vw-digital-cdn-br.itd.vw.com.br/assets/newsroom-cdn-br-ps/033f1f0ef5533125a5ec4ac6f41e82d5.pdf",
+      "sourceDoc": "Volkswagen do Brasil — Ficha Técnica Virtus 1.4l TSI 110kW GTS Automático 4 Portas, Dados Oficiais Dezembro/2019 (título interno \"Ficha Técnica VW27X GTS\")",
+      "sourceLayer": 1,
+      "sourceDate": "2019-12",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": null,
+      "note": "Fonte única — linha marcada. Fecha o item '250 TSI' que estava em naoVerificado com só o texto comercial (150 cv). Detalhe que o texto comercial escondia: a POTÊNCIA é a mesma nos dois combustíveis (110 kW / 150 cv), o que muda é a ROTAÇÃO — 5.000 rpm na gasolina contra uma faixa de 4.500-6.000 no etanol; o mesmo vale para o torque. models fica só com o Virtus: o mesmo 250 TSI equipa Nivus GTS e T-Cross Highline, que NÃO verifiquei. URL com nome de hash — frágil, se sumir o dado vira não verificado."
+    },
+    {
+      "brand": "Volkswagen",
+      "displacementL": "1.0",
+      "valves": "12V",
+      "aspiration": "NA",
+      "badge": "1.0 MPI",
+      "fuel": "Flex",
+      "yearFrom": 2023,
+      "yearTo": null,
+      "engineFamily": "EA211 1.0 MPI (57/62 kW), código de motor CSEB",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": 77,
+      "powerEthanolCv": 84,
+      "powerDieselCv": null,
+      "powerRpm": "6450",
+      "torqueGasoline": 94,
+      "torqueEthanol": 101,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4000 (gasolina) / 3000 (etanol)",
+      "norma": null,
+      "models": [
+        "Tera",
+        "Polo Track"
+      ],
+      "source": "https://www.vw.com.br/idhub/content/dam/onehub_pkw/importers/br/literatura-de-bordo/manual-tera/Manual_de_instrucoes_Tera_26A.5B1.TER.66.pdf",
+      "sourceDoc": "Volkswagen do Brasil — Manual de instruções Tera (26A.5B1.TER.66), capítulo Dados técnicos, \"Motor 1.0 TOTALFLEX 57/62 kW\"",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "Ficha técnica oficial do Polo Track (layout VW, NBR ISO 1585, marca de classificação \"INTERNAL\") traz os mesmos 57 kW (77 cv) e 62 kW (84 cv) a 6.450 rpm e os mesmos 94 Nm a 4.000 e 101 Nm a 3.000. Dois nameplates. RESSALVA: essa ficha só existe rehospedada em site camada 4 — não achei cópia em host da VW —, então ela vale como corroboração e não como fonte.",
+      "crossCheckUrl": "https://carroscomcamanzi.com.br/wp-content/uploads/2023/02/Ficha-Tecnica-Polo-Track-min.pdf",
+      "note": "Fecha o maior buraco da VW. TORQUE GUARDADO EM Nm DE PROPÓSITO: os dois documentos concordam exatamente em 94 e 101 Nm, mas DIVERGEM no kgfm impresso — o manual do Tera escreve \"94 Nm (9,4 kgfm)\" e a ficha do Polo Track escreve \"94 Nm (9,6 kgfm)\". 94 Nm são 9,59 kgfm, ou seja, o manual do Tera arredonda errado. Guardar em Nm evita propagar o erro. 3 cilindros, 999 cm³, 11,5:1, injeção multiponto com E-Flex (sem tanquinho de partida a frio). O manual não declara norma para este motor. yearFrom=2023 é o lançamento do Polo Track (data da ficha), não uma janela verificada documento a documento."
+    },
+    {
+      "brand": "Volkswagen",
+      "displacementL": "1.0",
+      "valves": "12V",
+      "aspiration": "TB",
+      "badge": "170 TSI",
+      "fuel": "Flex",
+      "yearFrom": 2025,
+      "yearTo": null,
+      "engineFamily": "EA211 1.0 TSI (80/85 kW), código de motor DHSD",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": 109,
+      "powerEthanolCv": 116,
+      "powerDieselCv": null,
+      "powerRpm": "5000",
+      "torqueGasoline": 16.8,
+      "torqueEthanol": 16.8,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "1750-4250 (gasolina) / 1750-4500 (etanol)",
+      "norma": null,
+      "models": [
+        "Tera"
+      ],
+      "source": "https://www.vw.com.br/idhub/content/dam/onehub_pkw/importers/br/literatura-de-bordo/manual-tera/Manual_de_instrucoes_Tera_26A.5B1.TER.66.pdf",
+      "sourceDoc": "Volkswagen do Brasil — Manual de instruções Tera (26A.5B1.TER.66), capítulo Dados técnicos, \"Motor 1.0 TOTALFLEX 80/85 kW - TSI\"",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "Fichas técnicas oficiais do Tera 170 TSI Manual e Automático, ambas datadas 11/03/2025, trazem os mesmos 80 kW (109 cv) / 85 kW (116 cv) a 5.000 rpm e os mesmos 165 Nm (16,8 kgfm) a 1.750-4.250 (gasolina) e 1.750-4.500 (etanol). RESSALVA: essas duas fichas só existem rehospedadas em site camada 4 — valem como corroboração, não como fonte. O manual do Tera, esse sim em host da VW, é a fonte.",
+      "crossCheckUrl": "https://carroscomcamanzi.com.br/wp-content/uploads/2025/07/Ficha-Tecnica-VW-Tera-1.0-170-TSI-AT.pdf",
+      "note": "Fecha o segundo maior buraco da VW e, junto com a linha do 200 TSI, RESOLVE a colisão 170 x 200 TSI: agora as duas badges têm linha própria. O manual publica \"165 Nm (16,8 kgfm)\" — o kgfm é do fabricante, não conversão minha. models fica só com o Tera: o 170 TSI também equipa Polo e Virtus, que NÃO verifiquei. O manual não declara norma para este motor; as fichas de 11/03/2025 declaram NBR ISO 1585."
+    },
+    {
+      "brand": "Jeep",
+      "displacementL": "1.3",
+      "valves": "16V",
+      "aspiration": "TB",
+      "badge": "T270",
+      "fuel": "Flex",
+      "yearFrom": null,
+      "yearTo": null,
+      "engineFamily": "GSE T4 1.3 turbo (MultiAir III, wastegate elétrica)",
+      "cylinders": 4,
+      "displacementCm3": 1332,
+      "powerGasolineCv": 180,
+      "powerEthanolCv": 185,
+      "powerDieselCv": null,
+      "powerRpm": "5750",
+      "torqueGasoline": 27.5,
+      "torqueEthanol": 27.5,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "1750",
+      "norma": "ABNT",
+      "models": [
+        "Compass",
+        "Renegade"
+      ],
+      "source": "https://www.media.stellantis.com/uploads/br/attachment/5156/ftjeepcompasslimited-661d4a80375ed.pdf",
+      "sourceDoc": "Stellantis Brasil — JEEP COMPASS LIMITED T270 FLEX AT6, Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": "2024-03",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "SEIS fichas técnicas oficiais, dois nameplates, três combinações de câmbio/tração, trazem exatamente os mesmos 180 cv (gasolina) / 185 cv (etanol) a 5.750 rpm e os mesmos 27,5 kgfm (270 Nm) a 1.750 rpm: Compass Limited, Compass S e Compass Longitude (todas AT6 4x2, PDFs criados em 21/03/2024), Renegade Sahara T270 4x2 AT6 MY2025 (PDF criado em 23/07/2024) e Renegade Série S e Trailhawk T270 4x4 AT9 (upload de 09/02/2022). Nem a tração 4x4 nem o câmbio de nove marchas mudam a declaração de motor.",
+      "crossCheckUrl": "https://www.media.stellantis.com/br-pt/download-model-document/309",
+      "note": "RESPONDE A PERGUNTA QUE ORIGINOU A LINHA: o T270 do Jeep tem os MESMOS números do T270 da Fiat (ver a linha Fiat/1.3/16V/TB). Não é casamento cruzado à mão — são seis documentos Jeep lidos, e a coincidência com a Fiat foi constatada depois, não assumida antes. A linha existe separada porque 'brand' entra na chave e a string da FIPE do Compass e do Renegade traz Jeep. Se a Stellantis um dia recalibrar uma das marcas, as duas linhas divergem sem precisar refazer a chave. O documento publica \"27,5 kgfm (270 Nm)\", então o kgfm é do fabricante. Janela nula: os documentos vão de fev/2022 a jul/2024 sem mudança de número."
+    },
+    {
+      "brand": "Chevrolet",
+      "displacementL": "1.0",
+      "valves": "12V",
+      "aspiration": "TB",
+      "fuel": "Flex",
+      "yearFrom": null,
+      "yearTo": 2025,
+      "engineFamily": "1.0 turbo 3 cilindros, injecao direta — aplicação Tracker até MY25, NÃO RESOLVIDA",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": null,
+      "powerEthanolCv": null,
+      "powerDieselCv": null,
+      "powerRpm": null,
+      "torqueGasoline": null,
+      "torqueEthanol": null,
+      "torqueUnit": null,
+      "torqueRpm": null,
+      "norma": null,
+      "models": [
+        "Tracker"
+      ],
+      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/tracker/01-pdfs/2025/tracker-2025-manual-do-propietario.pdf",
+      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Tracker 2025, capítulo \"Dados do motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2025",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": null,
+      "note": "LINHA PROPOSITALMENTE SEM NÚMERO, e ela existe para IMPEDIR um número errado, não para dar um certo. O problema: um Tracker com ano-modelo até 2025 casa a chave Chevrolet/1.0/12V/TB/Flex, o override do Tracker só vale de 2026, e como sobrava um único candidato o matcher devolvia a linha do ONIX — 160/165 Nm num carro que entrega 180/185. Reproduzi o defeito antes de escrever isto. Com esta linha, o desempate por nameplate encontra 'Tracker' aqui, devolve campos nulos, e a tela mostra ausência em vez de 20 Nm errados. POR QUE OS CAMPOS ESTÃO NULOS: o manual do Tracker 2025 traz, na MESMA tabela, um 1.0 T a 5.500 rpm com 160 Nm e outro a 5.000 rpm, além de dois 1.2 T (132/133 e 139/141 CV) e de códigos de motor L4G e LFD. São mais colunas do que a camada de texto do PDF permite mapear, e não tenho renderizador de imagem neste ambiente para ler a tabela como ela é desenhada. Preencher isso é trabalho de uma hora com um leitor de PDF que rasterize. yearTo=2025 e yearFrom nulo: vale para todo Tracker anterior ao MY26, que é exatamente a faixa não resolvida."
     }
   ],
   "overridesPorModelo": [
@@ -628,39 +1008,32 @@
       "sourceDate": null,
       "verifiedAt": "2026-08-17",
       "note": "Ver 'colisaoFiat13' no _meta. Esta é a calibração ALTA."
+    },
+    {
+      "overrides": "Chevrolet / 1.0 / 12V / TB / Flex",
+      "model": "Tracker",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "engineFamily": "1.0 turbo 3 cilindros, injecao direta — calibração Tracker",
+      "powerGasolineCv": 115.5,
+      "powerEthanolCv": 115.5,
+      "powerRpm": "5000",
+      "torqueGasoline": 180,
+      "torqueEthanol": 185,
+      "torqueUnit": "Nm",
+      "torqueRpm": "1800-3500",
+      "norma": "ABNT - NBR ISO 1585",
+      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/tracker/01-pdfs/2026/tracker-2026-manual-do-propieatrio.pdf",
+      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Tracker 2026, capítulo \"Dados do motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-18",
+      "crossCheck": "Ficha técnica MY26 do Tracker publica o torque em mkgf: 18,9 (etanol) / 18,3 (gasolina) a 1.800-3.500 rpm, que são 185 e 180 Nm. Confere com o manual. RESSALVA: essa ficha só existe rehospedada em site camada 4; o manual é a fonte.",
+      "crossCheckUrl": "https://carroscomcamanzi.com.br/wp-content/uploads/2025/08/Ficha-Tecnica-Chevrolet-Tracker-2026-MY26.pdf",
+      "note": "MESMO HARDWARE, CALIBRAÇÃO DIFERENTE. O Tracker usa o mesmo bloco do Onix (999 cm³, 74 x 77,49 mm, 10,5:1, 3 cilindros) e quase a mesma potência (115,5 CV / 85 kW), mas entrega 20 Nm A MAIS e numa faixa mais baixa: 180/185 Nm a 1.800-3.500 contra 160/165 Nm a 2.000-4.500 do Onix, e o pico de potência vem a 5.000 rpm em vez de 5.500. Se a chave sem override for usada, o Tracker perde 20 Nm. Foi essa comparação que provou que extrapolar motor entre nameplates da mesma marca é errado — a mesma cautela que o Brian teve com o T270 Fiat/Jeep, só que aqui a extrapolação teria de fato falhado. JANELA EM 2026 DE PROPÓSITO: é o único ano-modelo do Tracker cuja tabela de motor eu consegui mapear coluna a coluna. O manual do Tracker 2025 mistura na mesma tabela um 1.0 T a 5.500 rpm com 160 Nm e um a 5.000 rpm, e a camada de texto do PDF não permite dizer qual coluna é qual. Alargar a janela sem resolver isso seria trocar um erro conhecido por um palpite. Ver 'riscoConhecido' na linha base."
     }
   ],
   "naoVerificado": [
-    {
-      "brand": "Volkswagen",
-      "engines": [
-        "EA211 1.0 MPI 12V aspirado (84 cv)",
-        "EA211 1.0 TSI badge 170 TSI (116 cv E / 109 cv G)"
-      ],
-      "models": [
-        "Polo",
-        "Polo Track",
-        "Tera",
-        "Gol",
-        "Saveiro",
-        "Virtus",
-        "up!",
-        "Fox"
-      ],
-      "blocker": "São os dois motores VW de maior volume vivo e não tenho ficha tabelada para nenhum. O texto comercial do vw.com.br dá 84 cv / 101 Nm e 116-109 cv / 165 Nm, mas sem rpm e, no caso do MPI, sem par flex — não preenche o formato. Sondei 16 variações de nome na CDN da VW (Polo Track, Novo Gol, Nova Saveiro, Tera 170 TSI, Nivus 200 TSI, T-Cross 250 TSI etc.) e nenhuma existe. A API do newsroom (newsroom-cms-br.itd.vw.com.br/v1/api) devolve 401 em tudo menos technology/json."
-    },
-    {
-      "brand": "Volkswagen",
-      "engines": [
-        "EA211 1.4 TSI badge 250 TSI (150 cv)"
-      ],
-      "models": [
-        "Nivus GTS",
-        "T-Cross Highline",
-        "Virtus Exclusive"
-      ],
-      "blocker": "Só o texto comercial (150 cv). Sem ficha tabelada na CDN."
-    },
     {
       "brand": "Renault",
       "engines": [
@@ -673,6 +1046,37 @@
         "Stepway"
       ],
       "blocker": "Saíram de linha no Brasil e sumiram do renault.com.br. Não há catálogo oficial no ar. Colidem com a linha do Kwid na chave, então enquanto não houver fonte a chave Renault/1.0/12V/NA/Flex deve ser tratada como válida só para o Kwid."
+    },
+    {
+      "brand": "Chevrolet",
+      "engines": [
+        "1.0 turbo e 1.0 aspirado, anos-modelo 2020 a 2024",
+        "1.2 turbo 132/133 CV @5.500 (calibração antiga do Tracker)"
+      ],
+      "models": [
+        "Onix",
+        "Onix Plus",
+        "Tracker",
+        "Montana"
+      ],
+      "blocker": "O DAM de manuais da Chevrolet do Brasil só mantém os anos-modelo 2024, 2025 e 2026 no ar; sondei 2023 nos sete nameplates e nenhum existe. O manual do Tracker 2025 documenta um 1.2 T de 132/133 CV além do de 139/141, mas a tabela tem mais colunas do que a camada de texto do PDF permite mapear — preciso ler esse PDF como imagem para separar as colunas, e não tenho renderizador de PDF neste ambiente (só pdftotext; pdftoppm/pdfimages/PIL ausentes). É trabalho de uma hora com a ferramenta certa."
+    },
+    {
+      "brand": "Volkswagen",
+      "engines": [
+        "EA211 1.0 MPI e 1.0 TSI 170 TSI nas aplicações Polo, Virtus e Polo Track",
+        "1.6 8V do Voyage",
+        "250 TSI do Nivus GTS e do T-Cross Highline"
+      ],
+      "models": [
+        "Polo",
+        "Polo Track",
+        "Virtus",
+        "Voyage",
+        "Nivus",
+        "T-Cross"
+      ],
+      "blocker": "Os MOTORES estão verificados (ver linhas 1.0 MPI, 170 TSI, 1.6 8V e 250 TSI), mas cada linha foi lida na ficha de UM nameplate só. Como o caso Onix x Tracker mostrou que a mesma marca recalibra o mesmo bloco entre modelos, o campo 'models' dessas linhas ficou deliberadamente curto. Fechar exige a ficha de cada nameplate, e a CDN da VW não é enumerável — ver metodosDeBusca."
     }
   ],
   "fontesDescartadas": [
