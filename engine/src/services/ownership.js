@@ -920,3 +920,93 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
     },
   };
 }
+
+/**
+ * Alavancas: o que faria caber, e quanto cada mudança tira da conta do mês.
+ *
+ * Substitui o percentual do breakdown ("seguro é 13% do custo"), que descreve
+ * o modelo e não decide nada. O delta em reais decide: "só terceiros → −R$ 586
+ * por mês" é uma escolha que a pessoa pode fazer hoje.
+ *
+ * O delta sai do cenário CENTRAL, não do teto da faixa. O teto responde "cabe?"
+ * — ele é o pior caso e é com ele que o veredito é feito. A alavanca responde
+ * "quanto isso muda?", e para comparar duas mudanças entre si o central é a
+ * régua estável: o teto se move quando a alavanca mexe num campo que também é
+ * fonte de incerteza, e a comparação deixaria de ser entre iguais.
+ *
+ * Devolve `patch` junto porque a tela aplica a alavanca de verdade — botão que
+ * anuncia um número e não faz nada é promessa quebrada.
+ */
+export function affordabilityLevers(car, rawInputs = {}, location = {}) {
+  const inputs = normalizeOwnershipInputs(rawInputs);
+  const base = estimateOwnership(car, inputs, location);
+  const baseTotal = base.totals.monthlyTotal;
+  const value = base.value;
+  const savedValue = Math.max(num(car?.savedValue, 0), 0);
+  const isFinance = inputs.purchaseMode === "finance" && value > 0;
+
+  const levers = [];
+  const consider = (key, patch, params = {}, tradeoff = false) => {
+    const alt = estimateOwnership(car, { ...inputs, ...patch }, location);
+    const delta = baseTotal - alt.totals.monthlyTotal;
+    // Menos de um real por mês não é alavanca, é ruído — e listar ruído junto
+    // do que importa é como o breakdown de percentuais escondia o que decide.
+    if (!(delta >= 1)) return;
+    levers.push({ key, delta, patch, tradeoff, params });
+  };
+
+  if (isFinance) {
+    consider("cash", { purchaseMode: "cash" }, { value });
+  }
+
+  if (inputs.coverage === "full") {
+    consider("thirdparty", { coverage: "thirdparty" });
+  }
+
+  if (isFinance) {
+    const currentDown = inputs.downPaymentValue > 0 ? inputs.downPaymentValue : savedValue;
+    // Duas réguas, e vale a maior: a entrada ideal de 25% (a que o produto já
+    // recomenda) e a próxima marca de R$ 10 mil acima do que a pessoa tem.
+    // Quem ainda não juntou nada precisa mirar nos 25%; quem já passou deles
+    // precisa de um passo concreto, não de uma meta que já cumpriu. O teto de
+    // metade do carro existe para a alavanca não virar "compre à vista", que
+    // já é a primeira da lista.
+    const target = Math.min(
+      Math.max(base.recommendations.recommendedDownPayment, currentDown + 10000),
+      value * 0.5,
+    );
+    if (target > currentDown + 500) {
+      consider(
+        "down",
+        { downPaymentValue: target },
+        { target, have: currentDown, gap: target - currentDown },
+      );
+    }
+  }
+
+  if (isFinance && inputs.financeMonths < 72) {
+    const months = inputs.financeMonths < 60 ? 60 : 72;
+    const alt = estimateOwnership(car, { ...inputs, financeMonths: months }, location);
+    const delta = baseTotal - alt.totals.monthlyTotal;
+    if (delta >= 1) {
+      levers.push({
+        key: "months",
+        delta,
+        patch: { financeMonths: months },
+        // Alivia o mês e encarece o total: é troca, não economia. A tela
+        // precisa saber a diferença para não vender as duas como iguais.
+        tradeoff: true,
+        params: {
+          months,
+          from: inputs.financeMonths,
+          extraInterest: Math.max(
+            (alt.financing?.totalInterest || 0) - (base.financing?.totalInterest || 0),
+            0,
+          ),
+        },
+      });
+    }
+  }
+
+  return levers.sort((a, b) => b.delta - a.delta);
+}

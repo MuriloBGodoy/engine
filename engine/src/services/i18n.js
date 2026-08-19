@@ -507,8 +507,8 @@ const resources = {
           },
           breakdown: "Para onde vai o dinheiro (por mês)",
           installment: "Parcela do financiamento",
-          taxBR: "IPVA (proporcional)",
-          tax: "Imposto de circulação",
+          taxBR: "IPVA — 1/12 do valor anual",
+          tax: "Imposto de circulação — 1/12 do valor anual",
           licensing: "Licenciamento",
           insurance: "Seguro",
           fullCoverageUnavailable:
@@ -565,6 +565,106 @@ const resources = {
           },
           checkBudget:
             "Pelas suas contas sobra dinheiro, mas o carro ficaria em {{pct}}% da sua renda, bem acima dos {{typical}}% típicos de quem está na sua situação. Faltou alguma despesa na lista?",
+        },
+        answer: {
+          kicker: "O veredito",
+          costKicker: "Custo estimado por mês",
+          verdict: {
+            comfortable: "Cabe com folga",
+            tight: "Cabe, mas aperta",
+            no_fit: "Não cabe no seu bolso",
+          },
+          gap: "Faltam {{value}} por mês depois de pagar as suas contas.",
+          left: "Sobram {{value}} por mês depois do carro e das suas contas.",
+          math:
+            "{{income}} de renda − {{expenses}} de contas − {{car}} do carro (teto da faixa, é com ele que fazemos a conta).",
+          robust:
+            "Mesmo no cenário mais barato da faixa ({{low}}), ainda faltariam {{gap}} por mês. O veredito não depende de sorte na estimativa.",
+          ruler: {
+            comfortable: "Cabe com folga",
+            tight: "Aperta",
+            no_fit: "Não cabe",
+          },
+          rulerCaption:
+            "Este carro ocuparia {{pct}}% da sua renda. Para a sua situação, o típico é {{typical}}%.",
+          cellCost: "Custo estimado",
+          cellCostHint: "faixa de {{low}} a {{high}} por mês",
+          cellLeft: "Sobra hoje",
+          cellLeftHint: "{{income}} menos {{expenses}} de contas fixas",
+          cellKeep: "Só para manter",
+          cellKeepHint: "sem a parcela do financiamento",
+          low: "mínimo {{value}}",
+          high: "máximo {{value}}",
+          unknownWhy:
+            "A faixa é larga porque {{count}} informações ainda não foram dadas — a gente estima o que falta, e a faixa mostra o tamanho do palpite.",
+          exact: "Sem faixa: você já informou tudo o que muda a conta.",
+          incomeTitle: "Se você preferir raciocinar por renda",
+          fix: "Ver o que faria caber",
+          footGap: "faltam {{value}} por mês",
+          footLeft: "sobram {{value}} por mês",
+          footRange: "entre {{low}} e {{high}}",
+        },
+        invite: {
+          title: "Cabe no seu bolso?",
+          body:
+            "Com a sua renda e as suas contas fixas, a gente responde isso em vez de mostrar um número solto.",
+          income: "Sua renda por mês",
+          expenses: "Suas contas por mês (sem o carro)",
+          cta: "Ver se cabe",
+          skip: "Prefiro não informar agora",
+          privacy: "Fica salvo no seu perfil e vale para as próximas simulações.",
+          change: "Mudar renda e contas",
+          reopen: "Ver se cabe no seu bolso",
+        },
+        levers: {
+          title: "O que faria caber",
+          titleCheaper: "O que baixaria a conta",
+          sub: "Cada mudança e quanto ela tira da conta por mês.",
+          perMonth: "/mês",
+          tradeoff: "troca, não economia",
+          cash: "Comprar à vista, sem financiar",
+          cashNote: "Precisa de {{value}} na mão — é a mudança que mais pesa.",
+          thirdparty: "Trocar para seguro só de terceiros",
+          thirdpartyNote:
+            "Cobre o carro do outro, não o seu. Roubo e colisão ficam por sua conta.",
+          down: "Dar {{value}} de entrada",
+          downNote: "Você tem {{have}} guardados; faltam {{gap}}.",
+          months: "Financiar em {{months}}x em vez de {{from}}x",
+          monthsNote:
+            "Alivia o mês, mas você paga {{value}} a mais de juros no total.",
+        },
+        real: {
+          sub:
+            "Projeção contra o que os seus lançamentos dizem — o único número desta tela que não é estimativa.",
+          today: "Hoje, com o {{car}}",
+          todayHint: "medido em {{count}} lançamentos seus",
+          target: "Manter o {{car}}",
+          targetHint: "estimado pelo simulador",
+          more: "+{{value}} por mês",
+          less: "−{{value}} por mês",
+          same: "praticamente o mesmo",
+          basis:
+            "Sem parcela dos dois lados: a comparação usa só o que sai do bolso todo mês.",
+          selfToday: "Seus lançamentos",
+          selfTarget: "A estimativa",
+          selfHint: "média dos seus últimos meses",
+        },
+        detail: {
+          lines: "{{count}} linhas",
+          total: "Total por mês",
+          installmentBasis:
+            "{{months}}x pela tabela Price sobre {{principal}}, a {{rate}}% ao mês",
+          outside: "Fora da soma",
+        },
+        precision: {
+          title: "Estreitar a faixa",
+          sub:
+            "Em vez de pedir todos os campos antes da resposta, a tela oferece depois dela o que mais reduz a incerteza.",
+          km: "Usar os meus km reais: {{km}} km/mês",
+          kmNote:
+            "Medidos nos seus abastecimentos. A faixa cai de {{from}} para {{to}} de largura.",
+          kmNoteSimple: "Medidos nos seus abastecimentos.",
+          apply: "Aplicar",
         },
         tips: {
           installment:
@@ -1492,8 +1592,8 @@ const resources = {
           },
           breakdown: "Where the money goes (per month)",
           installment: "Loan installment",
-          taxBR: "IPVA (prorated)",
-          tax: "Road/circulation tax",
+          taxBR: "IPVA — 1/12 of the yearly bill",
+          tax: "Road tax — 1/12 of the yearly bill",
           licensing: "Registration",
           insurance: "Insurance",
           fullCoverageUnavailable:
@@ -1550,6 +1650,105 @@ const resources = {
           },
           checkBudget:
             "Your numbers leave money over, but the car would take {{pct}}% of your income — well above the {{typical}}% typical for your situation. Did you miss a bill?",
+        },
+        answer: {
+          kicker: "The verdict",
+          costKicker: "Estimated cost per month",
+          verdict: {
+            comfortable: "It fits comfortably",
+            tight: "It fits, but it's tight",
+            no_fit: "It doesn't fit your budget",
+          },
+          gap: "You'd be {{value}} short every month after your bills.",
+          left: "{{value}} left every month after the car and your bills.",
+          math:
+            "{{income}} income − {{expenses}} bills − {{car}} car (top of the range — that's what we run the math on).",
+          robust:
+            "Even in the cheapest scenario of the range ({{low}}), you'd still be {{gap}} short a month. The verdict doesn't rest on a lucky estimate.",
+          ruler: {
+            comfortable: "Comfortable",
+            tight: "Tight",
+            no_fit: "Doesn't fit",
+          },
+          rulerCaption:
+            "This car would take {{pct}}% of your income. For your situation, {{typical}}% is typical.",
+          cellCost: "Estimated cost",
+          cellCostHint: "{{low}} to {{high}} a month",
+          cellLeft: "Left over today",
+          cellLeftHint: "{{income}} minus {{expenses}} in fixed bills",
+          cellKeep: "Upkeep only",
+          cellKeepHint: "without the loan payment",
+          low: "low {{value}}",
+          high: "high {{value}}",
+          unknownWhy:
+            "The range is wide because {{count}} things haven't been filled in — we estimate what's missing, and the range shows how big that guess is.",
+          exact: "No range: you've filled in everything that moves the math.",
+          incomeTitle: "If you'd rather think in terms of income",
+          fix: "See what would make it fit",
+          footGap: "{{value}} short a month",
+          footLeft: "{{value}} left a month",
+          footRange: "between {{low}} and {{high}}",
+        },
+        invite: {
+          title: "Does it fit your budget?",
+          body:
+            "With your income and your fixed bills we answer that, instead of showing a number on its own.",
+          income: "Your monthly income",
+          expenses: "Your monthly bills (without the car)",
+          cta: "See if it fits",
+          skip: "I'd rather not say right now",
+          privacy: "Saved to your profile and reused in your next simulations.",
+          change: "Change income and bills",
+          reopen: "See if it fits your budget",
+        },
+        levers: {
+          title: "What would make it fit",
+          titleCheaper: "What would bring the bill down",
+          sub: "Each change, and how much it takes off the monthly bill.",
+          perMonth: "/mo",
+          tradeoff: "a trade-off, not a saving",
+          cash: "Pay cash, no financing",
+          cashNote: "You'd need {{value}} up front — the single biggest change.",
+          thirdparty: "Switch to third-party insurance only",
+          thirdpartyNote:
+            "Covers the other car, not yours. Theft and collision are on you.",
+          down: "Put {{value}} down",
+          downNote: "You have {{have}} saved; {{gap}} to go.",
+          months: "Finance over {{months}} months instead of {{from}}",
+          monthsNote: "Easier month, but {{value}} more in total interest.",
+        },
+        real: {
+          sub:
+            "Projection against your own entries — the only number on this screen that isn't an estimate.",
+          today: "Today, with the {{car}}",
+          todayHint: "measured from {{count}} of your entries",
+          target: "Keeping the {{car}}",
+          targetHint: "estimated by the simulator",
+          more: "+{{value}} a month",
+          less: "−{{value}} a month",
+          same: "practically the same",
+          basis:
+            "No loan payment on either side: the comparison only uses what leaves your pocket every month.",
+          selfToday: "Your entries",
+          selfTarget: "The estimate",
+          selfHint: "average of your recent months",
+        },
+        detail: {
+          lines: "{{count}} lines",
+          total: "Total per month",
+          installmentBasis:
+            "{{months}} payments, Price table on {{principal}} at {{rate}}% a month",
+          outside: "Outside the total",
+        },
+        precision: {
+          title: "Narrow the range",
+          sub:
+            "Instead of asking for every field before the answer, the screen offers afterwards what cuts the uncertainty most.",
+          km: "Use my real mileage: {{km}} km/month",
+          kmNote:
+            "Measured from your fill-ups. The range narrows from {{from}} wide to {{to}}.",
+          kmNoteSimple: "Measured from your fill-ups.",
+          apply: "Apply",
         },
         tips: {
           installment:
@@ -2475,8 +2674,8 @@ const resources = {
           },
           breakdown: "A dónde va el dinero (por mes)",
           installment: "Cuota del financiamiento",
-          taxBR: "IPVA (prorrateado)",
-          tax: "Impuesto de circulación",
+          taxBR: "IPVA — 1/12 del valor anual",
+          tax: "Impuesto de circulación — 1/12 del valor anual",
           licensing: "Licenciamiento",
           insurance: "Seguro",
           fullCoverageUnavailable:
@@ -2533,6 +2732,106 @@ const resources = {
           },
           checkBudget:
             "Según tus cuentas sobra dinero, pero el auto quedaría en {{pct}}% de tu ingreso, bastante por encima del {{typical}}% típico de tu situación. ¿Faltó algún gasto?",
+        },
+        answer: {
+          kicker: "El veredicto",
+          costKicker: "Coste estimado al mes",
+          verdict: {
+            comfortable: "Cabe con holgura",
+            tight: "Cabe, pero ajusta",
+            no_fit: "No cabe en tu bolsillo",
+          },
+          gap: "Te faltan {{value}} al mes después de pagar tus cuentas.",
+          left: "Te sobran {{value}} al mes después del coche y de tus cuentas.",
+          math:
+            "{{income}} de ingresos − {{expenses}} de cuentas − {{car}} del coche (techo del rango: es con él que hacemos la cuenta).",
+          robust:
+            "Incluso en el escenario más barato del rango ({{low}}), seguirían faltando {{gap}} al mes. El veredicto no depende de una estimación afortunada.",
+          ruler: {
+            comfortable: "Cabe con holgura",
+            tight: "Ajusta",
+            no_fit: "No cabe",
+          },
+          rulerCaption:
+            "Este coche ocuparía el {{pct}}% de tus ingresos. Para tu situación, lo típico es {{typical}}%.",
+          cellCost: "Coste estimado",
+          cellCostHint: "entre {{low}} y {{high}} al mes",
+          cellLeft: "Te sobra hoy",
+          cellLeftHint: "{{income}} menos {{expenses}} de gastos fijos",
+          cellKeep: "Solo mantenerlo",
+          cellKeepHint: "sin la cuota del préstamo",
+          low: "mínimo {{value}}",
+          high: "máximo {{value}}",
+          unknownWhy:
+            "El rango es amplio porque faltan {{count}} datos — estimamos lo que falta, y el rango enseña el tamaño de esa suposición.",
+          exact: "Sin rango: ya informaste todo lo que mueve la cuenta.",
+          incomeTitle: "Si prefieres razonar por ingresos",
+          fix: "Ver qué haría que cupiera",
+          footGap: "faltan {{value}} al mes",
+          footLeft: "sobran {{value}} al mes",
+          footRange: "entre {{low}} y {{high}}",
+        },
+        invite: {
+          title: "¿Cabe en tu bolsillo?",
+          body:
+            "Con tus ingresos y tus gastos fijos respondemos eso, en vez de enseñarte un número suelto.",
+          income: "Tus ingresos al mes",
+          expenses: "Tus cuentas al mes (sin el coche)",
+          cta: "Ver si cabe",
+          skip: "Prefiero no decirlo ahora",
+          privacy: "Se guarda en tu perfil y vale para las próximas simulaciones.",
+          change: "Cambiar ingresos y cuentas",
+          reopen: "Ver si cabe en tu bolsillo",
+        },
+        levers: {
+          title: "Qué haría que cupiera",
+          titleCheaper: "Qué bajaría la cuenta",
+          sub: "Cada cambio y cuánto le quita a la cuenta del mes.",
+          perMonth: "/mes",
+          tradeoff: "es un cambio, no un ahorro",
+          cash: "Comprar al contado, sin financiar",
+          cashNote: "Necesitas {{value}} en mano — es el cambio que más pesa.",
+          thirdparty: "Pasar a seguro solo a terceros",
+          thirdpartyNote:
+            "Cubre el coche del otro, no el tuyo. Robo y colisión corren de tu cuenta.",
+          down: "Dar {{value}} de entrada",
+          downNote: "Tienes {{have}} ahorrados; faltan {{gap}}.",
+          months: "Financiar a {{months}} cuotas en vez de {{from}}",
+          monthsNote:
+            "Alivia el mes, pero pagas {{value}} más de intereses en total.",
+        },
+        real: {
+          sub:
+            "Proyección contra tus propios registros — el único número de esta pantalla que no es estimación.",
+          today: "Hoy, con el {{car}}",
+          todayHint: "medido en {{count}} registros tuyos",
+          target: "Mantener el {{car}}",
+          targetHint: "estimado por el simulador",
+          more: "+{{value}} al mes",
+          less: "−{{value}} al mes",
+          same: "prácticamente lo mismo",
+          basis:
+            "Sin cuota en ninguno de los dos lados: la comparación usa solo lo que sale del bolsillo cada mes.",
+          selfToday: "Tus registros",
+          selfTarget: "La estimación",
+          selfHint: "media de tus últimos meses",
+        },
+        detail: {
+          lines: "{{count}} líneas",
+          total: "Total al mes",
+          installmentBasis:
+            "{{months}} cuotas, tabla Price sobre {{principal}}, al {{rate}}% mensual",
+          outside: "Fuera del total",
+        },
+        precision: {
+          title: "Estrechar el rango",
+          sub:
+            "En vez de pedir todos los campos antes de la respuesta, la pantalla ofrece después lo que más reduce la incertidumbre.",
+          km: "Usar mis km reales: {{km}} km/mes",
+          kmNote:
+            "Medidos en tus repostajes. El rango baja de {{from}} a {{to}} de anchura.",
+          kmNoteSimple: "Medidos en tus repostajes.",
+          apply: "Aplicar",
         },
         tips: {
           installment:
