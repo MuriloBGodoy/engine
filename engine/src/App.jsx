@@ -21,6 +21,7 @@ import { MobileNav } from "./components/MobileNav";
 import { Topbar } from "./components/TopBar"; // Importando em .jsx
 import { ModalNewCar } from "./components/ModalNewCar";
 import { OwnershipModal } from "./components/OwnershipModal";
+import { SpecSheetModal } from "./components/specsheet/SpecSheetModal";
 import { RequireAuth } from "./components/RequireAuth";
 import { Footer } from "./components/Footer";
 import { RegionPicker } from "./components/RegionPicker";
@@ -67,6 +68,7 @@ function App() {
   const [ownershipCar, setOwnershipCar] = useState(null);
   const [contributionCar, setContributionCar] = useState(null);
   const [expenseCar, setExpenseCar] = useState(null);
+  const [specsCar, setSpecsCar] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const userId = user?.uid;
   const isTopNav = settings.preferences.navLayout === "topnav";
@@ -164,6 +166,29 @@ function App() {
       captureError(error, { action: "saveCar", carId: carData?.id });
       // Devolve o motivo pra quem chamou: "não foi possível salvar" sem dizer
       // por quê fez a foto sumir sem explicação.
+      return { ok: false, message: error.message };
+    }
+  };
+
+  /**
+   * Ficha tecnica declarada pelo dono.
+   *
+   * Passa pelo mesmo `saveCar` do resto do carro de proposito: a ficha mora no
+   * documento do carro (`normalizeCar` ja normaliza `specs`), entao qualquer
+   * caminho paralelo daria duas verdades sobre o mesmo objeto. O carro
+   * atualizado volta para o estado local para o modal poder redesenhar a ficha
+   * resolvida — incluindo o que a correcao acabou de destravar.
+   */
+  const saveSpecsAction = async (car, specs) => {
+    try {
+      const updated = { ...car, specs };
+      await engineDB.saveCar(updated);
+      const updatedCars = await engineDB.getCars();
+      setCars(updatedCars);
+      setSpecsCar(updatedCars.find((item) => item.id === car.id) || updated);
+      return true;
+    } catch (error) {
+      captureError(error, { action: "saveSpecs", carId: car?.id });
       return { ok: false, message: error.message };
     }
   };
@@ -300,6 +325,9 @@ function App() {
               expenseCar={expenseCar}
               onCloseExpense={() => setExpenseCar(null)}
               onExpenseSaved={handleExpenseSaved}
+              specsCar={specsCar}
+              onCloseSpecs={() => setSpecsCar(null)}
+              onSaveSpecs={saveSpecsAction}
             />
           }
         >
@@ -316,6 +344,7 @@ function App() {
                   onAddContribution={setContributionCar}
                   onAddExpense={setExpenseCar}
                   onMarkAchieved={markCarAchieved}
+                  onOpenSpecs={setSpecsCar}
                   defaultSort={settings.preferences.defaultGarageSort}
                   hideValues={settings.privacy.lockSensitiveValues}
                 />
@@ -425,6 +454,9 @@ function AppLayout({
   expenseCar,
   onCloseExpense,
   onExpenseSaved,
+  specsCar,
+  onCloseSpecs,
+  onSaveSpecs,
 }) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -534,6 +566,14 @@ function AppLayout({
           car={expenseCar}
           onClose={onCloseExpense}
           onSaved={onExpenseSaved}
+        />
+      )}
+
+      {specsCar && (
+        <SpecSheetModal
+          car={specsCar}
+          onClose={onCloseSpecs}
+          onSave={(specs) => onSaveSpecs(specsCar, specs)}
         />
       )}
     </div>

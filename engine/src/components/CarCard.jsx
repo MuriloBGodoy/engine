@@ -1,9 +1,48 @@
-import { Calculator, Key, PiggyBank, Receipt, Trash2, Trophy } from "lucide-react";
+import {
+  Calculator,
+  ChevronRight,
+  Key,
+  PiggyBank,
+  Receipt,
+  Trash2,
+  Trophy,
+} from "lucide-react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { resolveVehicleSpecSheet } from "../services/carSpecSheet";
+import { summaryTokens } from "./specsheet/labels";
 import { estimateOwnership } from "../services/ownership";
 import { forecastCompletion } from "../services/forecast";
 import { expenseInsights } from "../services/expenses";
 import { CAR_TYPE_OWNED } from "../services/db";
+
+/**
+ * O bloco de identidade, clicavel ou nao.
+ *
+ * Sem `onOpenSpecs` ele continua sendo o texto de sempre — importa porque o
+ * CarCard tambem aparece em tela onde a ficha nao faz sentido, e um botao que
+ * nao leva a lugar nenhum e pior que nenhum botao.
+ *
+ * O `stopPropagation` nao e detalhe: na Garagem o card INTEIRO ja abre a edicao
+ * do carro. Sem ele, tocar na identidade abriria os dois.
+ */
+function SpecTrigger({ onOpenSpecs, car, label, children }) {
+  if (!onOpenSpecs) return <div className="min-w-0">{children}</div>;
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpenSpecs(car);
+      }}
+      className="group/specs -mx-2 -mt-1 block w-[calc(100%+1rem)] min-w-0 rounded-xl px-2 py-1 text-left transition-colors hover:bg-[var(--engine-surface-2)]"
+    >
+      {children}
+    </button>
+  );
+}
 
 export function CarCard({
   car,
@@ -12,6 +51,7 @@ export function CarCard({
   onAddContribution,
   onAddExpense,
   onMarkAchieved,
+  onOpenSpecs,
   hideValues = false,
 }) {
   const { i18n, t } = useTranslation();
@@ -27,6 +67,21 @@ export function CarCard({
   const forecast = forecastCompletion(car);
   // Gasto real do mês, quando há histórico suficiente para a média valer.
   const spending = isOwned ? expenseInsights(car) : null;
+  // A linha de resumo mostra SO o que o parser garante. Nada de "potencia nao
+  // confirmada" aqui: com potencia de fabrica faltando em ~62% dos carros
+  // reais, essa ressalva viraria um pedido de desculpas repetido em quase todo
+  // card da garagem. A ausencia se explica na ficha, que e onde cabe o porque.
+  const specs = useMemo(() => {
+    if (!onOpenSpecs) return [];
+    try {
+      return summaryTokens(t, i18n.language, resolveVehicleSpecSheet(car));
+    } catch {
+      // Carro antigo com marca/modelo fora do padrao nao pode derrubar a
+      // garagem inteira por causa de uma linha de resumo.
+      return [];
+    }
+  }, [car, onOpenSpecs, t, i18n.language]);
+
   const percentage = Math.min(
     car.targetValue ? (car.savedValue / car.targetValue) * 100 : 0,
     100,
@@ -60,17 +115,57 @@ export function CarCard({
       </div>
 
       <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--engine-accent)]">
-            {car.brand?.toUpperCase()}
-          </p>
-          <h3 className="mt-1 truncate text-xl font-extrabold italic tracking-tight text-[var(--engine-text)]">
-            {car.model}
-          </h3>
-          <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-subtle)]">
-            {car.year}
-          </p>
-        </div>
+        {/* O bloco de identidade E o botao da ficha tecnica — decisao do
+            Murilo, contra o terceiro botao no rodape. Tres acoes de mesmo peso
+            transformavam o card numa lista de botoes; aqui a ficha usa o espaco
+            morto que o `justify-between` ja deixava no meio, e o alvo de toque
+            fica onde a pessoa ja olha para saber que carro e este.
+
+            De quebra resolve o truncamento: como a ficha passa a ser o lugar
+            onde o nome completo da versao cabe, o modelo pode quebrar em duas
+            linhas em vez de virar "ONIX HATCH LT 1.0 12V Flex 5p M...". */}
+        <SpecTrigger onOpenSpecs={onOpenSpecs} car={car} label={t("specSheet.cardAction")}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--engine-accent)]">
+                {car.brand?.toUpperCase()}
+              </p>
+              <h3
+                className={`mt-1 text-xl font-extrabold italic leading-tight tracking-tight text-[var(--engine-text)] ${
+                  onOpenSpecs ? "line-clamp-2" : "truncate"
+                }`}
+              >
+                {car.model}
+              </h3>
+              <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-muted)]">
+                {car.year}
+              </p>
+            </div>
+            {onOpenSpecs && (
+              <ChevronRight
+                size={16}
+                aria-hidden="true"
+                className="mt-1 shrink-0 text-[var(--engine-text-muted)] transition group-hover/specs:translate-x-0.5 group-hover/specs:text-[var(--engine-accent)]"
+              />
+            )}
+          </div>
+
+          {specs.length > 0 && (
+            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-semibold text-[var(--engine-text-muted)]">
+              {specs.map((token, index) => (
+                <span key={token} className="flex items-center gap-1.5">
+                  {index > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="h-[3px] w-[3px] rounded-full bg-[var(--engine-border-strong)]"
+                    />
+                  )}
+                  {token}
+                </span>
+              ))}
+            </p>
+          )}
+        </SpecTrigger>
 
         <div className="space-y-3 pt-2">
           {/* Carro que a pessoa já tem não tem progresso a exibir: no lugar da
@@ -81,7 +176,7 @@ export function CarCard({
                 <Key size={11} />
                 {t("car.owned")}
               </span>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-muted)]">
                 {car.year}
               </p>
             </div>

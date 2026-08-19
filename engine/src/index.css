@@ -1403,3 +1403,31 @@ h5 {
   border: none;
   cursor: pointer;
 }
+
+/* ===== Ficha técnica =====
+   A hachura é a ÚNICA textura nova do sistema, e ela tem um significado só:
+   "existe fonte demais e escolher seria chutar" — a abstenção do parser
+   (`SPEC_STATUS.HELD`). Nunca marca ausência: campo que a fábrica não publicou
+   sai da grade em vez de ganhar textura.
+
+   Textura em vez de cor de propósito: o vermelho do Engine já quer dizer
+   ação/alerta, e não saber não é erro. E toda célula hachurada vem acompanhada
+   da ação que a resolve — é a assinatura visual de "aqui tem uma porta". */
+.spec-hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--engine-text-muted) 13%, transparent) 0 1px,
+    transparent 1px 7px
+  );
+}
+
+/* O número grande da ficha. `tabular-nums` porque 111 e 100 precisam ocupar a
+   mesma largura quando os dois lados do par flex ficam lado a lado. */
+.spec-number {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 0.94;
+  color: var(--engine-text);
+}

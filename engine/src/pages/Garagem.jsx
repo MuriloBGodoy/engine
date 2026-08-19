@@ -34,6 +34,7 @@ export function Garagem({
   onAddContribution,
   onAddExpense,
   onMarkAchieved,
+  onOpenSpecs,
   defaultSort = "progress-desc",
   hideValues = false,
 }) {
@@ -77,6 +78,7 @@ export function Garagem({
               onOpenOwnership={onOpenOwnership}
               onAddContribution={onAddContribution}
               onMarkAchieved={onMarkAchieved}
+              onOpenSpecs={onOpenSpecs}
               onDelete={(event) => {
                 event.stopPropagation();
                 onOpenDelete(car);
@@ -112,6 +114,7 @@ export function Garagem({
                   hideValues={hideValues}
                   onOpenOwnership={onOpenOwnership}
                   onAddExpense={onAddExpense}
+                  onOpenSpecs={onOpenSpecs}
                   onDelete={(event) => {
                     event.stopPropagation();
                     onOpenDelete(car);

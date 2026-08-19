@@ -36,6 +36,7 @@ import {
 import { ClubsTab } from "../components/community/ClubsTab";
 import { engineDB, POST_KIND_POST } from "../services/db";
 import { InfoTip } from "../components/InfoTip";
+import { SpecSheetModal } from "../components/specsheet/SpecSheetModal";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useConfirm } from "../components/ConfirmProvider";
 import { useToast } from "../components/ToastProvider";
@@ -560,6 +561,7 @@ export function GoalCard({
   const [editingDraft, setEditingDraft] = useState("");
   const [commentsOpen, setCommentsOpen] = useState(initialCommentsOpen);
   const [commentMenuId, setCommentMenuId] = useState("");
+  const [specsOpen, setSpecsOpen] = useState(false);
 
   const { i18n } = useTranslation();
   const progress = getProgress(goal);
@@ -804,13 +806,29 @@ export function GoalCard({
 
         {/* No modal o cabeçalho já anuncia o veículo. Post livre só mostra
             quando foi publicado a partir de um carro. */}
-        {!isModal && (!isFreePost || goal.title) && (
-          <p className="text-[13px] leading-5 text-[var(--engine-text-muted)]">
-            <span className="font-bold italic text-[var(--engine-text)]">
-              {getVehicleTitle(goal)}
+        {/* Mesmo gesto do CarCard: o nome do veiculo E a porta da ficha. Aqui
+            o carro e de outra pessoa, entao a ficha abre so em leitura — a
+            camada de fabrica sai de marca/modelo/ano, que ja sao publicos, e o
+            que o dono declarou vem sempre etiquetado por `publicSpecSheet`. */}
+        {(!isFreePost || goal.title) && (goal.brand || goal.model) && (
+          <button
+            type="button"
+            onClick={() => setSpecsOpen(true)}
+            aria-label={t("specSheet.cardAction")}
+            className="group/specs -mx-1 flex max-w-full items-center gap-1.5 rounded-lg px-1 py-0.5 text-left text-[13px] leading-5 text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)]"
+          >
+            <span className="min-w-0 truncate">
+              <span className="font-bold italic text-[var(--engine-text)]">
+                {getVehicleTitle(goal)}
+              </span>
+              {goal.year ? <span>{` · ${goal.year}`}</span> : null}
             </span>
-            {goal.year && <span>{` · ${goal.year}`}</span>}
-          </p>
+            <ChevronRight
+              size={14}
+              aria-hidden="true"
+              className="shrink-0 transition group-hover/specs:translate-x-0.5 group-hover/specs:text-[var(--engine-accent)]"
+            />
+          </button>
         )}
 
         {!isFreePost &&
@@ -839,6 +857,10 @@ export function GoalCard({
             </div>
           ))}
       </div>
+
+      {specsOpen && (
+        <SpecSheetModal car={goal} onClose={() => setSpecsOpen(false)} />
+      )}
 
       {commentsOpen && (
         <CommentsModal
