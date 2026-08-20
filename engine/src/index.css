@@ -31,10 +31,27 @@
   --engine-border: #dde1e9;
   --engine-border-strong: #cbd0da;
 
-  /* Texto */
+  /* Texto
+     `--engine-text-subtle` era #8a93a3 e reprovava em contraste nos SEIS casos
+     (3 fundos x 2 temas): 2,60:1 no --engine-bg, 2,92:1 no --engine-surface e
+     2,67:1 no --engine-surface-2 aqui no claro; 3,68 a 4,20:1 no escuro. O
+     minimo e 4,5:1 para texto de corpo, e o token pintava justamente texto de
+     corpo pequeno — rotulo de campo, dica embaixo do campo, legenda, data de
+     post — em 159 lugares de 26 arquivos.
+
+     Ele nao foi escurecido, foi aposentado, porque medindo apareceu que o
+     terceiro nivel nao cabe: no tema claro o unico valor deste matiz que passa
+     em 4,5:1 e #636a75, e o --engine-text-muted ja e #5b6472. Sao o mesmo
+     cinza a olho nu. Manter dois valores distintos so funcionaria no escuro, e
+     um token que significa "um passo mais claro" num tema e "igual ao muted"
+     no outro mente sobre a hierarquia.
+
+     O nome fica de pe para os 159 usos nao precisarem ser editados um a um. Se
+     um dia a hierarquia de tres niveis voltar a ser necessaria, ela tem de vir
+     por tamanho ou peso, nao por luminosidade — no claro nao ha espaco. */
   --engine-text: #131722;
   --engine-text-muted: #5b6472;
-  --engine-text-subtle: #8a93a3;
+  --engine-text-subtle: var(--engine-text-muted);
 
   /* Marca / acento */
   --engine-accent: #e11d2a;
@@ -61,10 +78,13 @@
   --engine-border: #23262e;
   --engine-border-strong: #2d313b;
 
-  /* Texto */
+  /* Texto — ver a nota no bloco do tema claro. Aqui o valor antigo (#6b7480)
+     dava 3,68 a 4,20:1, ou seja, passava como borda mas reprovava como texto.
+     Alias pelo mesmo motivo: o token tem de significar a mesma coisa nos dois
+     temas. */
   --engine-text: #f4f6fa;
   --engine-text-muted: #9aa3b2;
-  --engine-text-subtle: #6b7480;
+  --engine-text-subtle: var(--engine-text-muted);
 
   /* Marca / acento */
   --engine-accent: #ff3b47;
