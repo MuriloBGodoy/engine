@@ -1,8 +1,8 @@
 {
   "_meta": {
     "descricao": "Potência e torque por MOTOR. Chaveada por marca + cilindrada + válvulas + aspiração + combustível + janela de ano. Desempenho (0-100 e velocidade máxima) NÃO está aqui — é propriedade do veículo, não do motor, e vive em vehicle-performance.json.",
-    "compiladoEm": "2026-08-18",
-    "versao": "0.3.0-parcial",
+    "compiladoEm": "2026-08-19",
+    "versao": "0.4.0-parcial",
     "escopo": "Só motor a combustão. Híbrido e elétrico ficam de fora: potência de híbrido é de sistema (térmico + elétrico) e BEV não tem cilindrada, então nenhum dos dois é endereçável por esta chave.",
     "regra": "Nada de estimativa. Se o fabricante não publica um campo, o campo é null. Célula vazia a tela desenha; número inventado ela não desmente.",
     "chave": {
@@ -77,6 +77,31 @@
       "porQueIssoEstaAqui": "Cada linha desta tabela custou uma caçada. Estes são os caminhos que funcionaram e os que estão comprovadamente fechados, para ninguém repetir a caçada.",
       "funcionam": [
         {
+          "metodo": "TOYOTA: API pública de manuais, com histórico até 2014",
+          "detalhe": "https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário daquele ano-modelo. Achei lendo o chunk JS do componente ManualsExplorer em /manuais. É a melhor fonte Toyota que existe: o capítulo \"Dados de manutenção / Motor\" traz par flex rotulado (\"para modelo gasolina\" / \"para modelo etanol\"), rpm e, nos manuais de 2020 em diante, kW e CV juntos. Profundidade confirmada: Corolla 2014-2026, Corolla Cross 2021-2026, Yaris 2018-2024, Hilux 2016-2026, SW4 2016-2026. Isso resolve o problema de janela de ano que trava Hyundai e Renault. CUIDADO 1: a API devolve os manuais de DOIS anos-modelo para um mesmo ano consultado, e o parâmetro &month=AAAA/MM NÃO desempata (testei os 12 meses de 2022, 2023 e 2024 no Corolla e a resposta é idêntica). Quando os dois documentos divergem, a resposta certa é deixar as janelas se sobreporem e a tela reter — é o que a linha do Corolla 2.0 faz em 2023. CUIDADO 2: alguns PDFs (Hilux, SW4) têm a camada de texto com todos os caracteres deslocados 29 posições para baixo na tabela ASCII ('0RGHOR' = 'Modelo'). Decodifica somando 29 a todo caractere entre 3 e 97, inclusive os de controle — os dígitos aparecem como \\x11-\\x1a e se perdem se você filtrar só o imprimível.",
+          "verificadoEm": "2026-08-19"
+        },
+        {
+          "metodo": "HONDA: uma página por modelo E por ano-modelo, com link direto para o PDF",
+          "detalhe": "https://www.honda.com.br/pos-venda/automoveis/automovel/honda-<modelo>-<ano> traz o <a href> do manual do proprietário no HTML, sem SPA. Confirmado HR-V de 2016 a 2026 (2015 dá 404) e City de 2020 a 2026. Granularidade melhor que a da Toyota: um documento por ano, sem a ambiguidade de dois manuais para o mesmo ano. O capítulo 7 \"Especificações\" traz potência, torque, diâmetro x curso, taxa de compressão e vela. O host devolve 403 para curl com User-Agent só; passa com os cabeçalhos Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site e Sec-Fetch-User de navegador.",
+          "verificadoEm": "2026-08-19"
+        },
+        {
+          "metodo": "FORD: manual no DAM, com a lista de modelo x ano em HTML estático",
+          "detalhe": "ford.com.br/content/dam/Ford/website-assets/latam/br/servico-ao-cliente/manuais/<ano>/manuais-do-proprietario/fbr-manual-do-proprietario-<modelo>.pdf. O capítulo \"Capacidades e especificações\" traz \"Especificações do motor\" com kW, CV, Nm e rotações. A página /support/vehicle/<modelo>/<ano>/owner-manuals/ é SPA e não tem o link, mas /support/owner-manuals/owner-manuals-sitemap/ lista TODOS os pares modelo x ano em HTML estático. Mesmo WAF Akamai da Honda: exige Sec-Fetch-*.",
+          "verificadoEm": "2026-08-19"
+        },
+        {
+          "metodo": "HYUNDAI: press kit com ficha que alimenta AS DUAS tabelas",
+          "detalhe": "https://hyundai-csa-news.com/press-kit/ lista uma página por modelo (hb20, hb20s, novo-creta, novo-creta-n-line, kona-hibrido, palisade, ioniq-5) e cada uma linka a ficha técnica em PDF. É a melhor relação custo/benefício de todas: a MESMA ficha traz potência e torque com par flex E velocidade máxima e 0-100 com par flex. Extrair com 'pdftotext -table': no modo -layout as colunas escorregam uma linha e os rótulos saem trocados (a cilindrada aparece na linha da potência). Peguei esse deslocamento na conferência; se tivesse confiado no -layout teria gravado 998 cv.",
+          "verificadoEm": "2026-08-19"
+        },
+        {
+          "metodo": "STELLANTIS: enumerar download-model-document por ID inteiro",
+          "detalhe": "media.stellantis.com/br-pt/download-model-document/<id>, com id de 1 a 190, devolveu 147 PDFs — Fiat (Pulse, Argo, Cronos, Mobi, Toro, Strada, Doblò, Ducato, Fiorino, Grand Siena, 500e), Jeep (Compass, Renegade, Commander, Wrangler) e RAM. Sequencial e barato. DESCOBERTA QUE CORRIGE A VERSÃO ANTERIOR: existem DOIS templates de ficha, e um deles TEM bloco de desempenho (velocidade máxima e 0-100 separados por combustível). O _meta de vehicle-performance.json afirmava que a Fiat não publica desempenho; a afirmação vinha de sete fichas do template sem o bloco. Sete documentos do mesmo template não são amostra de um fabricante.",
+          "verificadoEm": "2026-08-19"
+        },
+        {
           "metodo": "MANUAL DO PROPRIETÁRIO como fonte de potência e torque",
           "detalhe": "Foi o que destravou a Chevrolet inteira, depois de a ficha técnica ter falhado. O capítulo \"Dados do motor\" (GM) ou \"Dados técnicos\" (VW) traz par flex, rpm e norma — exatamente os campos desta tabela — e é camada 1 sem discussão, hospedado no domínio da montadora. Vantagem sobre a ficha: a montadora precisa manter o manual no ar para quem já comprou, então o histórico dura mais. TENTAR ISSO PRIMEIRO nas marcas que faltam (Toyota, Honda, Nissan, Ford).",
           "chevrolet": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/<modelo>/01-pdfs/<ano>/<modelo>-<ano>-manual-do-propietario.pdf — ATENÇÃO ao nome: é 'propietario' (sem o segundo r) e o do Tracker 2026 é 'propieatrio' (com erro de digitação da própria GM). Alguns anos ganham uma pasta a mais: .../<ano>/manual-do-propietario/<arquivo>.pdf. Confirmados no ar em 18/08/2026: onix 2024/2025/2026, onix-plus 2026, tracker 2024/2025/2026, montana 2024/2025/2026, spin 2024/2025, s10 2024/2025, equinox 2024/2025/2026.",
@@ -96,6 +121,16 @@
         }
       ],
       "fechados": [
+        {
+          "caminho": "Manual do proprietário da NISSAN como fonte de potência",
+          "estado": "FECHADO, e vale para a marca inteira, não só para um modelo. O manual do Kicks MY23 não publica potência NEM torque: o capítulo \"Especificações / Motor\" traz código do motor (HR16DE), diâmetro x curso, cilindrada, ordem de ignição, vela, folga do eletrodo, marcha lenta, avanço de ignição, %CO e limite de ruído — e nenhuma linha de potência. Isso quebra a regra que valeu para Chevrolet, VW, Jeep, Toyota, Honda e Ford. Índice dos manuais em nissan.com.br/servicos/manuais/<modelo>.html, com histórico bom (Kicks 2016-2026, Versa 2013-2026, Frontier 2007-2022) — só que inútil para esta tabela.",
+          "verificadoEm": "2026-08-19"
+        },
+        {
+          "caminho": "Ficha técnica no CDN da Nissan (nissan-cdn.net) para anos anteriores",
+          "estado": "FECHADO PARA HISTÓRICO. O padrão existe e funciona para o ano-modelo corrente: nissan-cdn.net/content/dam/Nissan/br/site/veiculos/<modelo>-my<NN>/documentos/<arquivo>.pdf. Mas só a pasta do MY corrente está no ar. Varri kicks, kicks-play, versa, frontier e sentra x my20 a my27 com três convenções de nome (ficha_tecnica.pdf, catalogo_digital_bolso.pdf, FT_Padrao_<Modelo>_<ano>.pdf) e só responderam versa-my27 e kicks-my26. Não repetir a varredura. O que RESTA vivo na Nissan são as páginas /veiculos/modelos/<modelo>/versoes.html, que trazem tabela com par flex rotulado — porém só do MY corrente, e são HTML sem data, não PDF datado.",
+          "verificadoEm": "2026-08-19"
+        },
         {
           "caminho": "API do newsroom da VW (newsroom-cms-br.itd.vw.com.br/v1/api/)",
           "estado": "401 em tudo, menos technology/json. Testei models, models/json, search, search/json, subtechnology/json, press-release, presskit, vehicle, vehicles, model/json, car/json em 18/08/2026 — todos 401. Confirma o que a versão 0.2.0 já registrava. NÃO reabrir."
@@ -962,6 +997,443 @@
       "verifiedAt": "2026-08-18",
       "crossCheck": null,
       "note": "LINHA PROPOSITALMENTE SEM NÚMERO, e ela existe para IMPEDIR um número errado, não para dar um certo. O problema: um Tracker com ano-modelo até 2025 casa a chave Chevrolet/1.0/12V/TB/Flex, o override do Tracker só vale de 2026, e como sobrava um único candidato o matcher devolvia a linha do ONIX — 160/165 Nm num carro que entrega 180/185. Reproduzi o defeito antes de escrever isto. Com esta linha, o desempate por nameplate encontra 'Tracker' aqui, devolve campos nulos, e a tela mostra ausência em vez de 20 Nm errados. POR QUE OS CAMPOS ESTÃO NULOS: o manual do Tracker 2025 traz, na MESMA tabela, um 1.0 T a 5.500 rpm com 160 Nm e outro a 5.000 rpm, além de dois 1.2 T (132/133 e 139/141 CV) e de códigos de motor L4G e LFD. São mais colunas do que a camada de texto do PDF permite mapear, e não tenho renderizador de imagem neste ambiente para ler a tabela como ela é desenhada. Preencher isso é trabalho de uma hora com um leitor de PDF que rasterize. yearTo=2025 e yearFrom nulo: vale para todo Tracker anterior ao MY26, que é exatamente a faixa não resolvida."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "2.0",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2022,
+      "yearTo": 2023,
+      "engineFamily": "M20A-FKB 2.0 Dynamic Force 16V DOHC Flex",
+      "cylinders": 4,
+      "displacementCm3": 1987,
+      "powerGasolineCv": 169,
+      "powerEthanolCv": 177,
+      "powerDieselCv": null,
+      "powerRpm": "6600",
+      "torqueGasoline": 210,
+      "torqueEthanol": 210,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4400",
+      "norma": null,
+      "models": [
+        "Corolla Cross"
+      ],
+      "source": "https://media.toyota.com.ar/a5623299-39b4-46be-9c24-b418c14cf3d1.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário Corolla Cross 01999-98B51-RP, capítulo \"11-2. Dados técnicos / Dados de manutenção\"",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "O manual do COROLLA 01999-98731-RP (MY22-23, https://media.toyota.com.ar/830570a0-62b1-42c2-92a1-836b1d127b50.pdf) traz o MESMO bloco para o M20A-FKB: 124 kW (169 CV) @6.600 gasolina, 130 kW (177 CV) @6.600 etanol, 210 N.m @4.400. Dois documentos camada 1 independentes, mesmo número.",
+      "note": "Potência tem par flex declarado ('para modelo gasolina' / 'para modelo etanol'); TORQUE NÃO TEM — a Toyota publica um valor só, 210 N.m @4.400 rpm, sem rótulo de combustível, na mesma tabela em que rotula a potência. Os dois campos de torque recebem 210 porque é isso que o documento afirma (um torque para os dois combustíveis), não porque eu tenha duplicado um número faltante. Achado por API pública da própria Toyota: https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário por ano-modelo. A janela de ano desta linha é a faixa de anos para a qual a Toyota serve ESTE documento."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "1.8",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2018,
+      "yearTo": 2019,
+      "engineFamily": "2ZR-FBE 1.8 16V Dual VVT-i Flex (Corolla E170)",
+      "cylinders": 4,
+      "displacementCm3": 1798,
+      "powerGasolineCv": 139,
+      "powerEthanolCv": 144,
+      "powerDieselCv": null,
+      "powerRpm": "6000",
+      "torqueGasoline": 177,
+      "torqueEthanol": 182,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4400 (gasolina) / 4800 (etanol)",
+      "norma": null,
+      "models": [
+        "Corolla"
+      ],
+      "source": "https://media.toyota.com.ar/8eec8c36-a8ab-4653-b838-70efed70777c.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário Corolla 01999-98707-RP, capítulo \"10-2. Especificações / Motor Flex 1\"",
+      "sourceLayer": 1,
+      "sourceDate": "2018",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "Corolla E170 (katashiki ZRE172L/ZRE173L), o Corolla ANTERIOR ao atual. O manual publica a potência SÓ em kW. O cv aqui é conversão (1 cv = 735,49875 W) arredondada ao inteiro, NÃO transcrição. O fator está aferido contra os próprios manuais mais novos da Toyota, que publicam os dois: 124 kW->169 CV, 130 kW->177 CV, 150 kW->204 CV, 165 kW->224 CV, 81 kW->110 CV. Valores verbatim do documento: 102 kW @6.000 rpm (gasolina) e 106 kW @6.000 rpm (etanol). Torque sim está em N.m no documento e vai transcrito. Rotulagem 'Com gasolina' / 'Com etanol' explícita na tabela, nessa ordem. Achado por API pública da própria Toyota: https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário por ano-modelo. A janela de ano desta linha é a faixa de anos para a qual a Toyota serve ESTE documento."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "2.0",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2018,
+      "yearTo": 2019,
+      "engineFamily": "3ZR-FBE 2.0 16V Dual VVT-i Flex (Corolla E170 XRS)",
+      "cylinders": 4,
+      "displacementCm3": 1987,
+      "powerGasolineCv": 143,
+      "powerEthanolCv": 154,
+      "powerDieselCv": null,
+      "powerRpm": "5600 (gasolina) / 5800 (etanol)",
+      "torqueGasoline": 194,
+      "torqueEthanol": 203,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4000 (gasolina) / 4800 (etanol)",
+      "norma": null,
+      "models": [
+        "Corolla"
+      ],
+      "source": "https://media.toyota.com.ar/8eec8c36-a8ab-4653-b838-70efed70777c.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário Corolla 01999-98707-RP, capítulo \"10-2. Especificações / Motor Flex 2\"",
+      "sourceLayer": 1,
+      "sourceDate": "2018",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "3ZR-FBE do Corolla E170 (XRS). NÃO confundir com o M20A-FKB do E210, que tem a MESMA chave (Toyota/2.0/16V/NA/Flex) e 34 cv a mais no etanol — o que separa os dois aqui é só a janela de ano, e é por isso que a janela desta linha é fechada em 2019 em vez de aberta. O manual publica a potência SÓ em kW. O cv aqui é conversão (1 cv = 735,49875 W) arredondada ao inteiro, NÃO transcrição. O fator está aferido contra os próprios manuais mais novos da Toyota, que publicam os dois: 124 kW->169 CV, 130 kW->177 CV, 150 kW->204 CV, 165 kW->224 CV, 81 kW->110 CV. Valores verbatim do documento: 105 kW @5.600 rpm (gasolina) e 113 kW @5.800 rpm (etanol). A rotação de potência máxima difere por combustível, o que é raro e está no documento. Achado por API pública da própria Toyota: https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário por ano-modelo. A janela de ano desta linha é a faixa de anos para a qual a Toyota serve ESTE documento."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "1.5",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2022,
+      "yearTo": 2023,
+      "engineFamily": "2NR-FBE 1.5 16V Dual VVT-i Flex",
+      "cylinders": 4,
+      "displacementCm3": 1496,
+      "powerGasolineCv": 105,
+      "powerEthanolCv": 110,
+      "powerDieselCv": null,
+      "powerRpm": "5600",
+      "torqueGasoline": 143,
+      "torqueEthanol": 149,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4000",
+      "norma": null,
+      "models": [
+        "Yaris"
+      ],
+      "source": "https://media.toyota.com.ar/5ad8ee37-6b95-4181-acdf-c9a0687c7425.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário Yaris 01999-98R00-RP, capítulo \"11-2. Dados técnicos / Dados de manutenção\"",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "Vale para hatch e sedã: o manual cobre NSP151L-HHXRGG/HHXVGG (hatch XL, XS, XLS) e NSP151L-HEXRGG/HEXVGG (sedã XL, XS, XLS), todos com motor 2NR-FBE. O manual publica kW e CV juntos (77 kW (105 CV) / 81 kW (110 CV)), então o cv aqui é transcrição, não conversão. Rótulos 'com gasolina' / 'com etanol' explícitos. O Yaris 1.3 NÃO está neste documento e continua sem linha. Achado por API pública da própria Toyota: https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário por ano-modelo. A janela de ano desta linha é a faixa de anos para a qual a Toyota serve ESTE documento."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "2.0",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2020,
+      "yearTo": 2023,
+      "engineFamily": "M20A-FKB 2.0 Dynamic Force 16V DOHC Flex (calibração A)",
+      "cylinders": 4,
+      "displacementCm3": 1987,
+      "powerGasolineCv": 169,
+      "powerEthanolCv": 177,
+      "powerDieselCv": null,
+      "powerRpm": "6600",
+      "torqueGasoline": 210,
+      "torqueEthanol": 210,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4400",
+      "norma": null,
+      "models": [
+        "Corolla"
+      ],
+      "source": "https://media.toyota.com.ar/ec841e11-3b8c-4ba0-b118-523b15eea1d5.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário Corolla 01999-98712-RP (MY2020), capítulo \"11-2. Dados técnicos / Dados de manutenção\"",
+      "sourceLayer": 1,
+      "sourceDate": "2020",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "Quatro manuais camada 1 lidos, quatro vezes o mesmo número: 01999-98712-RP (MY2020), 45fa8937 (MY2021), 01999-98731-RP (MY2022-23) e o manual do Corolla Cross 01999-98B51-RP. Todos: 124 kW (169 CV) @6.600 gasolina, 130 kW (177 CV) @6.600 etanol, 210 N.m @4.400.",
+      "note": "Corolla E210. Potência com par flex rotulado; TORQUE publicado como valor único (210 N.m @4.400 rpm) sem rótulo de combustível — os dois campos recebem 210 porque é o que o documento afirma, não por duplicação de um dado faltante. SOBREPOSIÇÃO PROPOSITAL EM 2023, e ela é a resposta certa, não um descuido. A Toyota serve DOIS manuais diferentes para um Corolla ano-modelo 2023 — o 01999-98731-RP (169/177 cv, 210 N.m) e o 01999-98732-RP (167/175 cv, 208/209 N.m) — e serve os dois para todos os doze meses de 2023 (testei mês a mês na API; o parâmetro &month=2023/MM não separa). Ou seja: um Corolla 2023 é um ou o outro e o documento não diz qual. Com as duas linhas cobrindo 2023, o matcher devolve multiple_engine_candidates e a tela mostra RETIDO — que é a verdade. Fechar uma das janelas em 2022 ou 2024 seria escolher no palpite qual dos dois documentos oficiais vale, e 2 cv/2 N.m de erro silencioso é pior que uma célula retida. Achado por API pública da própria Toyota: https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário por ano-modelo."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "2.0",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2023,
+      "yearTo": null,
+      "engineFamily": "M20A-FKB 2.0 Dynamic Force 16V DOHC Flex (calibração B)",
+      "cylinders": 4,
+      "displacementCm3": 1987,
+      "powerGasolineCv": 167.2,
+      "powerEthanolCv": 175,
+      "powerDieselCv": null,
+      "powerRpm": "6600",
+      "torqueGasoline": 208,
+      "torqueEthanol": 209,
+      "torqueUnit": "Nm",
+      "torqueRpm": "4400",
+      "norma": null,
+      "models": [
+        "Corolla"
+      ],
+      "source": "https://media.toyota.com.br/80cc0f18-d480-4aad-9233-ae5ef11d890d.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário Corolla MY2024-2025 (manual-corolla-2025), capítulo \"8-2. Dados técnicos\"",
+      "sourceLayer": 1,
+      "sourceDate": "2024",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "Três manuais camada 1: 01999-98732-RP (MY2023-24) traz 123 kW (167 CV) / 129 kW (175 CV); manual-corolla-2025 (MY2024-25) e o manual MY2025-26 trazem 123 kW (167,2 CV) / 129 kW (175 CV). Mesmo kW nos três; a diferença 167 x 167,2 é só arredondamento do próprio fabricante. Torque idêntico nos três.",
+      "note": "A Toyota recalibrou o M20A: contra a calibração A o carro perde 1 kW e ganha 0,1 daNm no etanol. TORQUE PUBLICADO EM daNm neste documento (20,8 gasolina / 20,9 etanol), transcrito aqui em N.m — 1 daNm = 10 N.m exatos, sem arredondamento. powerGasolineCv com decimal (167,2) porque é assim que os dois manuais mais novos publicam; o MY2023-24 escreve 167 redondo. SOBREPOSIÇÃO PROPOSITAL EM 2023, e ela é a resposta certa, não um descuido. A Toyota serve DOIS manuais diferentes para um Corolla ano-modelo 2023 — o 01999-98731-RP (169/177 cv, 210 N.m) e o 01999-98732-RP (167/175 cv, 208/209 N.m) — e serve os dois para todos os doze meses de 2023 (testei mês a mês na API; o parâmetro &month=2023/MM não separa). Ou seja: um Corolla 2023 é um ou o outro e o documento não diz qual. Com as duas linhas cobrindo 2023, o matcher devolve multiple_engine_candidates e a tela mostra RETIDO — que é a verdade. Fechar uma das janelas em 2022 ou 2024 seria escolher no palpite qual dos dois documentos oficiais vale, e 2 cv/2 N.m de erro silencioso é pior que uma célula retida. Achado por API pública da própria Toyota: https://www.toyota.com.br/api/manuals?model=<Modelo>&year=<AAAA>&locale=pt-BR devolve JSON com o PDF do manual do proprietário por ano-modelo."
+    },
+    {
+      "brand": "Honda",
+      "displacementL": "1.5",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "engineFamily": "1.5 DOHC 16V i-VTEC Flex (Di i-VTEC FLEX)",
+      "cylinders": 4,
+      "displacementCm3": 1498,
+      "powerGasolineCv": 126,
+      "powerEthanolCv": 126,
+      "powerDieselCv": null,
+      "powerRpm": "6200",
+      "torqueGasoline": 15.5,
+      "torqueEthanol": 15.8,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "4600",
+      "norma": null,
+      "models": [
+        "HR-V",
+        "City"
+      ],
+      "source": "https://www.honda.com.br/pos-venda/automoveis/sites/customer_service/files/2024-01/WEB%20(PDF)_CITY%204D_KM_OM_3PT00M20_20231219.pdf",
+      "sourceDoc": "Honda Automóveis do Brasil — Manual do Proprietário City 4D (3PT00M20), capítulo 7 \"Especificações\"",
+      "sourceLayer": 1,
+      "sourceDate": "2023-12",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "Manual do Proprietário do New HR-V (3P3M0M30, MY2023) e o do HR-V 2026-2027 trazem o MESMO bloco: 126 cv x 6.200 rpm, Etanol 15,8 / Gasolina 15,5 kgf.m x 4.600 rpm, mesmo diâmetro x curso (73 x 89,5 mm), mesma taxa (12,4:1) e a mesma vela (NGK DILZKAR7F11H). Três documentos camada 1, dois modelos, número idêntico — por isso o 'models' cita os dois.",
+      "note": "A Honda publica UMA potência para o motor flex e, na linha logo abaixo, SEPARA o torque por combustível. Os dois campos de potência recebem o mesmo número porque é isso que o documento afirma — não é duplicação de dado faltante. A prova de que a Honda separa quando difere está no manual do HR-V 2021: lá o 1.8 sai com 'Potência (cv/rpm): Etanol 137/6300, Gasolina 138/6500', dois números rotulados. Quando ela escreve um número só, é um número só. CUIDADO DE ALCANCE: hoje esta linha só é alcançável pelo City. As strings de HR-V aspirado da FIPE ('HR-V EX/EXL 1.5 Flex Sensing 16V 5p Aut.') caem em aspiration_unknown, porque o grupo HR-V tem versão turbo e aspirada e o parser se abstém — o número está aqui e certo, mas a ficha do HR-V aspirado continua RETIDA até o dono dizer qual é o motor. Como achar mais Honda: https://www.honda.com.br/pos-venda/automoveis/automovel/honda-<modelo>-<ano> tem UMA página por ano-modelo, com link direto para o PDF do manual do proprietário. Confirmei HR-V de 2016 a 2026 (2015 dá 404) e City de 2020 a 2026. É granularidade melhor que a da Toyota: um documento por ano, sem sobreposição. O host devolve 403 para curl comum — só responde com os cabeçalhos Sec-Fetch-* de navegador (Dest/Mode/Site/User) junto do User-Agent."
+    },
+    {
+      "brand": "Honda",
+      "displacementL": "1.5",
+      "valves": "16V",
+      "aspiration": "TB",
+      "fuel": "Flex",
+      "yearFrom": 2023,
+      "yearTo": null,
+      "engineFamily": "1.5 DI VTEC Turbo Flex (L15 3ª geração do HR-V)",
+      "cylinders": 4,
+      "displacementCm3": 1498,
+      "powerGasolineCv": 177,
+      "powerEthanolCv": 177,
+      "powerDieselCv": null,
+      "powerRpm": "6000",
+      "torqueGasoline": 24.5,
+      "torqueEthanol": 24.5,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "1700-4500",
+      "norma": null,
+      "models": [
+        "HR-V"
+      ],
+      "source": "https://www.honda.com.br/pos-venda/automoveis/sites/customer_service/files/2024-01/WEB%20(PDF)_New_HR-V_KM_OM_3P3M0M30_20231219_0.pdf",
+      "sourceDoc": "Honda Automóveis do Brasil — Manual do Proprietário New HR-V (3P3M0M30, MY2023), capítulo 7 \"Especificações — Modelos com motor turbo\"",
+      "sourceLayer": 1,
+      "sourceDate": "2023-12",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "Manual do HR-V 2026-2027 repete 177 cv x 6.000 rpm e 24,5 kgf.m x 1.700-4.500 rpm, com vela NGK DILKAR8P8DY e taxa 10,6:1 nos dois. Dois documentos camada 1.",
+      "note": "Aqui a Honda publica valor único TAMBÉM no torque — potência e torque sem rótulo de combustível, ao contrário do 1.5 aspirado, que separa o torque. A Honda publica UMA potência para o motor flex e, na linha logo abaixo, SEPARA o torque por combustível. Os dois campos de potência recebem o mesmo número porque é isso que o documento afirma — não é duplicação de dado faltante. A prova de que a Honda separa quando difere está no manual do HR-V 2021: lá o 1.8 sai com 'Potência (cv/rpm): Etanol 137/6300, Gasolina 138/6500', dois números rotulados. Quando ela escreve um número só, é um número só. NÃO CONFUNDIR com o 1.5 turbo do HR-V de 2ª geração (MY2020-2022), que é GASOLINA PURA, 173 cv @5.500 e 22,4 kgf.m @1.700-5.500 — ver o item do HR-V em naoVerificado. yearFrom=2023 existe para não deixar o motor de 177 cv cair no carro de 173 cv."
+    },
+    {
+      "brand": "Honda",
+      "displacementL": "1.8",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2021,
+      "yearTo": 2022,
+      "engineFamily": "R18 1.8 SOHC i-VTEC 16V Flex (Flexone)",
+      "cylinders": 4,
+      "displacementCm3": 1799,
+      "powerGasolineCv": 138,
+      "powerEthanolCv": 137,
+      "powerDieselCv": null,
+      "powerRpm": "6500 (gasolina) / 6300 (etanol)",
+      "torqueGasoline": 17.3,
+      "torqueEthanol": 17.5,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "4800 (gasolina) / 5000 (etanol)",
+      "norma": null,
+      "models": [
+        "HR-V"
+      ],
+      "source": "https://www.honda.com.br/pos-venda/automoveis/sites/customer_service/files/2026-07/HRV%202021%20-%20Manual%20do%20Propriet%C3%A1rio_20210802.pdf",
+      "sourceDoc": "Honda Automóveis do Brasil — Manual do Proprietário HR-V 2021, capítulo \"Especificações do Motor\"",
+      "sourceLayer": 1,
+      "sourceDate": "2021-08",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "CASO RARO E REAL: a potência na GASOLINA é MAIOR que a no etanol (138 x 137 cv), em rotações diferentes (6.500 x 6.300). Está assim, rotulado, no documento — não é troca de coluna minha. O torque segue o sentido normal (etanol maior). AVISO DE ALCANCE: esta linha não casa hoje. A FIPE escreve 'HR-V EX 1.8 Flexone 16V 5p Aut.' e o parser lê 'Flexone' como não-flex, devolvendo fuel=gasoline — então a chave procurada é Honda/1.8/16V/NA/Gasolina e esta linha (Flex, que é o que o carro é) nunca é encontrada. É defeito de parser, não de tabela: 'Flexone' é a marca comercial de flex da Honda. Deixo a linha pronta e correta para o instante em que o parser aprender a palavra. Mesmo problema atinge City e Fit Flexone. Como achar mais Honda: https://www.honda.com.br/pos-venda/automoveis/automovel/honda-<modelo>-<ano> tem UMA página por ano-modelo, com link direto para o PDF do manual do proprietário. Confirmei HR-V de 2016 a 2026 (2015 dá 404) e City de 2020 a 2026. É granularidade melhor que a da Toyota: um documento por ano, sem sobreposição. O host devolve 403 para curl comum — só responde com os cabeçalhos Sec-Fetch-* de navegador (Dest/Mode/Site/User) junto do User-Agent."
+    },
+    {
+      "brand": "Nissan",
+      "displacementL": "1.6",
+      "valves": "16V",
+      "aspiration": "NA",
+      "fuel": "Flex",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "engineFamily": "HR16DE 1.6 16V CVVTCS Flex",
+      "cylinders": 4,
+      "displacementCm3": 1598,
+      "powerGasolineCv": 110,
+      "powerEthanolCv": 113,
+      "powerDieselCv": null,
+      "powerRpm": "5600",
+      "torqueGasoline": 14.9,
+      "torqueEthanol": 15.2,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "4000",
+      "norma": null,
+      "models": [
+        "Versa"
+      ],
+      "source": "https://www.nissan.com.br/veiculos/modelos/versa/versoes.html",
+      "sourceDoc": "Nissan do Brasil — Versa, página \"Versões\" (tabela de especificações técnicas), ano de produção 2026",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "Par flex EXPLÍCITO e rotulado na tabela da Nissan: 'Potência, cv @ rpm: 113 @ 5600 (etanol)' e '110 @ 5600 (gasolina)'; torque '15,2 @ 4000 (etanol)' e '14,9 @ 4000 (gasolina)'. FONTE FRÁGIL, e a fragilidade é o ponto: isto é PÁGINA HTML no domínio da montadora, não PDF datado. Camada 1 pela procedência, mas o artefato não tem data de publicação, pode mudar sem aviso e some quando o ano-modelo vira. A janela de ano vem do próprio campo 'Ano de produção' declarado na página. Revalidar a cada ciclo de modelo. CONSEQUÊNCIA DE COBERTURA: a janela começa em 2026, então TODO Versa usado continua sem número — só muda o motivo, de no_engine_row para outside_year_window, que é uma frase mais honesta ('temos, mas de outro ano'). O Versa 1.6 de 2011-2019 é OUTRA geração e OUTRO número; a janela fechada existe para não servir o de 2026 nele. Já sondado e FECHADO: a Nissan hospeda ficha técnica em nissan-cdn.net/content/dam/Nissan/br/site/veiculos/<modelo>-my<NN>/documentos/ mas só existe a pasta do ano-modelo CORRENTE. Varri kicks/kicks-play/versa/frontier/sentra x my20..my27 com três convenções de nome de arquivo (ficha_tecnica.pdf, catalogo_digital_bolso.pdf, FT_Padrao_<Modelo>_<ano>.pdf) e só responderam versa-my27 e kicks-my26. Não há histórico. Não repetir a varredura."
+    },
+    {
+      "brand": "Nissan",
+      "displacementL": "1.0",
+      "valves": null,
+      "aspiration": "TB",
+      "fuel": "Flex",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "engineFamily": "1.0 turbo 3 cilindros Flex (novo Kicks)",
+      "cylinders": 3,
+      "displacementCm3": 999,
+      "powerGasolineCv": 125,
+      "powerEthanolCv": 125,
+      "powerDieselCv": null,
+      "powerRpm": "5000",
+      "torqueGasoline": 22.4,
+      "torqueEthanol": 22.4,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "2500",
+      "norma": null,
+      "models": [
+        "Kicks"
+      ],
+      "source": "https://www.nissan.com.br/veiculos/modelos/novo-kicks/versoes.html",
+      "sourceDoc": "Nissan do Brasil — Novo Kicks, página \"Versões\" (tabela de especificações técnicas), ano de produção 2026/2027",
+      "sourceLayer": 1,
+      "sourceDate": "2026",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "A página kicks-my26/versoes.html traz a mesma tabela, número por número.",
+      "note": "valves NULO de propósito: a tabela declara cilindros (3) e cilindrada (999 cm³) e NÃO declara válvulas. Não vou inferir 12V para completar a chave — com valves nulo o matcher simplesmente não usa esse filtro. Potência e torque vêm SEM rótulo de combustível numa tabela cujo campo 'Combustível' diz 'Etanol / Gasolina': é um número para os dois, e os dois campos recebem o mesmo valor por isso. A Nissan separa quando difere — a tabela do Versa, no mesmo site, traz '(etanol)' e '(gasolina)' em linhas distintas. A Nissan publica o torque nas duas unidades (22,4 kgfm e 220 N.m @2.500); transcrevi kgfm e deixo a conversão para a borda. FONTE FRÁGIL, e a fragilidade é o ponto: isto é PÁGINA HTML no domínio da montadora, não PDF datado. Camada 1 pela procedência, mas o artefato não tem data de publicação, pode mudar sem aviso e some quando o ano-modelo vira. A janela de ano vem do próprio campo 'Ano de produção' declarado na página. Revalidar a cada ciclo de modelo."
+    },
+    {
+      "brand": "Ford",
+      "displacementL": "3.2",
+      "valves": null,
+      "aspiration": "TB",
+      "fuel": "Diesel",
+      "yearFrom": 2020,
+      "yearTo": 2022,
+      "engineFamily": "3.2L TDCi Duratorq 5 cilindros turbodiesel",
+      "cylinders": 5,
+      "displacementCm3": 3196,
+      "powerGasolineCv": null,
+      "powerEthanolCv": null,
+      "powerDieselCv": 200,
+      "powerRpm": "3000",
+      "torqueGasoline": null,
+      "torqueEthanol": null,
+      "torqueDiesel": 470,
+      "torqueUnit": "Nm",
+      "torqueRpm": "1750-2500",
+      "norma": null,
+      "models": [
+        "Ranger"
+      ],
+      "source": "https://www.ford.com.br/content/dam/Ford/website-assets/latam/br/servico-ao-cliente/manuais/2021/manuais-do-proprietario/fbr-manual-do-proprietario-ranger.pdf",
+      "sourceDoc": "Ford Motor Company Brasil — Manual do Proprietário Ranger (TKF) Brazil, Vehicles Built From: 08-06-2020, ptBRA, capítulo \"Capacidades e especificações\" — \"Especificações do motor - 3.2L Diesel\"",
+      "sourceLayer": 1,
+      "sourceDate": "2020-06",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "O manual publica kW e CV juntos (147 kW (200 CV) a 3.000 rpm), então o cv é transcrição, não conversão. Cinco cilindros, sequência de ignição 1-2-4-5-3 declarada — é o Duratorq de 5 cilindros mesmo, não um 4 cilindros. yearTo=2022 porque a geração seguinte da Ranger (2023+) não tem 3.2: ela troca para 3.0 V6 e 2.0 bi-turbo, e deixar a janela aberta serviria um motor descontinuado a um carro que não o tem. JANELA DE ANO CONSERVADORA E ISSO CUSTA COBERTURA: o documento se identifica como 'Vehicles Built From: 08-06-2020', então só respondo por Ranger construída de junho de 2020 em diante. A Ranger 3.2 foi vendida no Brasil desde 2013 e a maior parte das 24 versões 3.2 da FIPE é anterior a 2020 — elas passam de no_engine_row para outside_year_window, que é uma frase melhor, mas continua sem número. Fechar a janela para trás exige o manual das gerações anteriores, que eu não encontrei no DAM. CAMINHO QUE FUNCIONOU, para reaproveitar: a Ford esconde o manual atrás de uma SPA (/support/vehicle/<modelo>/<ano>/owner-manuals/ carrega por JS e não tem o link no HTML), mas o PDF está no DAM em ford.com.br/content/dam/Ford/website-assets/latam/br/servico-ao-cliente/manuais/<ano>/manuais-do-proprietario/fbr-manual-do-proprietario-<modelo>.pdf. O domínio tem WAF Akamai: curl com User-Agent só dá 403, e só passa com os cabeçalhos Sec-Fetch-Dest/Mode/Site/User de navegador. Sondagem de outros pares ano x modelo nesse padrão está incompleta — ver naoVerificado."
+    },
+    {
+      "brand": "Ford",
+      "displacementL": "2.2",
+      "valves": null,
+      "aspiration": "TB",
+      "fuel": "Diesel",
+      "yearFrom": 2020,
+      "yearTo": 2022,
+      "engineFamily": "2.2L TDCi Duratorq 4 cilindros turbodiesel",
+      "cylinders": 4,
+      "displacementCm3": 2198,
+      "powerGasolineCv": null,
+      "powerEthanolCv": null,
+      "powerDieselCv": 160,
+      "powerRpm": "3200",
+      "torqueGasoline": null,
+      "torqueEthanol": null,
+      "torqueDiesel": 385,
+      "torqueUnit": "Nm",
+      "torqueRpm": "1600-2500",
+      "norma": null,
+      "models": [
+        "Ranger"
+      ],
+      "source": "https://www.ford.com.br/content/dam/Ford/website-assets/latam/br/servico-ao-cliente/manuais/2021/manuais-do-proprietario/fbr-manual-do-proprietario-ranger.pdf",
+      "sourceDoc": "Ford Motor Company Brasil — Manual do Proprietário Ranger (TKF) Brazil, Vehicles Built From: 08-06-2020, ptBRA, capítulo \"Capacidades e especificações\" — \"Especificações do motor - 2.2L Diesel\"",
+      "sourceLayer": 1,
+      "sourceDate": "2020-06",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "118 kW (160 CV) a 3.200 rpm e 385 Nm a 1.600-2.500 rpm, kW e CV publicados juntos. MESMO DOCUMENTO da linha 3.2: uma passada, dois motores. JANELA DE ANO CONSERVADORA E ISSO CUSTA COBERTURA: o documento se identifica como 'Vehicles Built From: 08-06-2020', então só respondo por Ranger construída de junho de 2020 em diante. A Ranger 3.2 foi vendida no Brasil desde 2013 e a maior parte das 24 versões 3.2 da FIPE é anterior a 2020 — elas passam de no_engine_row para outside_year_window, que é uma frase melhor, mas continua sem número. Fechar a janela para trás exige o manual das gerações anteriores, que eu não encontrei no DAM. CAMINHO QUE FUNCIONOU, para reaproveitar: a Ford esconde o manual atrás de uma SPA (/support/vehicle/<modelo>/<ano>/owner-manuals/ carrega por JS e não tem o link no HTML), mas o PDF está no DAM em ford.com.br/content/dam/Ford/website-assets/latam/br/servico-ao-cliente/manuais/<ano>/manuais-do-proprietario/fbr-manual-do-proprietario-<modelo>.pdf. O domínio tem WAF Akamai: curl com User-Agent só dá 403, e só passa com os cabeçalhos Sec-Fetch-Dest/Mode/Site/User de navegador. Sondagem de outros pares ano x modelo nesse padrão está incompleta — ver naoVerificado."
+    },
+    {
+      "brand": "Hyundai",
+      "displacementL": "1.6",
+      "valves": null,
+      "aspiration": "TB",
+      "fuel": "Flex",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "engineFamily": "Gamma II 1.6 Turbo GDI Flex DOHC D-CVVT",
+      "cylinders": 4,
+      "displacementCm3": 1598,
+      "powerGasolineCv": 176,
+      "powerEthanolCv": 173,
+      "powerDieselCv": null,
+      "powerRpm": "5500",
+      "torqueGasoline": 27.0,
+      "torqueEthanol": null,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "1600-4000",
+      "norma": null,
+      "models": [
+        "Creta"
+      ],
+      "source": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/CRETA-Ficha-tecnica-Novo-Creta-26_27.pdf",
+      "sourceDoc": "Hyundai Motor Brasil — FICHA TÉCNICA NOVO CRETA 26/27",
+      "sourceLayer": 1,
+      "sourceDate": "2026-03",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": null,
+      "note": "DUAS COISAS ESTRANHAS, as duas transcritas como estão no documento. (1) A potência na GASOLINA é MAIOR que a no etanol: '176 (G) | 173 (E) @5,500 RPM'. A ordem dos rótulos está invertida em relação à coluna do 1.0 da mesma ficha ('120 (E) | 115 (G)'), o que descarta troca de coluna minha — a Hyundai escreveu (G) primeiro justamente porque é o maior. (2) O TORQUE só tem valor de gasolina: '27.0 (G) @1,600 ~ 4,000 RPM'. O etanol não é publicado, então torqueEthanol fica nulo — a montadora não mediu ou não divulgou. PISTA A VERIFICAR, NÃO CORREÇÃO: agregadores circulam 193 cv para o Creta 1.6 Turbo. A ficha oficial diz 176/173. Divergência de 17 cv entre camada 1 e camada 4 é lead, não erro — quem tiver uma segunda ficha oficial deve confrontar. valves nulo: a ficha declara DOHC D-CVVT e não declara número de válvulas; não invento 16V para completar a chave. Fonte única. Achado no press kit oficial: https://hyundai-csa-news.com/press-kit/ lista uma página por modelo (hb20, hb20s, novo-creta, novo-creta-n-line, kona-hibrido, palisade, ioniq-5) e cada uma linka a ficha técnica em PDF. É a fonte mais completa que achei nesta rodada: a MESMA ficha traz potência/torque com par flex E desempenho com par flex, ou seja, uma passada alimenta as duas tabelas."
     }
   ],
   "overridesPorModelo": [
@@ -1031,6 +1503,27 @@
       "crossCheck": "Ficha técnica MY26 do Tracker publica o torque em mkgf: 18,9 (etanol) / 18,3 (gasolina) a 1.800-3.500 rpm, que são 185 e 180 Nm. Confere com o manual. RESSALVA: essa ficha só existe rehospedada em site camada 4; o manual é a fonte.",
       "crossCheckUrl": "https://carroscomcamanzi.com.br/wp-content/uploads/2025/08/Ficha-Tecnica-Chevrolet-Tracker-2026-MY26.pdf",
       "note": "MESMO HARDWARE, CALIBRAÇÃO DIFERENTE. O Tracker usa o mesmo bloco do Onix (999 cm³, 74 x 77,49 mm, 10,5:1, 3 cilindros) e quase a mesma potência (115,5 CV / 85 kW), mas entrega 20 Nm A MAIS e numa faixa mais baixa: 180/185 Nm a 1.800-3.500 contra 160/165 Nm a 2.000-4.500 do Onix, e o pico de potência vem a 5.000 rpm em vez de 5.500. Se a chave sem override for usada, o Tracker perde 20 Nm. Foi essa comparação que provou que extrapolar motor entre nameplates da mesma marca é errado — a mesma cautela que o Brian teve com o T270 Fiat/Jeep, só que aqui a extrapolação teria de fato falhado. JANELA EM 2026 DE PROPÓSITO: é o único ano-modelo do Tracker cuja tabela de motor eu consegui mapear coluna a coluna. O manual do Tracker 2025 mistura na mesma tabela um 1.0 T a 5.500 rpm com 160 Nm e um a 5.000 rpm, e a camada de texto do PDF não permite dizer qual coluna é qual. Alargar a janela sem resolver isso seria trocar um erro conhecido por um palpite. Ver 'riscoConhecido' na linha base."
+    },
+    {
+      "overrides": "Volkswagen / 1.6 / 16V / NA / Flex",
+      "model": "Voyage",
+      "yearFrom": 2019,
+      "yearTo": null,
+      "engineFamily": "EA211 1.6 (88 kW) — aplicação Voyage",
+      "powerGasolineCv": 110,
+      "powerEthanolCv": 120,
+      "powerRpm": "5750",
+      "torqueGasoline": 15.8,
+      "torqueEthanol": 16.8,
+      "torqueUnit": "kgfm",
+      "torqueRpm": "4000",
+      "norma": "NBR ISO 1585",
+      "source": "https://vw-digital-cdn-br.itd.vw.com.br/assets/newsroom-cdn-br-ps/Ficha%20T%C3%A9cnica%20Voyage%201.6%20Autom%C3%A1tico%202019.pdf",
+      "sourceDoc": "Volkswagen do Brasil — Ficha Técnica Voyage 1.6l 120cv Automático 4 Portas, 2019",
+      "sourceLayer": 1,
+      "sourceDate": "2019",
+      "verifiedAt": "2026-08-19",
+      "note": "Mesma calibração da Saveiro (110/120 cv, 15,8/16,8 kgfm) e NÃO a do Polo/Virtus (110/117, 15,8/16,5). O Voyage estava caindo em no_row_for_this_model: a chave casava, mas nenhuma linha respondia por ele. Este override é a ficha do modelo, então ele passa a valer como model_verified. O documento publica o torque nas duas unidades (155/165 Nm e 15,8/16,8 kgfm); transcrevi kgfm, como as linhas irmãs."
     }
   ],
   "naoVerificado": [
@@ -1077,6 +1570,76 @@
         "T-Cross"
       ],
       "blocker": "Os MOTORES estão verificados (ver linhas 1.0 MPI, 170 TSI, 1.6 8V e 250 TSI), mas cada linha foi lida na ficha de UM nameplate só. Como o caso Onix x Tracker mostrou que a mesma marca recalibra o mesmo bloco entre modelos, o campo 'models' dessas linhas ficou deliberadamente curto. Fechar exige a ficha de cada nameplate, e a CDN da VW não é enumerável — ver metodosDeBusca."
+    },
+    {
+      "brand": "Toyota",
+      "engines": [
+        "1GD-FTV 2.8 turbodiesel (Hilux e SW4)"
+      ],
+      "models": [
+        "Hilux",
+        "SW4"
+      ],
+      "blocker": "NÃO É FALTA DE FONTE — o dado está lido e conferido; é a CHAVE que não separa os dois carros. O parser da FIPE reduz \"Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.\" ao nameplate \"Hilux\", igual a \"Hilux CD SRV 4x4 2.8 TDI Diesel Aut.\". Como Hilux e SW4 viram o mesmo nome, uma única linha Toyota/2.8/TB/Diesel teria de responder pelos dois — e eles diferem 20 cv. Testei as saídas antes de desistir: badge não resolve (badgeMatches exige 3 dígitos seguidos ou 3+ letras com fronteira de palavra, e SW4 não é nem um nem outro); valves não resolve (16V aparece nos dois); override por modelo não resolve (findOverride casa por nameplate, que é justamente o que está colapsado). Por isso NÃO escrevi linha nenhuma: melhor no_engine_row do que 204 cv num SW4 de 224. O QUE DESTRAVA: o parser reconhecer SW4 como nameplate próprio. São ~57 versões da FIPE esperando por isso.",
+      "dadoJaExtraido": {
+        "fonte": "https://media.toyota.com.ar/0de01d34-db5a-450e-b545-d958629e239d.pdf",
+        "sourceDoc": "Toyota do Brasil — Manual do Proprietário HILUX MY23 01999-98390 (OM9A353b), capítulo \"8-2. Dados técnicos\"",
+        "sourceLayer": 1,
+        "sourceDate": "2022",
+        "verifiedAt": "2026-08-19",
+        "motor": "1GD-FTV, 4 cilindros em linha, 92 x 103,6 mm, 2.755 L",
+        "hiluxExcetoGRS": "150 kW (204 CV) @3.400 rpm",
+        "hiluxGRS": "165 kW (224 CV) @3.000 rpm",
+        "sw4TodasAsVersoes": "165 kW (224 CV) @3.000 rpm e 550 N.m @1.600-2.800 rpm — manual do SW4 MY23, https://media.toyota.com.ar/accfd153-d853-4706-96ee-78fa465bcb07.pdf, cobrindo SRX 4x4 (5 e 7 lugares), Diamond e GRS",
+        "torqueHiluxPendente": "O TORQUE DA HILUX ESTÁ ILEGÍVEL e eu não vou adivinhá-lo. A camada de texto do PDF perde um algarismo em cada valor: sai \"55 N.m\" para o GRS, \"43 N.m\" para os GUN126L-DGFLXG/BGFLXG/BGFLXG3 (câmbio manual RC61F, @1.400-3.400 rpm) e \"50 N.m\" para o resto (@1.600-2.800 rpm). Que falta um algarismo é certo: 55 N.m é impossível num 2.8 diesel, e o manual do SW4 — mesmo motor, mesma calibração de 224 CV — imprime \"550 N.m\" inteiro. Logo o do GRS é 550 e o terceiro é 500. Mas o do meio (\"43\") pode ser 430 ou 420, as duas leituras são plausíveis, e agregadores dizem 420 — o que é pista, não fonte. Confirmei que não é artefato do extrator: -raw, -table, -layout e -clip do pdftotext dão os mesmos dois dígitos, e o manual MY22 (4e3f7a05) repete o defeito. Resolve com um renderizador que rasterize a página, que não existe neste ambiente."
+      }
+    },
+    {
+      "brand": "Honda",
+      "engines": [
+        "R18 1.8 SOHC i-VTEC Flexone",
+        "1.5 DI VTEC Turbo GASOLINA (HR-V 2a geracao)"
+      ],
+      "models": [
+        "HR-V",
+        "City",
+        "Fit",
+        "WR-V"
+      ],
+      "blocker": "DOIS PROBLEMAS DE PARSER, nenhum de fonte. (1) \"Flexone\" é a marca comercial de flex da Honda e o parser não a reconhece: \"HR-V EX 1.8 Flexone 16V 5p Aut.\" sai com fuel=gasoline, então a chave procurada vira Honda/1.8/16V/NA/Gasolina e a linha correta (Flex, que é o que o carro é) nunca é encontrada. A linha do 1.8 já está escrita e correta em engines, esperando o parser aprender a palavra. Atinge também City e Fit Flexone. (2) A FIPE escreve \"HR-V Touring 1.5 Flex TB\" também para a 2ª geração (MY2020-2022), cujo 1.5 turbo é GASOLINA PURA — \"DOHC 16V Turbo - Gasolina\" nas palavras do manual — com 173 cv @5.500 rpm e 22,4 kgf.m @1.700-5.500 rpm. Não criei linha para ele porque teria de declarar fuel=Flex num motor que não é flex, só para casar com o erro da FIPE. A janela yearFrom=2023 da linha turbo existe exatamente para o motor de 177 cv não cair nesse carro de 173 cv.",
+      "fonteDoDadoNaoUsado": "https://www.honda.com.br/pos-venda/automoveis/sites/customer_service/files/2026-07/HRV%202021%20-%20Manual%20do%20Propriet%C3%A1rio_20210802.pdf"
+    },
+    {
+      "brand": "Nissan",
+      "engines": [
+        "HR16DE 1.6 16V Flex (Kicks)"
+      ],
+      "models": [
+        "Kicks"
+      ],
+      "blocker": "41 versões da FIPE — a terceira maior chave sem motor no recorte 2023 — e a Nissan não publica o par flex de um jeito alcançável. Três caminhos sondados. (1) MANUAL DO PROPRIETÁRIO: FECHADO, e vale para a marca inteira. O manual do Kicks MY23 não traz potência NEM torque; o capítulo \"Especificações / Motor\" lista código do motor (HR16DE), diâmetro x curso (78 x 83,6 mm), cilindrada (1.598), vela, marcha lenta, avanço de ignição e limite de ruído, e para aí. (2) FICHA TÉCNICA NO CDN: FECHADO PARA HISTÓRICO. Existe o padrão nissan-cdn.net/content/dam/Nissan/br/site/veiculos/<modelo>-my<NN>/documentos/, mas só com a pasta do ano-modelo CORRENTE. Varri kicks, kicks-play, versa, frontier e sentra x my20 a my27 com três convenções de nome de arquivo e só responderam versa-my27 e kicks-my26. (3) RELEASE DE IMPRENSA: tem número, mas não serve como está. O release de 06/07/2017 diz em prosa \"114 cavalos de potência máxima a 5.600 rpm e torque máximo de 15,5 kgfm a 4.000 rpm\". É um valor só, sem dizer o combustível, em texto corrido — e esta tabela não tem campo \"unico\" para potência (a de desempenho tem). Pôr 114 em powerEthanolCv faria a tela escrever \"114 cv (etanol)\", que o documento não afirma; pôr nos dois campos faria afirmar que a Nissan mediu igual nos dois, que ela também não afirma. A tabela oficial do Versa 1.6, MESMO motor, separa 113 (E) / 110 (G): a Nissan separa quando quer, logo o silêncio da prosa é silêncio mesmo.",
+      "fonteDoDadoNaoUsado": "https://brazil.nissannews.com/pt-BR/releases/agora-fabricado-no-brasil-nissan-kicks-ganha-mais-opc-o-es-de-verso-es-equipamentos-e-cores",
+      "oQueDestrava": "Ou um campo powerUnicoCv em engine-specs.json com suporte em powerCell (espelhando o accel0to100Unico que vehicle-performance.json já tem), ou uma ficha tabelada do Kicks 1.6 de qualquer ano — que não está no ar."
+    },
+    {
+      "brand": "Ford",
+      "engines": [
+        "Sigma 1.6 16V Flex",
+        "Dragon 1.5 12V Flex",
+        "Duratec 2.0 16V Flex",
+        "3.2 e 2.2 TDCi anteriores a 06/2020",
+        "1.5 EcoBoost GTDi (Territory)"
+      ],
+      "models": [
+        "EcoSport",
+        "Ka",
+        "Fiesta",
+        "Focus",
+        "Ranger",
+        "Territory"
+      ],
+      "blocker": "Fonte EXISTE e é boa; faltou tempo de varredura — o resultado é INCONCLUSIVO, não negativo. O manual do proprietário da Ford publica potência e torque em bloco limpo (\"Especificações do motor - 3.2L Diesel\": \"147 kW (200 CV) a 3.000 rpm\", \"470 Nm a 1.750 - 2.500 rpm\"), com kW e CV juntos, o que dispensa conversão. Só confirmei o par 2021/ranger no DAM; a sondagem de 2019-2026 x territory, ecosport, ka, bronco-sport e maverick estourou o tempo antes de terminar.",
+      "oQueDestrava": "A lista de modelo x ano que a Ford mantém no ar está em HTML ESTÁTICO e legível em ford.com.br/support/owner-manuals/owner-manuals-sitemap/ (ecosport 2012-2021, ranger 2012-2026, bronco-sport 2021-2026, edge, fusion, focus, ka, transit, cargo). A página do modelo/ano em si é SPA e não tem o link no HTML, mas o PDF está no DAM em ford.com.br/content/dam/Ford/website-assets/latam/br/servico-ao-cliente/manuais/<ano>/manuais-do-proprietario/fbr-manual-do-proprietario-<modelo>.pdf. Cruzar as duas listas resolve o resto da Ford. ATENÇÃO: WAF Akamai devolve 403 para curl com User-Agent só; passa com os cabeçalhos Sec-Fetch-Dest/Mode/Site/User de navegador."
     }
   ],
   "fontesDescartadas": [

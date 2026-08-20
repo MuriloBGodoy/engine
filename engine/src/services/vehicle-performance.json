@@ -1,8 +1,8 @@
 {
   "_meta": {
     "descricao": "Desempenho medido/declarado por VEÍCULO: 0-100 km/h e velocidade máxima. Separado de engine-specs.json de propósito — desempenho é propriedade do veículo (massa, relação de marchas, aerodinâmica, pneu), não do motor.",
-    "compiladoEm": "2026-08-17",
-    "versao": "0.1.0-esparso",
+    "compiladoEm": "2026-08-19",
+    "versao": "0.2.0-esparso",
     "porQueSeparado": "O MESMO motor 200 TSI (116 cv G / 128 cv E, 20,4 kgfm) aparece em cinco veículos com cinco desempenhos diferentes, todos em ficha oficial da Volkswagen: Polo 9,6 s / 192 km/h (etanol), T-Cross manual 9,6 s / 189, Virtus 9,9 s / 194, Nivus 10,0 s / 189, T-Cross automático 10,4 s / 184. Um segundo inteiro de espalhamento e 10 km/h. E a Duster 1.6 muda de 11,4 s / 178 km/h para 12,9 s / 167 km/h só trocando manual por CVT. Chavear isso por motor serviria número plausível para o carro errado — o mesmo defeito do fipe-consumption-db.json com roupa nova.",
     "chave": {
       "campos": [
@@ -21,8 +21,142 @@
       "Hyundai": "Os dois campos, por combustível, na ficha do MY corrente.",
       "Renault": "Os dois campos na maioria dos catálogos, mas não em todos (Kwid sem velocidade máxima). Às vezes só o valor no etanol.",
       "Chevrolet": "Publica, mas só encontrei documento de 2013. Só o valor no etanol.",
-      "Fiat": "NÃO publica desempenho nas fichas técnicas do media.stellantis.com — as sete que li trazem motor, transmissão, freios, suspensão e dimensões, e nenhuma traz 0-100 nem velocidade máxima. Fiat é buraco estrutural nesta tabela, não falta de coleta.",
-      "Toyota / Honda / Nissan / Jeep / Ford": "Não verificado."
+      "Fiat": "PUBLICA SIM — a versão 0.1.0 desta tabela dizia o contrário e ESTAVA ERRADA. A afirmação antiga ('buraco estrutural, não falta de coleta') veio de sete fichas do media.stellantis.com que de fato não trazem desempenho. Enumerando media.stellantis.com/br-pt/download-model-document/<id> de 1 a 190 aparecem DOIS templates: um sem desempenho (o que eu tinha visto) e outro com bloco 'Desempenho' completo — velocidade máxima e 0 a 100 km/h, separados por gasolina e etanol. Lição: sete documentos do mesmo template não são amostra de um fabricante. Pulse, Argo, Cronos, Mobi e Toro têm desempenho publicado.",
+      "Jeep": "Publica, mesmo template com desempenho da Fiat, e com o MESMO problema de trim: o Compass T270 Flex AT6 tem quatro fichas (Sport, Longitude, Limited, S) com quatro resultados diferentes. Compass e Renegade a DIESEL não trazem desempenho. Ver 'bloqueadoPorTrim'.",
+      "Toyota": "NÃO publica, e agora está verificado. Li sete manuais do proprietário (Corolla MY2018-19, MY2020, MY2021, MY2022-23, MY2023-24, MY2024-25; Corolla Cross MY2022-23; Yaris MY2022; Hilux MY2022 e MY2022-23; SW4 MY2022-23) mais o catálogo do Corolla 2026 e o press kit do Corolla Cross. TODOS trazem potência e torque com par flex, NENHUM traz 0-100 ou velocidade máxima. O capítulo 'Dados de manutenção' da Toyota simplesmente não tem esses campos. Não adianta procurar mais manual — se aparecer, virá de press kit de lançamento.",
+      "Honda": "NÃO publica. Quatro manuais do proprietário lidos (HR-V MY2021, MY2023 e MY2026-27; City 4D MY2023). O capítulo 7 'Especificações' traz potência, torque, taxa de compressão, folga de válvulas e até avanço de ignição — e nenhuma linha de desempenho.",
+      "Nissan": "NÃO publica em lugar nenhum que eu tenha alcançado. O manual do proprietário do Kicks MY23 não traz nem POTÊNCIA (só código do motor, diâmetro x curso, cilindrada, vela, marcha lenta e ruído), quanto mais desempenho. As páginas 'versões' do nissan.com.br trazem potência e torque com par flex, mas nenhum campo de aceleração ou velocidade máxima.",
+      "Ford": "NÃO publica no manual. O manual da Ranger (Built From 08-06-2020) tem 'Especificações do motor' com kW, CV, Nm e rotações — e zero desempenho."
+    },
+    "bloqueadoPorTrim": {
+      "porQueEstaAqui": "Dado JÁ EXTRAÍDO, camada 1, conferido — e que NÃO PODE virar linha desta tabela hoje. Guardo aqui para não perder a coleta e para que vire linha no dia em que o casamento de versão souber ler o acabamento.",
+      "oBloqueio": "matchPerformanceRow -> performanceVersionMatches (src/services/vehicleSpecs.js) NÃO compara o texto de acabamento do campo 'version'. Ele extrai a cilindrada da string e, se achar, RETORNA na hora comparando só cilindrada; se não achar, testa apenas se a versão parece turbo ou aspirada. Consequência: 'Volcano T270' e 'Endurance T270' são indistinguíveis para o matcher. Duas linhas de acabamentos diferentes do mesmo carro, mesma cilindrada e mesmo câmbio sempre caem em multiple_performance_candidates e a tela fica RETIDA. Escrever uma só delas seria servir o número de um acabamento a todos os outros — o erro que esta tabela existe para não cometer.",
+      "oQueDestrava": "Ensinar performanceVersionMatches a casar a palavra de acabamento contra a string da FIPE quando ela existir em 'version' (a FIPE escreve o acabamento: 'Toro Volcano 1.3 T270 16V Flex Aut.', 'COMPASS Longitude 1.3 T270 4x2 Flex Aut.'), mantendo o comportamento atual quando 'version' não trouxer acabamento. Com isso, os 12 conjuntos abaixo viram linha direto, sem nova coleta.",
+      "medidoEmQuantoCusta": "No Compass T270 o espalhamento entre acabamentos é de 0,9 s no 0-100 (8,9 s no Sport contra 9,8 s no Limited/S) — 9%. Na Toro T270 é de 4,5 km/h na velocidade máxima (195,5 no Volcano contra 200 no Endurance). Não é ruído de arredondamento; é carro diferente.",
+      "dados": [
+        {
+          "marca": "Jeep",
+          "veiculo": "Compass",
+          "motor": "T270 Turbo Flex",
+          "cambio": "AT6",
+          "acabamentos": [
+            {
+              "acabamento": "Sport",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/134",
+              "accel0to100Gasoline": 8.9,
+              "accel0to100Ethanol": 8.8,
+              "topSpeedGasoline": 204.5,
+              "topSpeedEthanol": 207
+            },
+            {
+              "acabamento": "Longitude",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/132 (e 133, idêntico)",
+              "accel0to100Gasoline": 9.7,
+              "accel0to100Ethanol": 9.3,
+              "topSpeedGasoline": 204,
+              "topSpeedEthanol": 206.5
+            },
+            {
+              "acabamento": "Limited",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/131",
+              "accel0to100Gasoline": 9.8,
+              "accel0to100Ethanol": 9.4,
+              "topSpeedGasoline": 203.5,
+              "topSpeedEthanol": 206
+            },
+            {
+              "acabamento": "S",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/130",
+              "accel0to100Gasoline": 9.8,
+              "accel0to100Ethanol": 9.4,
+              "topSpeedGasoline": 203.5,
+              "topSpeedEthanol": 206
+            }
+          ]
+        },
+        {
+          "marca": "Fiat",
+          "veiculo": "Toro",
+          "motor": "Turbo 270 Flex",
+          "cambio": "AT6",
+          "acabamentos": [
+            {
+              "acabamento": "Endurance (MY22)",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/86",
+              "accel0to100Gasoline": 10.7,
+              "accel0to100Ethanol": 10.6,
+              "topSpeedGasoline": 200,
+              "topSpeedEthanol": 202
+            },
+            {
+              "acabamento": "Freedom",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/88",
+              "accel0to100Gasoline": 10.8,
+              "accel0to100Ethanol": 10.7,
+              "topSpeedGasoline": 199.5,
+              "topSpeedEthanol": 201.5
+            },
+            {
+              "acabamento": "Volcano",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/92",
+              "accel0to100Gasoline": 10.8,
+              "accel0to100Ethanol": 10.7,
+              "topSpeedGasoline": 195.5,
+              "topSpeedEthanol": 201.5
+            }
+          ]
+        },
+        {
+          "marca": "Fiat",
+          "veiculo": "Mobi",
+          "motor": "1.0",
+          "cambio": "Manual",
+          "acabamentos": [
+            {
+              "acabamento": "Easy (MY21)",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/82",
+              "accel0to100Gasoline": 14.3,
+              "accel0to100Ethanol": 13.2,
+              "topSpeedGasoline": 152.5,
+              "topSpeedEthanol": 153.6
+            },
+            {
+              "acabamento": "Like (MY21)",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/83",
+              "accel0to100Gasoline": 14.4,
+              "accel0to100Ethanol": 13.8,
+              "topSpeedGasoline": 151,
+              "topSpeedEthanol": 152.2
+            },
+            {
+              "acabamento": "Trekking (MY21)",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/84",
+              "accel0to100Gasoline": 14.4,
+              "accel0to100Ethanol": 13.8,
+              "topSpeedGasoline": 151,
+              "topSpeedEthanol": 152.2
+            },
+            {
+              "acabamento": "Like (MY22)",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/71",
+              "accel0to100Gasoline": 15.8,
+              "accel0to100Ethanol": 14.0,
+              "topSpeedGasoline": 151,
+              "topSpeedEthanol": 152.2
+            },
+            {
+              "acabamento": "Trekking (MY22)",
+              "doc": "https://www.media.stellantis.com/br-pt/download-model-document/72",
+              "accel0to100Gasoline": 14.4,
+              "accel0to100Ethanol": 14.9,
+              "topSpeedGasoline": 151,
+              "topSpeedEthanol": 152.2,
+              "suspeita": "NÃO USAR SEM CONFERIR. Esta ficha diz que o 0-100 no ETANOL (14,9 s) é MAIS LENTO que na gasolina (14,4 s). Em motor flex o etanol entrega mais potência e o número deveria ser menor — todas as outras 20 fichas Fiat que li seguem essa direção, inclusive a do MESMO Mobi Trekking no MY21 (14,4 / 13,8). A hipótese mais provável é erro de digitação da Fiat com os campos trocados ou o 13,8 virando 14,9, mas isso é INFERÊNCIA minha e não corrijo documento de fabricante. Fica marcado."
+            }
+          ]
+        }
+      ],
+      "ondeMaisProcurar": "A enumeração de media.stellantis.com/br-pt/download-model-document/<id> foi de 1 a 190 e devolveu 147 PDFs: Fiat (Pulse, Argo, Cronos, Mobi, Toro, Strada, Doblò, Ducato, Fiorino, Grand Siena, 500e), Jeep (Compass, Renegade, Commander, Wrangler) e RAM (700, 1500, 2500). Acima de 190 não sondei. Fichas a DIESEL (Toro AT9, Compass diesel, Renegade diesel, Commander TD380) e as da Strada 1.3/1.4 NÃO trazem bloco de desempenho — nesses casos é ausência do fabricante, não falta de coleta."
     },
     "regra": "Campo nulo é ausência de fonte, nunca zero e nunca estimativa. Onde o fabricante publica um valor só sem dizer o combustível, vai em 'unico'."
   },
@@ -359,6 +493,266 @@
       "sourceDate": "2013-07",
       "verifiedAt": "2026-08-17",
       "note": "A Chevrolet publica só o número no etanol neste documento. Gasolina fica nulo — ausência de fonte."
+    },
+    {
+      "brand": "Hyundai",
+      "nameplate": "Creta",
+      "version": "1.0 Turbo GDI",
+      "transmission": "Automático",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "accel0to100Unico": 11.6,
+      "topSpeedUnico": 175,
+      "source": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/CRETA-Ficha-tecnica-Novo-Creta-26_27.pdf",
+      "sourceDoc": "Hyundai Motor Brasil — FICHA TÉCNICA NOVO CRETA 26/27",
+      "sourceLayer": 1,
+      "sourceDate": "2026-03",
+      "verifiedAt": "2026-08-19",
+      "note": "O campo de desempenho desta ficha NÃO separa combustível (ao contrário do HB20/HB20S da mesma marca, que separam): a Hyundai publica um valor só por coluna. Vai em 'unico' em vez de duplicado nos dois campos. Vale para Action, Comfort, Limited e Platinum — exatamente a lista de versões declarada no cabeçalho desta coluna."
+    },
+    {
+      "brand": "Hyundai",
+      "nameplate": "Creta",
+      "version": "1.6 Turbo GDI",
+      "transmission": "Dupla embreagem",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "accel0to100Unico": 8.1,
+      "topSpeedUnico": 202,
+      "source": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/CRETA-Ficha-tecnica-Novo-Creta-26_27.pdf",
+      "sourceDoc": "Hyundai Motor Brasil — FICHA TÉCNICA NOVO CRETA 26/27",
+      "sourceLayer": 1,
+      "sourceDate": "2026-03",
+      "verifiedAt": "2026-08-19",
+      "note": "O campo de desempenho desta ficha NÃO separa combustível (ao contrário do HB20/HB20S da mesma marca, que separam): a Hyundai publica um valor só por coluna. Vai em 'unico' em vez de duplicado nos dois campos. Coluna 'Ultimate | N Line', transmissão automatizada de dupla embreagem. 3,5 s e 27 km/h de diferença para o 1.0 Turbo do MESMO carro."
+    },
+    {
+      "brand": "Hyundai",
+      "nameplate": "HB20S",
+      "version": "1.0 12V aspirado",
+      "transmission": "Manual",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "accel0to100Gasoline": 15.4,
+      "accel0to100Ethanol": 14.5,
+      "topSpeedGasoline": 159,
+      "topSpeedEthanol": 162,
+      "source": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/202602-Ficha-Tecnica-Novo-HB20S-26-27.pdf",
+      "sourceDoc": "Hyundai Motor Brasil — FICHA TÉCNICA NOVO HB20S 26/27",
+      "sourceLayer": 1,
+      "sourceDate": "2026-03",
+      "verifiedAt": "2026-08-19",
+      "note": "O SEDÃ NÃO É O HATCH, e a ficha prova: contra o HB20 hatch já na tabela (158 G / 161 E), o HB20S faz 159 G / 162 E — 1 km/h a mais, mesma aceleração. É pouco e é medido, e é a razão de esta tabela ser chaveada por veículo. Sem linha própria o HB20S ficaria sem número, porque a FIPE usa nameplate diferente do hatch."
+    },
+    {
+      "brand": "Hyundai",
+      "nameplate": "HB20S",
+      "version": "1.0 Turbo GDI",
+      "transmission": "Automático",
+      "yearFrom": 2026,
+      "yearTo": null,
+      "accel0to100Gasoline": 10.7,
+      "accel0to100Ethanol": 10.7,
+      "topSpeedGasoline": 191,
+      "topSpeedEthanol": 191,
+      "source": "https://hyundai-csa-news.com/wp-content/uploads/2026/03/202602-Ficha-Tecnica-Novo-HB20S-26-27.pdf",
+      "sourceDoc": "Hyundai Motor Brasil — FICHA TÉCNICA NOVO HB20S 26/27",
+      "sourceLayer": 1,
+      "sourceDate": "2026-03",
+      "verifiedAt": "2026-08-19",
+      "note": "Os dois combustíveis dão o mesmo número e a ficha escreve os dois assim ('10,7 (E)' e '10,7 (G)'; '191 (E)' e '191 (G)') — não é duplicação minha. Contra o hatch turbo (190 km/h), o sedã faz 191."
+    },
+    {
+      "brand": "Volkswagen",
+      "nameplate": "Voyage",
+      "version": "1.6",
+      "transmission": "Automático",
+      "yearFrom": 2019,
+      "yearTo": null,
+      "accel0to100Gasoline": 10.8,
+      "accel0to100Ethanol": 10.2,
+      "topSpeedGasoline": 184,
+      "topSpeedEthanol": 190,
+      "extra": {
+        "accel0to1000mGasoline": 32.2,
+        "accel0to1000mEthanol": 31.5,
+        "recovery80to120Gasoline": null,
+        "recovery80to120Ethanol": null
+      },
+      "source": "https://vw-digital-cdn-br.itd.vw.com.br/assets/newsroom-cdn-br-ps/Ficha%20T%C3%A9cnica%20Voyage%201.6%20Autom%C3%A1tico%202019.pdf",
+      "sourceDoc": "Volkswagen do Brasil — Ficha Técnica Voyage 1.6l 120cv Automático 4 Portas, 2019",
+      "sourceLayer": 1,
+      "sourceDate": "2019",
+      "verifiedAt": "2026-08-19",
+      "note": "Vale SÓ para o Voyage 1.6 AUTOMÁTICO — é o que o cabeçalho do documento declara ('Automático', '4 Portas'). O manual é outro carro na conta do 0-100 e não está aqui. A retomada 80-120 aparece como '-' na ficha: a VW não mediu, e por isso vai nula em vez de estimada. Achado pela mesma trilha do resto da VW: o CDN vw-digital-cdn-br guarda as fichas de lançamento antigas, e esta é de 2019 — cobertura de carro usado, que é o que falta na tabela."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Pulse",
+      "version": "Drive 1.3",
+      "transmission": "Manual",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 12.2,
+      "accel0to100Ethanol": 11.7,
+      "topSpeedGasoline": 174,
+      "topSpeedEthanol": 178,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/1",
+      "sourceDoc": "Stellantis Brasil — FIAT PULSE DRIVE 1.3 FLEX MANUAL (MY22), Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "note": "CORRIGE O _meta DESTA TABELA. Até esta rodada o 'quemPublica' afirmava que a Fiat NÃO publica desempenho, com base em sete fichas do media.stellantis.com que de fato não trazem. A afirmação estava ERRADA por amostra pequena: enumerando media.stellantis.com/br-pt/download-model-document/<id> de 1 a 45 aparecem DOIS templates de ficha, e um deles tem bloco 'Desempenho' completo com velocidade máxima e 0-100 separados por combustível. As sete que eu tinha lido eram todas do template sem desempenho. O título traz (MY22), então esta é das poucas fichas Fiat com ano declarado."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Pulse",
+      "version": "Drive 1.3",
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 12.2,
+      "accel0to100Ethanol": 11.4,
+      "topSpeedGasoline": 173,
+      "topSpeedEthanol": 177,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/2",
+      "sourceDoc": "Stellantis Brasil — FIAT PULSE DRIVE 1.3 FLEX AUTOMÁTICO (MY22), Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "note": "Par direto com a linha manual acima, mesmo carro e mesmo motor: o automático é 0,3 s MAIS RÁPIDO no etanol (11,4 x 11,7) e 1 km/h MAIS LENTO na ponta. Efeito pequeno e de sinal misto — mais um caso de que a direção do efeito do câmbio não se infere."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Pulse",
+      "version": "1.0 Turbo 200",
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 9.7,
+      "accel0to100Ethanol": 9.4,
+      "topSpeedGasoline": 187,
+      "topSpeedEthanol": 189,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/3",
+      "sourceDoc": "Stellantis Brasil — FIAT PULSE DRIVE TURBO 200 FLEX AUTOMÁTICO (MY22), Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "Fichas separadas das versões AUDACE (id 4) e IMPETUS (id 5) trazem exatamente os mesmos quatro números. Três documentos, um resultado — por isso uma linha só cobre as três versões.",
+      "note": "version='1.0 Turbo 200' e não 'Turbo 200' DE PROPÓSITO. Sem a cilindrada na string, o casamento de versão só exigiria 'ser turbo', e o PULSE ABARTH 1.3 T270 (185 cv) casaria com esta linha e receberia o 0-100 do 1.0 de 130 cv. Com '1.0' escrito, o filtro de cilindrada exclui o Abarth."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Argo",
+      "version": "1.0",
+      "transmission": "Manual",
+      "yearFrom": null,
+      "yearTo": null,
+      "accel0to100Gasoline": 14.4,
+      "accel0to100Ethanol": 13.4,
+      "topSpeedGasoline": 157,
+      "topSpeedEthanol": 162,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/6",
+      "sourceDoc": "Stellantis Brasil — FIAT ARGO 1.0 MT, Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "A ficha do ARGO DRIVE 1.0 MT (id 7) traz os mesmos números. Uma terceira ficha, do template tabelado (id 12), publica a velocidade em 5ª marcha como 157,0 / 162,0 km/h — bate com a velocidade máxima das outras duas.",
+      "note": "DOCUMENTO SEM DATA: a ficha não traz data impressa, o PDF não tem CreationDate e a URL é /download-model-document/<id> — sem o sufixo hexadecimal que datava os arquivos de media.stellantis.com/uploads. Por isso a janela de ano é nula, do mesmo jeito que já é nula nas linhas de motor da Fiat. Janela nula é curinga: se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Argo",
+      "version": "1.3",
+      "transmission": "Manual",
+      "yearFrom": null,
+      "yearTo": null,
+      "accel0to100Gasoline": 11.8,
+      "accel0to100Ethanol": 10.8,
+      "topSpeedGasoline": 180,
+      "topSpeedEthanol": 184,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/8",
+      "sourceDoc": "Stellantis Brasil — FIAT ARGO DRIVE 1.3 MT, Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "ARGO TTREKKING 1.3 MT (id 11) e duas fichas do template tabelado (ids 13 e 14) dão os mesmos valores.",
+      "note": "DOCUMENTO SEM DATA: a ficha não traz data impressa, o PDF não tem CreationDate e a URL é /download-model-document/<id> — sem o sufixo hexadecimal que datava os arquivos de media.stellantis.com/uploads. Por isso a janela de ano é nula, do mesmo jeito que já é nula nas linhas de motor da Fiat. Janela nula é curinga: se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. Vale para o 1.3 MANUAL. O Argo 1.3 CVT usa a outra calibração do Firefly (ver 'colisaoFiat13' no _meta de engine-specs.json) e não tem ficha de desempenho lida — não extrapolar esta linha para ele."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Cronos",
+      "version": "1.3",
+      "transmission": "Manual",
+      "yearFrom": null,
+      "yearTo": null,
+      "accel0to100Gasoline": 12.3,
+      "accel0to100Ethanol": 11.5,
+      "topSpeedGasoline": 178.1,
+      "topSpeedEthanol": 182.9,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/26",
+      "sourceDoc": "Stellantis Brasil — FIAT CRONOS 1.3 MT, Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "Cinco fichas concordam: CRONOS 1.3 MT (ids 26 e 40), CRONOS DRIVE 1.3 MT (ids 27 e 41), CRONOS DRIVE S-DESIGN 1.3 MT (ids 28 e 45).",
+      "note": "DOCUMENTO SEM DATA: a ficha não traz data impressa, o PDF não tem CreationDate e a URL é /download-model-document/<id> — sem o sufixo hexadecimal que datava os arquivos de media.stellantis.com/uploads. Por isso a janela de ano é nula, do mesmo jeito que já é nula nas linhas de motor da Fiat. Janela nula é curinga: se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. Velocidade máxima com casa decimal (178,1 / 182,9) porque é assim que a Fiat publica neste modelo; não arredondei. Contra o Argo 1.3 MANUAL, que tem o MESMO motor: o sedã é 0,5 s mais lento no 0-100 e 1,1 km/h mais lento na ponta."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Cronos",
+      "version": "1.8",
+      "transmission": "Automático",
+      "yearFrom": null,
+      "yearTo": null,
+      "accel0to100Gasoline": 10.8,
+      "accel0to100Ethanol": 9.9,
+      "topSpeedGasoline": 176,
+      "topSpeedEthanol": 181.5,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/42",
+      "sourceDoc": "Stellantis Brasil — FIAT CRONOS DRIVE 1.8 AT6, Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "CRONOS PRECISION 1.8 AT6 (id 43) e CRONOS HGT 1.8 AT6 (id 44) trazem os mesmos números.",
+      "note": "DOCUMENTO SEM DATA: a ficha não traz data impressa, o PDF não tem CreationDate e a URL é /download-model-document/<id> — sem o sufixo hexadecimal que datava os arquivos de media.stellantis.com/uploads. Por isso a janela de ano é nula, do mesmo jeito que já é nula nas linhas de motor da Fiat. Janela nula é curinga: se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. Curiosidade medida: o 1.8 automático acelera bem mais que o 1.3 manual (9,9 x 11,5 s no etanol) e mesmo assim tem velocidade máxima MENOR na gasolina (176 x 178,1). É relação de marchas, e é o motivo de esta tabela existir separada da de motor."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Toro",
+      "version": "1.8",
+      "transmission": "Manual",
+      "yearFrom": 2021,
+      "yearTo": null,
+      "accel0to100Gasoline": 14.0,
+      "accel0to100Ethanol": 13.0,
+      "topSpeedGasoline": 180,
+      "topSpeedEthanol": 183,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/109",
+      "sourceDoc": "Stellantis Brasil — FIAT TORO ENDURANCE 1.8 FLEX MT5 (MY21), Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": "2021",
+      "verifiedAt": "2026-08-19",
+      "note": "Única ficha de Toro 1.8 MANUAL em todo o corpus que enumerei (download-model-document/1 a 190). Endurance é a única versão com MT5."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Toro",
+      "version": "1.8",
+      "transmission": "Automático",
+      "yearFrom": 2021,
+      "yearTo": null,
+      "accel0to100Gasoline": 12.8,
+      "accel0to100Ethanol": 12.2,
+      "topSpeedGasoline": 154,
+      "topSpeedEthanol": 162,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/110",
+      "sourceDoc": "Stellantis Brasil — FIAT TORO FREEDOM 1.8 FLEX AT6 (MY21), Ficha técnica",
+      "sourceLayer": 1,
+      "sourceDate": "2021",
+      "verifiedAt": "2026-08-19",
+      "crossCheck": "A ficha de id 111 é o mesmo documento (TORO FREEDOM 1.8 FLEX AT6 MY21) e traz os mesmos quatro números.",
+      "note": "NÚMERO ESTRANHO E CONFIRMADO EM DOIS DOCUMENTOS: contra a Toro 1.8 manual, a automática acelera MAIS (12,8 x 14,0 s na gasolina) e tem velocidade máxima 26 km/h MENOR (154 x 180). Vinte e seis km/h só de câmbio é muito, e eu esperaria erro de digitação — mas as fichas de id 110 e 111 dizem a mesma coisa. Transcrevo como está e deixo o aviso: se alguém achar uma terceira ficha oficial da Toro 1.8 AT6, confrontar esta linha primeiro."
     }
   ]
 }

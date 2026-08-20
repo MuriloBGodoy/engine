@@ -320,14 +320,26 @@ console.log("== assertivas ==\n");
 {
   // Camada 2 pura: o carro é de fábrica, o buraco é nosso. Complementa, não
   // substitui, e a tela não deve desenhar seta nenhuma.
-  const car = owned("Fiat", "ARGO DRIVE 1.3 Firefly Flex 8V 5p Mec.", "2021 Gasolina", {
-    performance: { topSpeedKmh: declared(178) },
+  //
+  // ERA O ARGO 1.3 e deixou de servir em 19/08/2026: a Fiat publica sim o
+  // desempenho do Argo (180/184 km/h), a linha entrou em
+  // vehicle-performance.json e o buraco que este teste precisava sumiu. O teste
+  // ficou vermelho por COBERTURA A MAIS, não por defeito — trocar o carro é a
+  // correção certa, mexer no dado seria esconder o ganho.
+  //
+  // A Strada é a substituta estável: tem potência de fábrica (logo é um carro
+  // que a tabela conhece de verdade) e NÃO tem velocidade máxima, porque as
+  // cinco fichas da Strada no media.stellantis.com (ids 120 a 124) usam o
+  // template SEM bloco de desempenho. É ausência do fabricante, não fila de
+  // coleta, então o buraco não vai fechar por acidente.
+  const car = owned("Fiat", "STRADA Freedom 1.3 Flex 8V CD", "2023 Gasolina", {
+    performance: { topSpeedKmh: declared(158) },
   });
   const sheet = resolveVehicleSpecSheet(car);
-  check("argo: velocidade declarada", sheet.tags.topSpeedKmh, "declarado");
-  check("argo: não substitui nada", sheet.fields.topSpeedKmh.replaces, null);
-  check("argo: preenche um buraco conhecido", Boolean(sheet.fields.topSpeedKmh.fills), true);
-  check("argo: não conta como modificação", sheet.hasModifications, false);
+  check("strada: velocidade declarada", sheet.tags.topSpeedKmh, "declarado");
+  check("strada: não substitui nada", sheet.fields.topSpeedKmh.replaces, null);
+  check("strada: preenche um buraco conhecido", Boolean(sheet.fields.topSpeedKmh.fills), true);
+  check("strada: não conta como modificação", sheet.hasModifications, false);
 }
 {
   // Camada 2 dando um número que a fábrica desmente: 90 cv num Polo 200 TSI de
