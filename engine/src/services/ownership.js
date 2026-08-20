@@ -750,10 +750,25 @@ export function estimateOwnershipRange(car, rawInputs = {}, location = {}, unkno
  * consegue pagar. Com a despesa real informada dá para responder pelo que
  * sobra de fato.
  *
- * A regra não é jogada fora: ela vira detector de orçamento incompleto. Quando
- * a folga aprova mas o carro come muito mais da renda do que o típico para a
- * situação de vida, a tela pergunta em vez de reprovar — normalmente é despesa
+ * A regra não é jogada fora: ela vira teto do otimismo e detector de orçamento
+ * incompleto. Quando a folga aprova mas o carro come mais da renda do que é
+ * saudável para a situação de vida, o veredito não sobe a "com folga"; quando
+ * come muito mais, a tela pergunta em vez de reprovar — normalmente é despesa
  * que a pessoa esqueceu de contar.
+ *
+ * ESTA É A ÚNICA FUNÇÃO DO MOTOR QUE VIRA NÚMERO EM VEREDITO. Até 19/08/2026
+ * havia uma segunda, o `comfortLevel` do `estimateOwnership`, que julgava a
+ * mesma situação só pelo percentual da renda e discordava desta em faixas
+ * inteiras — com renda R$ 11.000 e contas R$ 3.500, "cabe apertado" aqui e
+ * "crítico" lá. Duas réguas discordando não é redundância, é o produto falando
+ * duas coisas sobre a mesma decisão financeira. A tela nova mostra o veredito
+ * em 46px ao lado da régua de três zonas, então a contradição ia para o rosto
+ * de quem está decidindo. Se um dia voltar a existir uma segunda régua, é aqui
+ * que ela tem de nascer, como mais um caso deste `level`.
+ *
+ * Contrato com a tela: `level` é sempre um de três valores discretos —
+ * "comfortable", "tight", "no_fit" — e nada entre eles. É o que a régua de
+ * zonas do `OwnershipModal` desenha. Verificado em scripts/check-affordability.mjs.
  */
 export function assessAffordability({
   monthlyCost = 0,
@@ -775,11 +790,42 @@ export function assessAffordability({
   const leftover = disposable - monthlyCost;
   const committedPct = monthlyCost / monthlyIncome;
 
-  const level =
-    leftover <= 0 ? "no_fit" : leftover >= monthlyIncome * 0.2 ? "comfortable" : "tight";
+  const situation = LIFE_SITUATIONS[lifeSituation] || LIFE_SITUATIONS.shared;
+
+  // Duas perguntas, uma resposta só, e cada régua manda no que sabe responder.
+  //
+  // A FOLGA (renda − contas − carro) decide se CABE. É a medida informada: sai
+  // da despesa que a pessoa declarou, não de um percentual típico, e é ela que
+  // aprova quem tem renda modesta e contas baixas — o falso "não cabe" que a
+  // regra de percentual produzia.
+  //
+  // A FATIA DA RENDA decide se dá para chamar de FOLGA. Ela não enxerga as
+  // contas, então não tem autoridade para reprovar: reprovar por proxy tira da
+  // pessoa um carro que caberia, que é o erro que este motor não comete em
+  // lugar nenhum. Mas ela enxerga uma coisa que a folga não enxerga — que o
+  // carro come uma fatia da renda acima do sustentável para a situação de vida
+  // — e por isso pode TIRAR o "com folga" e deixar em "aperta". Nunca o
+  // contrário.
+  //
+  // O teto é `warning`, não `comfortable`: é o ponto em que a régua de
+  // percentual já dizia "acima do recomendado", e usar o corte de baixo
+  // rebaixaria justamente quem mora com a família e tem conta fixa quase zero.
+  // Medido em 19/08/2026 (scripts/check-affordability.mjs): sem este teto,
+  // renda R$ 11.000, contas R$ 500 e um carro de R$ 6.425/mês saíam como "cabe
+  // com folga" em 46px, com a legenda da régua logo abaixo, na mesma tela,
+  // dizendo "este carro ocuparia 58% da sua renda; o típico é 20%". As duas
+  // frases eram do mesmo motor.
+  const fits = leftover > 0;
+  const hasSlack = leftover >= monthlyIncome * 0.2;
+  const aboveHealthyShare = committedPct > situation.warning;
+  const level = !fits ? "no_fit" : hasSlack && !aboveHealthyShare ? "comfortable" : "tight";
+  // Para a tela poder dizer POR QUE aperta um orçamento em que sobra dinheiro.
+  const cappedByIncomeShare = fits && hasSlack && aboveHealthyShare;
 
   // Só desconfia quando a folga aprovou: se já não coube, não há o que checar.
-  const situation = LIFE_SITUATIONS[lifeSituation] || LIFE_SITUATIONS.shared;
+  // O corte aqui é mais alto que o do teto acima de propósito: passar do
+  // saudável rebaixa o veredito, passar de meia vez isso é forte o bastante
+  // para a tela perguntar se faltou uma conta na lista.
   const suspectIncompleteBudget =
     level !== "no_fit" && committedPct > situation.warning * 1.5;
 
@@ -788,6 +834,7 @@ export function assessAffordability({
     leftover,
     committedPct,
     level,
+    cappedByIncomeShare,
     ongoingExpenses,
     freedByReplacing,
     suspectIncompleteBudget,
@@ -867,20 +914,18 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
   const requiredIncomeMaintain = monthlyMaintain / share;
   const emergencyFund = Math.max(monthlyMaintain * 3, value * 0.02);
 
-  // Limites de conforto adaptados à situação de vida: quem mora com os pais
-  // pode comprometer mais da renda do que quem sustenta a casa sozinho.
+  // Aqui NÃO se emite veredito. Esta função sabe o custo e a renda, mas não
+  // sabe as contas da pessoa, e julgar "cabe ou não cabe" sem elas é julgar por
+  // proxy — era o que o `comfortLevel` fazia até 19/08/2026, discordando do
+  // `assessAffordability` em faixas inteiras de renda. Quem responde "cabe?" é
+  // o `assessAffordability`, que recebe a despesa declarada; sem despesa a
+  // resposta é ausente de propósito, e a tela convida a informá-la em vez de
+  // mostrar um veredito mais fraco.
+  //
+  // Consequência: `inputs.monthlyIncome` continua sendo normalizado e
+  // persistido (a tela guarda a renda em `settings.budget`), mas não muda mais
+  // nenhum número que sai daqui.
   const situation = LIFE_SITUATIONS[inputs.lifeSituation];
-  let comfortLevel = null;
-  let committedPct = null;
-  if (inputs.monthlyIncome > 0) {
-    committedPct = monthlyTotal / inputs.monthlyIncome;
-    comfortLevel =
-      committedPct <= situation.comfortable
-        ? "comfortable"
-        : committedPct <= situation.warning
-          ? "warning"
-          : "critical";
-  }
 
   return {
     inputs,
@@ -910,12 +955,6 @@ export function estimateOwnership(car, rawInputs = {}, location = {}) {
       emergencyFund,
       incomeSharePct: inputs.incomeSharePct,
       suggestedSharePct: situation.suggestedShare,
-      comfortThresholds: {
-        comfortable: situation.comfortable,
-        warning: situation.warning,
-      },
-      committedPct,
-      comfortLevel,
       downPaymentGap: Math.max(recommendedDownPayment - savedValue, 0),
     },
   };
