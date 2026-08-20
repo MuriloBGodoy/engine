@@ -1549,6 +1549,28 @@ h5 {
   font-size: clamp(2.5rem, 7.6cqw, 4.125rem);
 }
 
+/* A linha do porquê: aparece só quando o teto de fatia da renda rebaixou o
+   veredito, ou seja, quando a tela precisa explicar um "aperta" com dinheiro
+   sobrando.
+
+   Cor CHEIA, não `--engine-slab-fg-muted`: é substância, não rodapé. A
+   hierarquia do slab fica veredito (46px) > sobra (15px) > porquê (13.5px,
+   cheio) > a conta escrita por extenso (12.5px, muted).
+
+   O filete de 2px marca a frase como "a explicação disto aqui em cima" sem
+   fazer dela mais uma caixa — que era o defeito de origem desta tela. Usa
+   `--engine-slab-line`, o mesmo traço das células e da régua: nenhuma cor nova
+   entrou no sistema, e o acento continua exclusivo do "não cabe". */
+.engine-slab-why {
+  margin-top: 0.75rem;
+  max-width: 60ch;
+  border-left: 2px solid var(--engine-slab-line);
+  padding-left: 0.75rem;
+  font-size: 0.84375rem;
+  line-height: 1.6;
+  color: var(--engine-slab-fg);
+}
+
 /* Régua de conforto: TRES zonas discretas, nao um gradiente.
 
    O motor devolve tres niveis (comfortable / tight / no_fit) e nada entre

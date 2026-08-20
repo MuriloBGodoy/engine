@@ -614,6 +614,24 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
     lifeSituation: inputs.lifeSituation,
   });
 
+  // O veredito pode ser "aperta" com dinheiro sobrando: a folga aprova, e o
+  // teto de fatia da renda tira o "com folga". São 13% das células medidas
+  // (scripts/check-affordability.mjs) e um terço de todos os "aperta" — o
+  // perfil de quem mora com a família, tem conta fixa baixa e está comprando o
+  // primeiro carro. Sem dizer o porquê, a pessoa lê "aperta" com R$ 4.438 no
+  // bolso e conclui que a conta está errada.
+  const cappedByShare = Boolean(verdict?.cappedByIncomeShare);
+  // O número que DECIDIU é o `warning` da situação de vida. A régua mostrava o
+  // `typical` (o `suggestedShare`), que é referência e não corte: explicar o
+  // veredito com ele seria justificá-lo por um número que não o produziu.
+  const healthyCapPct = Math.round(
+    (LIFE_SITUATIONS[inputs.lifeSituation]?.warning ?? LIFE_SITUATIONS.shared.warning) *
+      100,
+  );
+  // A fatia como a tela a escreve. Vale a pena ter o mesmo número em três
+  // lugares (frase, barra fixa e legenda da régua) saindo de uma variável só.
+  const sharePctShown = verdict ? Math.round(verdict.committedPct * 100) : 0;
+
   const rangeIsWide = range.high - range.low >= 1;
   // O mesmo veredito no PISO da faixa: responde se o "nao cabe" depende de a
   // estimativa ter sido azarada ou se ele vale no cenario mais barato tambem.
@@ -823,16 +841,64 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                     ? t("ownership.answer.gap", {
                         value: money(Math.abs(verdict.leftover)),
                       })
-                    : t("ownership.answer.left", { value: money(verdict.leftover) })}
+                    : t(
+                        cappedByShare
+                          ? "ownership.answer.leftCapped"
+                          : "ownership.answer.left",
+                        { value: money(verdict.leftover) },
+                      )}
                 </p>
+
+                {/* A LINHA DO PORQUE.
+
+                    Só existe quando o teto de fatia da renda rebaixou o
+                    veredito, e é a única coisa que liga "aperta" a "sobram
+                    R$ 4.438" — as duas frases que a tela mostrava juntas, em
+                    46px e 15px, sem nada entre elas.
+
+                    Mora AQUI, colada no veredito, e não numa caixa nova: a
+                    resposta é a resposta, e o defeito de origem desta tela foi
+                    justamente empurrar o que importa para mais um bloco.
+
+                    A frase é neutra em magnitude de proposito. Medindo as
+                    células rebaixadas, a distância acima do teto vai de 1 a 50
+                    pontos e as contas fixas vão de 5% a 40% da renda: nem
+                    "muito acima do saudável" nem "porque as suas contas são
+                    baixas" seriam verdade em todas. */}
+                {cappedByShare ? (
+                  <p className="engine-slab-why">
+                    {/* A fatia é sempre MAIOR que o teto — é isso que rebaixou o
+                        veredito —, mas pode ser maior por menos de meio ponto e
+                        arredondar para o mesmo número. Aí a frase comparativa
+                        citaria "30%" contra "30%" e não explicaria nada. Achado
+                        clicando a alavanca "à vista", que leva a 30,08% num teto
+                        de 30%: nesse caso a frase para de comparar e diz o que é
+                        verdade, que o carro está bem em cima do limite. */}
+                    {sharePctShown === healthyCapPct
+                      ? t("ownership.answer.capReasonAtLimit", { cap: healthyCapPct })
+                      : t("ownership.answer.capReason", {
+                          pct: sharePctShown,
+                          cap: healthyCapPct,
+                        })}
+                  </p>
+                ) : null}
 
                 <ComfortRuler
                   t={t}
                   level={verdict.level}
-                  caption={t("ownership.answer.rulerCaption", {
-                    pct: Math.round(verdict.committedPct * 100),
-                    typical: verdict.typicalSharePct,
-                  })}
+                  /* Quando a linha do porquê está no ar, a legenda sai: ela
+                     repetiria a mesma fatia da renda a 40px de distância, e
+                     contra um terceiro número (o típico) que não foi o que
+                     decidiu. Percentual repetido é o defeito que originou este
+                     redesenho. */
+                  caption={
+                    cappedByShare
+                      ? null
+                      : t("ownership.answer.rulerCaption", {
+                          pct: sharePctShown,
+                          typical: verdict.typicalSharePct,
+                        })
+                  }
                 />
 
                 <div className="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-[var(--engine-slab-line)] bg-[var(--engine-slab-line)] @[420px]:grid-cols-2 @[700px]:grid-cols-3">
@@ -885,13 +951,20 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                 {/* A regra de % nao sumiu: virou detector de orcamento
                     incompleto. Quando a folga aprova mas o carro come muito
                     mais da renda do que o tipico, quase sempre faltou uma
-                    conta na lista — entao a tela pergunta, em vez de reprovar. */}
+                    conta na lista — entao a tela pergunta, em vez de reprovar.
+
+                    Um terco das celulas rebaixadas pelo teto tambem dispara
+                    esta caixa (medido). Nelas a fatia da renda ja foi dita na
+                    linha do porque, entao aqui fica so a pergunta: repetir o
+                    percentual seria a terceira vez na mesma tela. */}
                 {verdict.suspectIncompleteBudget ? (
                   <p className="mt-3 max-w-[62ch] rounded-xl border border-[var(--engine-slab-line)] bg-[var(--engine-slab-cell)] px-3 py-2 text-[12px] leading-relaxed text-[var(--engine-slab-fg)]">
-                    {t("ownership.budget.checkBudget", {
-                      pct: Math.round(verdict.committedPct * 100),
-                      typical: verdict.typicalSharePct,
-                    })}
+                    {cappedByShare
+                      ? t("ownership.budget.checkBudgetShort")
+                      : t("ownership.budget.checkBudget", {
+                          pct: sharePctShown,
+                          typical: verdict.typicalSharePct,
+                        })}
                   </p>
                 ) : null}
 
@@ -1822,12 +1895,24 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                   <p className="text-[13.5px] font-bold leading-tight text-[var(--engine-text)]">
                     {t(`ownership.answer.verdict.${verdict.level}`)}
                   </p>
+                  {/* A barra é o eco comprimido da resposta, e é o que fica à
+                      vista enquanto a pessoa rola o formulário. Ecoar só a
+                      sobra num veredito rebaixado pelo teto reproduziria aqui,
+                      em miniatura e longe de qualquer explicação, exatamente a
+                      contradição que o slab acabou de resolver. */}
                   <p className="text-[12px] leading-tight text-[var(--engine-text-muted)]">
                     {verdict.level === "no_fit"
                       ? t("ownership.answer.footGap", {
                           value: money(Math.abs(verdict.leftover)),
                         })
-                      : t("ownership.answer.footLeft", { value: money(verdict.leftover) })}
+                      : cappedByShare
+                        ? t("ownership.answer.footCapped", {
+                            value: money(verdict.leftover),
+                            pct: sharePctShown,
+                          })
+                        : t("ownership.answer.footLeft", {
+                            value: money(verdict.leftover),
+                          })}
                   </p>
                 </>
               ) : (

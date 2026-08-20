@@ -565,6 +565,10 @@ const resources = {
           },
           checkBudget:
             "Pelas suas contas sobra dinheiro, mas o carro ficaria em {{pct}}% da sua renda, bem acima dos {{typical}}% típicos de quem está na sua situação. Faltou alguma despesa na lista?",
+          // Quando o teto já explicou a fatia duas linhas acima, repetir o
+          // percentual aqui seria a terceira vez na mesma tela.
+          checkBudgetShort:
+            "Uma fatia grande assim quase sempre significa uma despesa esquecida na lista. Vale conferir — corrigir muda o veredito.",
         },
         answer: {
           kicker: "O veredito",
@@ -576,6 +580,17 @@ const resources = {
           },
           gap: "Faltam {{value}} por mês depois de pagar as suas contas.",
           left: "Sobram {{value}} por mês depois do carro e das suas contas.",
+          // O teto de fatia da renda rebaixou o veredito: sobra dinheiro E aperta.
+          // A frase da sobra vira PONTE em vez de contradição, e o porquê vem logo
+          // abaixo. Sem isso a pessoa lê "aperta" com R$ 4.438 no bolso.
+          leftCapped: "Sobram {{value}} por mês, e não é isso que aperta.",
+          capReason:
+            "O que aperta é o carro levar {{pct}}% da sua renda todo mês, quando o saudável para a sua situação vai até {{cap}}%. É a parte mais difícil de cortar se algo mudar.",
+          // Quando a fatia arredondada bate no teto (ex.: 30,08% e teto de 30%),
+          // a frase de cima citaria o mesmo número duas vezes e não explicaria
+          // nada. Achado clicando a alavanca "à vista", que leva exatamente ali.
+          capReasonAtLimit:
+            "O que aperta é o carro ficar bem em cima do limite saudável para a sua situação — {{cap}}% da sua renda. É a parte mais difícil de cortar se algo mudar.",
           math:
             "{{income}} de renda − {{expenses}} de contas − {{car}} do carro (teto da faixa, é com ele que fazemos a conta).",
           robust:
@@ -602,6 +617,7 @@ const resources = {
           fix: "Ver o que faria caber",
           footGap: "faltam {{value}} por mês",
           footLeft: "sobram {{value}} por mês",
+          footCapped: "sobram {{value}}, mas o carro leva {{pct}}% da renda",
           footRange: "entre {{low}} e {{high}}",
         },
         invite: {
@@ -1650,6 +1666,8 @@ const resources = {
           },
           checkBudget:
             "Your numbers leave money over, but the car would take {{pct}}% of your income — well above the {{typical}}% typical for your situation. Did you miss a bill?",
+          checkBudgetShort:
+            "A share that big usually means a bill is missing from your list. Worth checking — fixing it changes the verdict.",
         },
         answer: {
           kicker: "The verdict",
@@ -1661,6 +1679,11 @@ const resources = {
           },
           gap: "You'd be {{value}} short every month after your bills.",
           left: "{{value}} left every month after the car and your bills.",
+          leftCapped: "{{value}} left every month — that is not what makes it tight.",
+          capReason:
+            "What makes it tight is the car taking {{pct}}% of your income every month, when up to {{cap}}% is healthy for your situation. That is the hardest part to cut if something changes.",
+          capReasonAtLimit:
+            "What makes it tight is the car sitting right at the healthy ceiling for your situation — {{cap}}% of your income. That is the hardest part to cut if something changes.",
           math:
             "{{income}} income − {{expenses}} bills − {{car}} car (top of the range — that's what we run the math on).",
           robust:
@@ -1687,6 +1710,7 @@ const resources = {
           fix: "See what would make it fit",
           footGap: "{{value}} short a month",
           footLeft: "{{value}} left a month",
+          footCapped: "{{value}} left, but the car takes {{pct}}% of your income",
           footRange: "between {{low}} and {{high}}",
         },
         invite: {
@@ -2732,6 +2756,8 @@ const resources = {
           },
           checkBudget:
             "Según tus cuentas sobra dinero, pero el auto quedaría en {{pct}}% de tu ingreso, bastante por encima del {{typical}}% típico de tu situación. ¿Faltó algún gasto?",
+          checkBudgetShort:
+            "Una porción así de grande casi siempre significa un gasto olvidado en la lista. Vale la pena revisar: corregirlo cambia el veredicto.",
         },
         answer: {
           kicker: "El veredicto",
@@ -2743,6 +2769,11 @@ const resources = {
           },
           gap: "Te faltan {{value}} al mes después de pagar tus cuentas.",
           left: "Te sobran {{value}} al mes después del coche y de tus cuentas.",
+          leftCapped: "Te sobran {{value}} al mes, y no es eso lo que ajusta.",
+          capReason:
+            "Lo que ajusta es que el coche se lleva el {{pct}}% de tus ingresos cada mes, cuando lo saludable para tu situación llega hasta el {{cap}}%. Es la parte más difícil de recortar si algo cambia.",
+          capReasonAtLimit:
+            "Lo que ajusta es que el coche queda justo en el límite saludable para tu situación — el {{cap}}% de tus ingresos. Es la parte más difícil de recortar si algo cambia.",
           math:
             "{{income}} de ingresos − {{expenses}} de cuentas − {{car}} del coche (techo del rango: es con él que hacemos la cuenta).",
           robust:
@@ -2769,6 +2800,7 @@ const resources = {
           fix: "Ver qué haría que cupiera",
           footGap: "faltan {{value}} al mes",
           footLeft: "sobran {{value}} al mes",
+          footCapped: "sobran {{value}}, pero el coche se lleva el {{pct}}% del ingreso",
           footRange: "entre {{low}} y {{high}}",
         },
         invite: {
