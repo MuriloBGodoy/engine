@@ -704,7 +704,7 @@
       "crossCheck": "Manual do Proprietário Onix 2026 traz exatamente os mesmos números (115,5 CV / 85 kW a 5.500 rpm, gasolina e etanol; 160 Nm a 2.000-4.500 gasolina e 165 Nm a 2.000-5.000 etanol). Dois nameplates, dois documentos camada 1 do próprio fabricante. O Manual do Onix 2025 traz os mesmos 85 kW e os mesmos 160/165 Nm, imprimindo 115,6 CV e a rotação de torque como \"2.000 rpm\" sem faixa.",
       "crossCheckUrl": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/onix/01-pdfs/2026/manual-do-propietario/onix-2026-manual-do-propietario.pdf",
       "note": "NÃO VALE PARA O TRACKER — ver override e colisão. O Tracker usa o MESMO bloco 999 cm³ 74 x 77,49 mm 10,5:1 com outra calibração: 180/185 Nm a 1.800-3.500 e potência a 5.000 rpm. A potência é 85 kW nos três documentos; 115,5 e 115,6 CV são arredondamentos do mesmo 85 kW (85 kW = 115,57 CV). Torque em Nm porque o manual publica só em Nm, sem kgfm. 'valves':'12V' NÃO está no manual — vem da string da FIPE e da ficha do Tracker, que declara \"Válvulas, total: 12\" para este mesmo bloco de 999 cm³; é inferência declarada. yearFrom=2025 é o documento mais antigo que alcancei, não o início do motor: o 1.0 turbo equipa o Onix desde 2020 e os anos 2020-2024 seguem NÃO verificados.",
-      "riscoConhecido": "NEUTRALIZADO, mas vale saber por quê. Em matchEngineRow, quando sobra um único candidato o código o devolve com escopo ENGINE_FAMILY mesmo que o nameplate NÃO esteja em 'models' — ou seja, 'models' não é filtro duro. Por causa disso, um Tracker até MY25 recebia os 160/165 Nm desta linha em vez dos 180/185 dele. A correção foi por DADO, não por código: existe agora uma linha Chevrolet/1.0/12V/TB/Flex com models=['Tracker'], yearTo=2025 e todos os campos nulos, que ganha o desempate por nameplate e faz a tela mostrar ausência. O conserto de raiz continua sendo do matcher (dono: Brian): 'models', quando preenchido, deveria excluir quem não está nele."
+      "riscoConhecido": "RESOLVIDO NO CÓDIGO, e o registro fica porque o defeito era sutil. Em matchEngineRow, 'models' era desempate e não filtro: quando a janela de ano derrubava a concorrência e sobrava um único candidato, ele voltava com escopo ENGINE_FAMILY ainda que o 'models' dele não citasse o carro — a AUSÊNCIA DE CONCORRÊNCIA promovia palpite a resposta. Por causa disso um Tracker até MY25 recebia os 160/165 Nm desta linha em vez dos 180/185 dele. O remendo da época foi por DADO: uma linha irmã com models=['Tracker'], yearTo=2025 e todos os campos nulos, que ganhava o desempate e forçava ausência. Ela impedia o número errado, mas mentia no motivo — a tela dizia 'field_not_published', ou seja 'a Chevrolet não publica', quando a Chevrolet publica e quem não consegue ler a tabela do PDF somos nós. O conserto de raiz veio depois: 'models', quando preenchido, agora EXCLUI quem não está nele. Com isso a linha nula virou peso morto e foi removida em 21/08/2026 — o Tracker MY<=25 continua sem número, agora por 'no_row_for_this_model', que é a frase verdadeira. Assertiva em check-spec-sheet.mjs ('tracker 2025: e o motivo é o verdadeiro') guarda os dois lados: o número errado e o motivo errado."
     },
     {
       "brand": "Chevrolet",
@@ -966,37 +966,6 @@
       "crossCheck": "SEIS fichas técnicas oficiais, dois nameplates, três combinações de câmbio/tração, trazem exatamente os mesmos 180 cv (gasolina) / 185 cv (etanol) a 5.750 rpm e os mesmos 27,5 kgfm (270 Nm) a 1.750 rpm: Compass Limited, Compass S e Compass Longitude (todas AT6 4x2, PDFs criados em 21/03/2024), Renegade Sahara T270 4x2 AT6 MY2025 (PDF criado em 23/07/2024) e Renegade Série S e Trailhawk T270 4x4 AT9 (upload de 09/02/2022). Nem a tração 4x4 nem o câmbio de nove marchas mudam a declaração de motor.",
       "crossCheckUrl": "https://www.media.stellantis.com/br-pt/download-model-document/309",
       "note": "RESPONDE A PERGUNTA QUE ORIGINOU A LINHA: o T270 do Jeep tem os MESMOS números do T270 da Fiat (ver a linha Fiat/1.3/16V/TB). Não é casamento cruzado à mão — são seis documentos Jeep lidos, e a coincidência com a Fiat foi constatada depois, não assumida antes. A linha existe separada porque 'brand' entra na chave e a string da FIPE do Compass e do Renegade traz Jeep. Se a Stellantis um dia recalibrar uma das marcas, as duas linhas divergem sem precisar refazer a chave. O documento publica \"27,5 kgfm (270 Nm)\", então o kgfm é do fabricante. Janela nula: os documentos vão de fev/2022 a jul/2024 sem mudança de número."
-    },
-    {
-      "brand": "Chevrolet",
-      "displacementL": "1.0",
-      "valves": "12V",
-      "aspiration": "TB",
-      "fuel": "Flex",
-      "yearFrom": null,
-      "yearTo": 2025,
-      "engineFamily": "1.0 turbo 3 cilindros, injecao direta — aplicação Tracker até MY25, NÃO RESOLVIDA",
-      "cylinders": 3,
-      "displacementCm3": 999,
-      "powerGasolineCv": null,
-      "powerEthanolCv": null,
-      "powerDieselCv": null,
-      "powerRpm": null,
-      "torqueGasoline": null,
-      "torqueEthanol": null,
-      "torqueUnit": null,
-      "torqueRpm": null,
-      "norma": null,
-      "models": [
-        "Tracker"
-      ],
-      "source": "https://www.chevrolet.com.br/content/dam/chevrolet/south-america/brazil/portuguese/index/visid/services/manuals/pdfs/tracker/01-pdfs/2025/tracker-2025-manual-do-propietario.pdf",
-      "sourceDoc": "Chevrolet do Brasil — Manual do Proprietário Tracker 2025, capítulo \"Dados do motor\"",
-      "sourceLayer": 1,
-      "sourceDate": "2025",
-      "verifiedAt": "2026-08-18",
-      "crossCheck": null,
-      "note": "LINHA PROPOSITALMENTE SEM NÚMERO, e ela existe para IMPEDIR um número errado, não para dar um certo. O problema: um Tracker com ano-modelo até 2025 casa a chave Chevrolet/1.0/12V/TB/Flex, o override do Tracker só vale de 2026, e como sobrava um único candidato o matcher devolvia a linha do ONIX — 160/165 Nm num carro que entrega 180/185. Reproduzi o defeito antes de escrever isto. Com esta linha, o desempate por nameplate encontra 'Tracker' aqui, devolve campos nulos, e a tela mostra ausência em vez de 20 Nm errados. POR QUE OS CAMPOS ESTÃO NULOS: o manual do Tracker 2025 traz, na MESMA tabela, um 1.0 T a 5.500 rpm com 160 Nm e outro a 5.000 rpm, além de dois 1.2 T (132/133 e 139/141 CV) e de códigos de motor L4G e LFD. São mais colunas do que a camada de texto do PDF permite mapear, e não tenho renderizador de imagem neste ambiente para ler a tabela como ela é desenhada. Preencher isso é trabalho de uma hora com um leitor de PDF que rasterize. yearTo=2025 e yearFrom nulo: vale para todo Tracker anterior ao MY26, que é exatamente a faixa não resolvida."
     },
     {
       "brand": "Toyota",

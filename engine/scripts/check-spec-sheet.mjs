@@ -180,6 +180,25 @@ console.log("== assertivas ==\n");
   check("tracker 2025: não recebe o torque do Onix", tracker.fields.torque.value, null);
   check("tracker 2025: nem o par dele", tracker.fields.torque.pair, null);
   check("tracker 2025: nem a potência", tracker.fields.powerCv.status, SPEC_STATUS.ABSENT);
+  // O MOTIVO faz parte da resposta, e é por isso que ele é assertiva.
+  //
+  // Enquanto o `models` da linha era desempate e não filtro, o Tracker até MY25
+  // recebia os 160/165 Nm do Onix. O remendo da época foi por DADO: uma linha
+  // Chevrolet/1.0/12V/TB com `models:["Tracker"]`, `yearTo:2025` e todos os
+  // campos nulos, que ganhava o desempate e forçava ausência. Funcionava, mas
+  // mentia no motivo — saía `field_not_published`, ou seja "a Chevrolet não
+  // publica", quando a Chevrolet publica e quem não consegue ler a tabela do
+  // PDF somos nós.
+  //
+  // O `models` virou filtro eliminatório em `matchEngineRow` e a linha nula foi
+  // removida em 21/08/2026. A ausência continua — pelo motivo verdadeiro: temos
+  // o motor, e a ficha que temos é de outro carro. Esta assertiva é o que
+  // impede a linha nula de voltar sem que alguém perceba.
+  check(
+    "tracker 2025: e o motivo é o verdadeiro, não 'a montadora não publica'",
+    tracker.fields.powerCv.reason,
+    ABSENT_REASON.NO_ROW_FOR_THIS_MODEL,
+  );
 
   // O ano em que existe documento do Tracker: aí sim, e pelo override, que é a
   // ficha DAQUELE modelo — por isso o escopo é verificado no modelo.
