@@ -81,6 +81,35 @@ const modified = (value, extra = {}) => ({
   ...extra,
 });
 
+/**
+ * As 21 versões que a FIPE escreve com `Flexone` (amostra de 4.864, 20/08/2026).
+ * Transcritas aqui e não filtradas do cache porque a assertiva precisa rodar
+ * mesmo sem a amostra baixada — e porque a lista congelada é o que denuncia se
+ * a FIPE mudar a grafia.
+ */
+const FIPE_FLEXONE = [
+  "Civic Sedan EXR 2.0 Flexone 16V Aut. 4p",
+  "Civic Sedan LXR 2.0 Flexone 16V Aut. 4p",
+  "CR-V EXL 2.0 16V 4WD/2.0 Flexone Aut.",
+  "CR-V EXL 2.0 Flexone 16V 2WD Aut.",
+  "CR-V LX 2.0 16V 2WD/2.0 Flexone Aut.",
+  "Fit DX 1.5 Flexone 16V 5p Aut.",
+  "Fit DX 1.5 Flexone 16V 5p Mec.",
+  "Fit EX/S 1.5 Flex/Flexone 16V 5p Aut.",
+  "Fit EXL 1.5 Flex/Flexone 16V 5p Aut",
+  "Fit LX 1.5 Flexone 16V 5p Aut.",
+  "Fit LX 1.5 Flexone 16V 5p Mec.",
+  "Fit Personal 1.5 Flexone 16V 5p Aut.",
+  "HR-V EX 1.8 Flexone 16V 5p Aut.",
+  "HR-V EXL 1.8 Flexone 16V 5p Aut.",
+  "HR-V LX 1.8 Flexone 16V 5p Aut.",
+  "HR-V LX 1.8 Flexone 16V 5p Mec.",
+  "HR-V Touring 1.8 Flexone 16V 5p Aut.",
+  "WR-V EX 1.5 Flexone 16V 5p Aut.",
+  "WR-V EXL 1.5 Flexone 16V 5p Aut.",
+  "WR-V LX 1.5 Flexone 16V 5p Aut.",
+];
+
 console.log("== assertivas ==\n");
 
 // ---------------------------------------------------------------------------
@@ -273,6 +302,337 @@ console.log("== assertivas ==\n");
   const bev = getFactorySpecs({ brand: "BYD", model: "Dolphin EV GS (Elétrico)", year: "2024 Elétrico" });
   check("BEV: fora do escopo da tabela", bev.fields.powerCv.reason, ABSENT_REASON.OUT_OF_TABLE_SCOPE);
   check("BEV: status ausente, não retido", bev.fields.powerCv.status, SPEC_STATUS.ABSENT);
+}
+
+{
+  // FLEXONE — o nome comercial do flex da Honda, escrito colado. O parser lia
+  // `Flexone` como palavra desconhecida, não achava marcador de combustível e
+  // caía no campo de ano da FIPE, que diz `Gasolina`. Com fuel=gasoline a
+  // chave não encontrava o R18 1.8 FLEX do HR-V, que está na tabela.
+  //
+  // A assertiva do COMBUSTÍVEL vem primeiro de propósito: é o defeito. A da
+  // potência é a consequência, e sozinha não diria onde quebrou.
+  const hrv = getFactorySpecs({
+    brand: "Honda",
+    model: "HR-V EX 1.8 Flexone 16V 5p Aut.",
+    year: "2021 Gasolina",
+  });
+  check("hr-v flexone: é flex, não gasolina", hrv.parsed.fuel.value, "flex");
+  check(
+    "hr-v flexone: e o marcador veio do nome, não do campo de ano",
+    hrv.parsed.fuel.evidence,
+    "marcador no nome",
+  );
+  check("hr-v flexone: destrava o R18 1.8", hrv.fields.powerCv.pair, {
+    gasoline: 138,
+    ethanol: 137,
+  });
+  check("hr-v flexone: verificado no modelo", hrv.fields.powerCv.scope, MATCH_SCOPE.MODEL_VERIFIED);
+
+  // Carro impossível: HR-V 1.8 a gasolina pura nunca foi vendido no Brasil, e
+  // o mesmo vale para Civic 2.0, CR-V 2.0, Fit 1.5 e WR-V 1.5 desta lista —
+  // todo motor Flexone é flex por definição da própria Honda. Qualquer uma que
+  // saia como não-flex é bug, e a assertiva mostra QUAL.
+  const naoFlex = FIPE_FLEXONE.map((model) => ({
+    model,
+    fuel: parseFipeVersion({ brand: "Honda", model, year: "2017 Gasolina" }).fuel?.value ?? null,
+  })).filter((row) => row.fuel !== "flex");
+  check("nenhuma Honda Flexone sai como não-flex", naoFlex, []);
+}
+
+{
+  // SW4 x HILUX — dois carros, um nome só na FIPE.
+  //
+  // A FIPE escreve o SUV como `Hilux SW4 ...`, e o parser reduzia isso ao
+  // nameplate `Hilux`. Colapsados no mesmo nome, uma linha só teria de
+  // responder pelos dois — e o MESMO 1GD-FTV 2.8 dá 204 cv na picape e 224 cv
+  // no SUV. O Han mediu os dois números, conferiu, e NÃO escreveu linha
+  // nenhuma justamente por isso.
+  //
+  // A assertiva do NOME vem primeiro: é onde quebrava.
+  const sw4 = getFactorySpecs({
+    brand: "Toyota",
+    model: "Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.",
+    year: "2023 Diesel",
+  });
+  check("sw4: não é Hilux", sw4.parsed.nameplate.value, "Hilux SW4");
+  check("sw4: 224 cv, que são dele", sw4.fields.powerCv.value, 224);
+  check("sw4: no diesel, sem par flex", sw4.fields.powerCv.fuelBasis, "diesel");
+  check("sw4: 550 Nm", sw4.fields.torque.value, 550);
+  check("sw4: verificado no modelo", sw4.fields.powerCv.scope, MATCH_SCOPE.MODEL_VERIFIED);
+
+  // A CONTRAPARTIDA, e é ela que impede o conserto de virar o bug anterior de
+  // sinal trocado: a Hilux NÃO pode herdar a linha do SW4. Enquanto a picape
+  // não tiver linha própria (falta o corte por acabamento entre GR-S e o resto,
+  // e o torque está ilegível no PDF), a resposta certa é não ter número.
+  const hilux = getFactorySpecs({
+    brand: "Toyota",
+    model: "Hilux CD SRX 4x4 2.8 TDI 16V Diesel Aut.",
+    year: "2023 Diesel",
+  });
+  check("hilux: continua sem potência de fábrica", hilux.fields.powerCv.status, SPEC_STATUS.ABSENT);
+  check("hilux: e não recebe os 224 cv do SW4", hilux.fields.powerCv.value, null);
+  // O motivo MUDOU com a linha do SW4, e mudou para melhor: antes era
+  // `no_engine_row` ("não temos este motor"), agora é `no_row_for_this_model`
+  // ("temos o motor, a ficha que temos é de outro carro"). A segunda frase é
+  // verdadeira e a primeira deixou de ser — o 1GD-FTV está na tabela.
+  check("hilux: o motivo é a ficha ser de outro modelo", hilux.fields.powerCv.reason, ABSENT_REASON.NO_ROW_FOR_THIS_MODEL);
+
+  // Janela: a linha é do manual MY23 e só responde por MY23. O SW4 2.8 de 2016
+  // a 2020 é a calibração de 177 cv — servir 224 nele seria o mesmo erro com
+  // outra roupa.
+  const sw4Velho = getFactorySpecs({
+    brand: "Toyota",
+    model: "Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.",
+    year: "2018 Diesel",
+  });
+  check("sw4 2018: fora da janela do manual", sw4Velho.fields.powerCv.reason, ABSENT_REASON.OUTSIDE_YEAR_WINDOW);
+
+  // Carro impossível: o SW4 2.8 dos anos 90 (3L aspirado, 90 cv) está na FIPE
+  // como `Hilux SW4 4x4 2.8 Diesel`, sem marcador de sobrealimentação. Com o
+  // ano de verdade ele não pode receber os 224 cv do 1GD-FTV — nem por janela
+  // (é anterior a 2023) nem por aspiração (o parser não afirma turbo em diesel
+  // pré-2005).
+  const sw4Antigo = getFactorySpecs({
+    brand: "Toyota",
+    model: "Hilux SW4 4x4 2.8 Diesel",
+    year: "1998 Diesel",
+  });
+  check("sw4 1998: não vira um 224 cv", sw4Antigo.fields.powerCv.value, null);
+  check("sw4 1998: e nem chega a casar motor", sw4Antigo.fields.powerCv.reason, ABSENT_REASON.NO_ENGINE_ROW);
+  check(
+    "sw4 1998: porque o parser não afirma turbo em diesel pré-2005",
+    sw4Antigo.parsed.aspiration.value,
+    "naturally_aspirated",
+  );
+}
+
+{
+  // ACABAMENTO — a trava que segurava 12 fichas já coletadas.
+  //
+  // Compass Sport e Compass Limited têm o MESMO motor (T270), a MESMA
+  // cilindrada e o MESMO câmbio (AT6), e a Jeep publica ficha separada para
+  // cada um: 8,9 s contra 9,8 s no 0-100. Sem ler o acabamento, o matcher via
+  // dois candidatos idênticos, caía em multiple_performance_candidates e a tela
+  // ficava retida. Escolher "o mais comum" seria servir o carro do vizinho.
+  const sport = getFactorySpecs({
+    brand: "Jeep",
+    model: "COMPASS SPORT T270 1.3 TB 4x2 Flex Aut.",
+    year: "2023 Gasolina",
+  });
+  const limited = getFactorySpecs({
+    brand: "Jeep",
+    model: "COMPASS LIMITED T270 1.3 TB 4x2 Flex Aut",
+    year: "2023 Gasolina",
+  });
+  check("compass sport: 8,9/8,8 s", sport.fields.accel0to100S.pair, { gasoline: 8.9, ethanol: 8.8 });
+  check("compass sport: e com status de valor", sport.fields.accel0to100S.status, SPEC_STATUS.VALUE);
+  check("compass limited: 9,8/9,4 s", limited.fields.accel0to100S.pair, { gasoline: 9.8, ethanol: 9.4 });
+  check(
+    "compass: os dois acabamentos NÃO recebem o mesmo número",
+    JSON.stringify(sport.fields.accel0to100S.pair) ===
+      JSON.stringify(limited.fields.accel0to100S.pair),
+    false,
+  );
+  check("compass sport: velocidade máxima também é dele", sport.fields.topSpeedKmh.pair, {
+    gasoline: 204.5,
+    ethanol: 207,
+  });
+
+  // Toro: 4,5 km/h de diferença na ponta entre Volcano e Endurance.
+  const volcano = getFactorySpecs({
+    brand: "Fiat",
+    model: "Toro Volcano 1.3 T270 4x2 Flex Aut.",
+    year: "2023 Gasolina",
+  });
+  const endurance = getFactorySpecs({
+    brand: "Fiat",
+    model: "Toro Endurance 1.3 T270 4x2 Flex Aut.",
+    year: "2023 Gasolina",
+  });
+  // `?.` de propósito: assertiva que estoura em vez de falhar esconde as
+  // outras. Quando esta quebrar, tem de aparecer "obtido undefined", não um
+  // TypeError que aborta a suíte no meio.
+  check("toro volcano: 195,5 km/h na gasolina", volcano.fields.topSpeedKmh.pair?.gasoline, 195.5);
+  check("toro endurance: 200 km/h na gasolina", endurance.fields.topSpeedKmh.pair?.gasoline, 200);
+
+  // FIPE TRUNCADA NÃO CASA, e isto é a metade importante do conserto: sem esta
+  // assertiva, alguém "melhora" o matcher com casamento por prefixo de LETRA e
+  // o Longitude Night Eagle passa a receber a ficha do Longitude.
+  const truncado = getFactorySpecs({
+    brand: "Jeep",
+    model: "COMPASS LONG. T270 1.3 TB 4x2 Flex Aut.",
+    year: "2023 Gasolina",
+  });
+  check("compass LONG.: não vira Longitude", truncado.fields.accel0to100S.status, SPEC_STATUS.ABSENT);
+  check(
+    "compass LONG.: e o motivo é não ter linha, não ter escolhido errado",
+    truncado.fields.accel0to100S.reason,
+    ABSENT_REASON.NO_PERFORMANCE_ROW,
+  );
+
+  // Acabamento de uma letra, e um plug-in com o MESMO nome. O 4xe faz o 0-100
+  // com dois motores somados; a ficha do T270 a combustão não é dele.
+  const s4xe = getFactorySpecs({
+    brand: "Jeep",
+    model: "COMPASS S 1.3 TB 4XE Aut. (Híbrido)",
+    year: "2023 Gasolina",
+  });
+  check("compass 4xe: fora do escopo da tabela", s4xe.fields.accel0to100S.reason, ABSENT_REASON.OUT_OF_TABLE_SCOPE);
+  const sCombustao = getFactorySpecs({
+    brand: "Jeep",
+    model: "COMPASS S T270 1.3 TB 4x2 Flex Aut.",
+    year: "2023 Gasolina",
+  });
+  check("compass S a combustão: recebe a ficha dele", sCombustao.fields.accel0to100S.pair, {
+    gasoline: 9.8,
+    ethanol: 9.4,
+  });
+
+  // Mesmo acabamento, ano-modelo diferente, número diferente: o Mobi Like faz
+  // 14,4 s no MY21 e 15,8 s no MY22 na gasolina. Se a janela de ano estivesse
+  // aberta, um dos dois receberia o número do outro.
+  const like21 = getFactorySpecs({ brand: "Fiat", model: "MOBI LIKE 1.0 Fire Flex 5p.", year: "2021 Gasolina" });
+  const like22 = getFactorySpecs({ brand: "Fiat", model: "MOBI LIKE 1.0 Fire Flex 5p.", year: "2022 Gasolina" });
+  check("mobi like MY21: 14,4 s na gasolina", like21.fields.accel0to100S.pair?.gasoline, 14.4);
+  check("mobi like MY22: 15,8 s na gasolina", like22.fields.accel0to100S.pair?.gasoline, 15.8);
+
+  // FONTE CONTESTADA — a ficha do Mobi Trekking MY22 diz que o etanol é mais
+  // LENTO que a gasolina, o contrário do que motor flex faz. Não vai à tela, e
+  // o motivo não pode ser "a montadora não publica", porque ela publica.
+  const trekking22 = getFactorySpecs({
+    brand: "Fiat",
+    model: "MOBI TREKKING 1.0 Flex 5p.",
+    year: "2022 Gasolina",
+  });
+  check("mobi trekking MY22: 0-100 em branco", trekking22.fields.accel0to100S.status, SPEC_STATUS.ABSENT);
+  check(
+    "mobi trekking MY22: e o motivo é a fonte não fechar",
+    trekking22.fields.accel0to100S.reason,
+    ABSENT_REASON.SOURCE_DISPUTED,
+  );
+  check(
+    "mobi trekking MY22: a velocidade máxima da mesma ficha continua valendo",
+    trekking22.fields.topSpeedKmh.pair,
+    { gasoline: 151, ethanol: 152.2 },
+  );
+
+  // ABSTENÇÃO DE ASPIRAÇÃO NO DESEMPENHO. O HB20 1.0 tem duas fichas (aspirado
+  // 15,4 s e turbo 10,7 s) e a FIPE não escreve o marcador. Cinco segundos.
+  // Tem de sair RETIDO — "existe fonte demais" —, não ausente: ausente diria
+  // que ninguém publicou, e a Hyundai publicou os dois.
+  const hb20 = getFactorySpecs({
+    brand: "Hyundai",
+    model: "HB20 Comfort 1.0 Flex 12V 5p Mec.",
+    year: "2026 Gasolina",
+  });
+  check("hb20 1.0: desempenho retido, não ausente", hb20.fields.accel0to100S.status, SPEC_STATUS.HELD);
+  check("hb20 1.0: e o motivo é a aspiração", hb20.fields.accel0to100S.reason, HOLD_REASON.ASPIRATION_UNKNOWN);
+
+  // E o Creta 1.6, que era o pior caso: recebia os 8,1 s do 1.6 TURBO GDI de
+  // dupla embreagem porque a checagem de cilindrada retornava antes da de
+  // aspiração. O 1.6 aspirado faz uns 11 s. Três segundos de mentira.
+  const creta = getFactorySpecs({
+    brand: "Hyundai",
+    model: "Creta Action 1.6 16V Flex Aut.",
+    year: "2026 Gasolina",
+  });
+  check("creta 1.6: não recebe os 8,1 s do 1.6 turbo", creta.fields.accel0to100S.status, SPEC_STATUS.HELD);
+  check("creta 1.6: retido pela aspiração", creta.fields.accel0to100S.reason, HOLD_REASON.ASPIRATION_UNKNOWN);
+}
+
+{
+  // ACHADOS DA MESMA MEDIÇÃO, mesma classe de defeito: linha de desempenho
+  // respondendo por carro que não é o dela. Nenhum destes estava na lista de
+  // travas — apareceram quando a frota passou a medir o 0-100 e a auditoria
+  // varreu quem recebia número de quem.
+
+  // 1. `200 TSI` sem cilindrada casava com QUALQUER turbo do modelo. O Polo GTI
+  //    1.8 20V Turbo recebia o 0-100 do 1.0 três cilindros. Carro impossível.
+  const gti = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Polo GTI 1.8 Mi 150cv 20V Turbo 3p",
+    year: "2010 Gasolina",
+  });
+  check("polo GTI 1.8: não recebe o 0-100 do 200 TSI", gti.fields.accel0to100S.status, SPEC_STATUS.ABSENT);
+  const gts = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "T-Cross Hig. 250 TSI 1.4 Flex 16V 5p Aut",
+    year: "2022 Gasolina",
+  });
+  check("t-cross 250 TSI 1.4: nem ele", gts.fields.accel0to100S.status, SPEC_STATUS.ABSENT);
+  const tcross = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "T-Cross 200 TSI 1.0 Flex 12V 5p Aut.",
+    year: "2022 Gasolina",
+  });
+  check("t-cross 200 TSI 1.0: continua com o dele", tcross.fields.accel0to100S.pair, {
+    gasoline: 10.9,
+    ethanol: 10.4,
+  });
+
+  // 2. Cabine. A ficha da Saveiro CD Cross diz "cabine simples é mais leve e o
+  //    número é outro, não extrapolar" — e o código extrapolava para 28 versões.
+  const cs = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Saveiro Robust 1.6 Total Flex 16V CS",
+    year: "2022 Gasolina",
+  });
+  check("saveiro Robust: não recebe o número da Cross", cs.fields.accel0to100S.status, SPEC_STATUS.ABSENT);
+  // ESTA é a que testa a CABINE, e não a de cima: a Cross de cabine estendida
+  // passa pelo corte de acabamento (o acabamento é o mesmo, `Cross`) e só é
+  // barrada pela cabine. Sem ela, o campo `cab` podia sumir do código sem
+  // nenhuma assertiva ficar vermelha — foi o que aconteceu na primeira
+  // tentativa de mutação.
+  const ce = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Saveiro CROSS 1.6 T. Flex 16V CE",
+    year: "2019 Gasolina",
+  });
+  check(
+    "saveiro Cross cabine estendida: é outra cabine, outro peso, sem número",
+    ce.fields.accel0to100S.status,
+    SPEC_STATUS.ABSENT,
+  );
+  const cdCross = getFactorySpecs({
+    brand: "VW - VolksWagen",
+    model: "Saveiro CROSS 1.6 T.Flex 16V CD",
+    year: "2022 Gasolina",
+  });
+  check("saveiro CD Cross: é o carro do documento e fica com o número", cdCross.fields.accel0to100S.pair, {
+    gasoline: 10.5,
+    ethanol: 10,
+  });
+
+  // 3. Acabamento de novo, agora separando aspirado de turbo: o Pulse Abarth
+  //    (T270, 185 cv) recebia os 12,2 s do Pulse Drive 1.3 aspirado.
+  const abarth = getFactorySpecs({
+    brand: "Fiat",
+    model: "PULSE ABARTH 1.3 Turbo 16V Flex Aut.",
+    year: "2023 Gasolina",
+  });
+  check("pulse abarth: não recebe o tempo do 1.3 aspirado", abarth.fields.accel0to100S.status, SPEC_STATUS.ABSENT);
+
+  // 4. Colapso de nome, o mesmo do SW4: a FIPE escreve `DUSTER OROCH`, e as
+  //    cinco versões viravam Duster. Picape e SUV, mesmo motor, números
+  //    diferentes — e a Oroch TEM linha própria na tabela.
+  const oroch = getFactorySpecs({
+    brand: "Renault",
+    model: "DUSTER OROCH Dyna. 1.6 Flex 16V Mec.",
+    year: "2026 Gasolina",
+  });
+  check("duster oroch: é Oroch", oroch.parsed.nameplate.value, "DUSTER OROCH");
+  check("duster oroch: e pega a linha da Oroch, 11,8 s", oroch.fields.accel0to100S.value, 11.8);
+
+  // 5. Apelido de nome faltando no matcher de desempenho: a FIPE escreve
+  //    `ONIX HATCH`, a Chevrolet escreve `Onix`, e a única linha de Onix da
+  //    tabela não respondia por versão nenhuma.
+  const onix14 = getFactorySpecs({
+    brand: "GM - Chevrolet",
+    model: "ONIX HATCH LTZ 1.4 8V FlexPower 5p Aut.",
+    year: "2016 Gasolina",
+  });
+  check("onix 1.4: a linha da Chevrolet finalmente responde", onix14.fields.accel0to100S.value, 12);
 }
 
 // ---------------------------------------------------------------------------
@@ -649,6 +1009,7 @@ const FLEET = [
   ["Renault", "DUSTER Intense 1.6 16V Flex 5p Aut.", "2023 Gasolina"],
   ["Toyota", "Corolla XEi 2.0 16V Flex Aut.", "2022 Gasolina"],
   ["Toyota", "Hilux SRV 2.8 TDI 4x4 Diesel Aut.", "2022 Diesel"],
+  ["Toyota", "Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.", "2023 Diesel"],
   ["Honda", "HR-V EXL 1.5 Flex TB 16V 5p Aut.", "2023 Gasolina"],
   ["Nissan", "KICKS Active 1.6 16V Flex Aut.", "2023 Gasolina"],
   ["Ford", "Ranger XLS 3.2 Diesel 4x4 CD Aut.", "2020 Diesel"],
@@ -657,19 +1018,28 @@ const FLEET = [
 const measureFleet = () => {
   console.log(`\n--- frota real (${FLEET.length} versões contemporâneas de modelos de volume) ---`);
   let withValue = 0;
+  let withAccel = 0;
+  const cell = (c, unit) =>
+    c.status === SPEC_STATUS.VALUE
+      ? `${c.pair ? `${c.pair.ethanol}/${c.pair.gasoline}` : c.value} ${unit}`
+      : `${c.status}: ${c.reason}`;
   for (const [brand, model, year] of FLEET) {
     const factory = getFactorySpecs({ brand, model, year });
     const power = factory.fields.powerCv;
+    const accel = factory.fields.accel0to100S;
+    if (power.status === SPEC_STATUS.VALUE) withValue += 1;
+    if (accel.status === SPEC_STATUS.VALUE) withAccel += 1;
     const label =
       power.status === SPEC_STATUS.VALUE
         ? `${power.pair ? `${power.pair.ethanol}/${power.pair.gasoline}` : power.value} cv (${power.scope})`
         : `${power.status}: ${power.reason}`;
-    if (power.status === SPEC_STATUS.VALUE) withValue += 1;
-    console.log(`  ${model.slice(0, 42).padEnd(44)}${label}`);
+    console.log(`  ${model.slice(0, 42).padEnd(44)}${label.padEnd(34)}${cell(accel, "s")}`);
   }
-  console.log(
-    `  => potência de fábrica em ${withValue}/${FLEET.length} (${((withValue / FLEET.length) * 100).toFixed(0)}%)`,
-  );
+  const pct = (n) => `${((n / FLEET.length) * 100).toFixed(0)}%`;
+  console.log(`  => potência de fábrica em ${withValue}/${FLEET.length} (${pct(withValue)})`);
+  // O 0-100 é o campo que o dono mais quer ver, e é o mais esparso. Medido à
+  // parte porque a média com a potência esconderia os dois.
+  console.log(`  => 0-100 em ${withAccel}/${FLEET.length} (${pct(withAccel)})`);
 };
 
 // Sem ano, toda janela passa: é o teto otimista da cobertura.

@@ -117,6 +117,8 @@ const resources = {
             "Temos este motor na tabela, só que a ficha que temos dele é de outro modelo. Motor igual não quer dizer número igual: a mesma peça muda de calibração de um carro para o outro, então preferimos não mostrar o número do vizinho.",
           not_written_by_fipe: "A FIPE não escreve isso na string desta versão.",
           out_of_table_scope: "Motor elétrico e híbrido não entram na nossa tabela de cilindrada.",
+          source_disputed:
+            "A montadora publica este número e ele não fecha com o resto da própria ficha. Preferimos deixar em branco a repetir um valor que o documento desmente.",
         },
         issue: {
           out_of_physical_range: "Fora do fisicamente possível ({{min}} a {{max}} {{unit}}). Confira o número antes de salvar.",
@@ -1218,6 +1220,8 @@ const resources = {
             "We have this engine in our table, but the sheet we have for it belongs to another model. Same engine doesn't mean same numbers: the very same part is calibrated differently from one car to the next, so we'd rather not show you your neighbour's figure.",
           not_written_by_fipe: "FIPE doesn't write this in the version string.",
           out_of_table_scope: "Electric and hybrid engines fall outside our displacement table.",
+          source_disputed:
+            "The manufacturer does publish this figure, and it doesn't add up against the rest of the same sheet. We'd rather leave it blank than repeat a number the document itself contradicts.",
         },
         issue: {
           out_of_physical_range: "Outside what's physically possible ({{min}} to {{max}} {{unit}}). Check the number before saving.",
@@ -2307,6 +2311,8 @@ const resources = {
             "Tenemos este motor en la tabla, pero la ficha que tenemos de él es de otro modelo. Motor igual no significa números iguales: la misma pieza cambia de calibración de un coche a otro, así que preferimos no mostrarte el número del vecino.",
           not_written_by_fipe: "FIPE no lo escribe en la cadena de esta versión.",
           out_of_table_scope: "Los motores eléctricos e híbridos quedan fuera de nuestra tabla de cilindrada.",
+          source_disputed:
+            "El fabricante sí publica este número y no cuadra con el resto de la propia ficha. Preferimos dejarlo en blanco antes que repetir un valor que el documento desmiente.",
         },
         issue: {
           out_of_physical_range: "Fuera de lo físicamente posible ({{min}} a {{max}} {{unit}}). Revisa el número antes de guardar.",

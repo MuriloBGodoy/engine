@@ -310,8 +310,25 @@ const TOTAL_FLEX_TRAP = /\bT(OT)?\.?\s?FLEX\b/i;
 // Combustível
 // ---------------------------------------------------------------------------
 
+/**
+ * `FLEXONE` está aqui e não é detalhe de regex: é o nome comercial do sistema
+ * bicombustível da Honda (i-VTEC FlexOne), e a FIPE o escreve COLADO. São 21
+ * versões da base com `Flexone`, e nenhuma escreve `Flex` solto na mesma
+ * string. Sem a alternativa, a fronteira de palavra logo depois de FLEX falha
+ * (o `o` seguinte é caractere de palavra), o nome não declara combustível
+ * nenhum e a versão cai no campo de ano da FIPE — que diz `Gasolina` por
+ * herança histórica.
+ *
+ * Medido antes da correção: `HR-V EX 1.8 Flexone 16V 5p Aut.` saía com
+ * `fuel=gasoline`. Como a tabela do Han chaveia por combustível, o R18 1.8
+ * FLEX do HR-V — que a tabela TEM, com 137/138 cv — nunca era encontrado.
+ *
+ * E o que denuncia o defeito não é o regex, é o carro: HR-V 1.8 a gasolina
+ * pura nunca foi vendido no Brasil. Todo R18 nacional é flex. O parser estava
+ * produzindo um carro que não existe.
+ */
 const FLEX_MARKERS =
-  /\b(FLEX(FUEL|POWER)?|F\.\s?(FLEX|POWER)|TOT(AL)?\.?\s?FLEX|HI[-\s]?(FLEX|POWER)|E[-\s]?FLEX|BI[-\s]?COMB)\b/i;
+  /\b(FLEX(FUEL|POWER|ONE)?|F\.\s?(FLEX|POWER)|TOT(AL)?\.?\s?FLEX|HI[-\s]?(FLEX|POWER)|E[-\s]?FLEX|BI[-\s]?COMB)\b/i;
 const DIESEL_MARKERS =
   /\b(DIESEL|DIES?\.?|INT\.?\s?DIES?\.?|TDI|D[CE]I|CRDI|(BLUE)?HDI|MULTIJET|JTD|TDV\d|MSDT|D4[-\s]?D|CTDI)\b/i;
 const ELECTRIC_MARKERS = /\((EL[ÉE]TRIC[OA])\)|\bBEV\b|\bEV\b|\bE[-\s]?TRON\b/i;
@@ -655,10 +672,33 @@ const NAMEPLATES = [
   "HB20S", "HB20X", "HB20", "CRETA", "TUCSON", "IX35", "SANTA FE", "I30", "AZERA",
   "ELANTRA", "KONA",
   // Toyota
-  "COROLLA CROSS", "COROLLA", "YARIS CROSS", "YARIS", "ETIOS", "HILUX", "SW4",
+  "COROLLA CROSS", "COROLLA", "YARIS CROSS", "YARIS", "ETIOS",
+  // A FIPE escreve o SUV como `Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.` — com
+  // `Hilux` na frente. Sem esta entrada, `HILUX` casa primeiro e as 20 versões
+  // de SW4 da base colapsam no nome das 57 da picape, num balde só de 77.
+  //
+  // Não é detalhe de string. O MESMO 1GD-FTV 2.8 entrega 204 cv na Hilux e
+  // 224 cv no SW4 (manuais MY23 da própria Toyota), e a tabela de motor é
+  // chaveada por nome de modelo: com os dois no mesmo nome, uma linha só teria
+  // de responder pelos dois carros e um deles receberia o número do outro. Foi
+  // por isso que o Han mediu o dado, conferiu e NÃO escreveu a linha.
+  //
+  // `HILUX SW4` tem de vir antes de `HILUX`, e vem: NAMEPLATES_SORTED ordena do
+  // mais longo para o mais curto. `SW4` sozinho fica na lista porque não custa
+  // nada e cobre o dia em que a FIPE largar o prefixo — hoje nenhuma versão da
+  // base começa por `SW4`.
+  "HILUX SW4", "HILUX", "SW4",
   "RAV4", "CAMRY", "PRIUS",
   // Renault
-  "KWID", "SANDERO", "LOGAN", "STEPWAY", "DUSTER", "OROCH", "CAPTUR", "KANGOO",
+  "KWID", "SANDERO", "LOGAN", "STEPWAY",
+  // Mesma armadilha do `Hilux SW4`, achada pela mesma medição: a FIPE escreve
+  // `DUSTER OROCH Dyna. 1.6 Flex 16V Mec.` em 5 versões, e sem esta entrada as
+  // cinco viravam `DUSTER`. A Oroch é picape e a Duster é SUV — carroceria,
+  // peso e distância entre eixos diferentes, com o MESMO 1.6 SCe. A Renault
+  // publica catálogo separado para cada uma e os números não batem (Duster 1.6
+  // manual 11,5 s; Oroch 1.6 11,8 s), e a tabela de desempenho tem linha para
+  // as duas — só que as cinco versões nunca chegavam na linha delas.
+  "DUSTER OROCH", "DUSTER", "OROCH", "CAPTUR", "KANGOO",
   "MASTER", "FLUENCE", "CLIO", "ZOE",
   // Honda
   "CIVIC", "CITY", "FIT", "HR-V", "WR-V", "CR-V", "ZR-V", "ACCORD",

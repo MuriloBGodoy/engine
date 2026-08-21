@@ -59,6 +59,27 @@ export const ABSENT_REASON = {
   /** A linha existe, mas o fabricante não publica este campo. */
   FIELD_NOT_PUBLISHED: "field_not_published",
   /**
+   * O fabricante PUBLICA o número e ele não fecha — e por isso não vai à tela.
+   *
+   * Não é `field_not_published`, que acusa a montadora de não publicar, nem
+   * `no_performance_row`, que diz que ninguém mediu. As duas frases seriam
+   * falsas: o documento existe, o número está impresso nele, e quem se recusa a
+   * repetir somos nós.
+   *
+   * O caso que criou o código: a ficha do Mobi Trekking MY22 (Stellantis, doc
+   * 72) publica 0-100 de 14,4 s na gasolina e 14,9 s no ETANOL. Em motor flex o
+   * etanol entrega mais potência e o tempo tem de ser MENOR — é assim nas
+   * outras 20 fichas Fiat lidas, inclusive na do MESMO Mobi Trekking no MY21
+   * (14,4 / 13,8). Provavelmente é erro de digitação da Fiat. Provavelmente não
+   * basta: corrigir documento de fabricante é inventar dado, e repetir um
+   * número que a própria ficha desmente é servir carro errado com carimbo de
+   * camada 1. Fica em branco, e a tela diz por quê.
+   *
+   * Marcado campo a campo, em `disputedFields` na linha da tabela: a velocidade
+   * máxima da MESMA ficha é consistente com todas as irmãs e continua valendo.
+   */
+  SOURCE_DISPUTED: "source_disputed",
+  /**
    * A tabela tem este motor, e o documento de onde ele saiu é de OUTRO modelo.
    * Não é `no_engine_row` (que diz "não temos o motor") nem
    * `field_not_published` (que acusa a montadora de não publicar): o número
@@ -239,10 +260,23 @@ const engineRowMatches = (row, parsed) => {
  *                               toda entrada `ONIX SEDAN` da FIPE traz `Plus`
  *                               no nome. O sedã anterior era o Prisma, e a FIPE
  *                               escreve PRISMA nele.
+ *   HILUX SW4   -> SW4        — a FIPE mantém `Hilux` na frente porque o SUV
+ *                               nasceu como derivado da picape. A Toyota do
+ *                               Brasil vende e DOCUMENTA o carro como `SW4`:
+ *                               o manual do proprietário do SW4 é separado do
+ *                               da Hilux, e é dele que sai o número. O apelido
+ *                               casa as duas grafias — e NÃO junta os dois
+ *                               carros: eles continuam separados porque o
+ *                               parser agora lê `HILUX SW4` como nome próprio,
+ *                               diferente de `HILUX`.
  */
 const FIPE_NAMEPLATE_ALIAS = {
   ONIXHATCH: "ONIX",
   ONIXSEDAN: "ONIXPLUS",
+  HILUXSW4: "SW4",
+  // Mesmo caso do SW4: a FIPE prefixa com o nome do irmão mais velho, a Renault
+  // vende e documenta como `Oroch`.
+  DUSTEROROCH: "OROCH",
 };
 
 /** Nomes normalizados pelos quais este carro atende. Nunca vazio se há nome. */
@@ -400,40 +434,182 @@ export function matchEngineRow(parsed) {
 // ---------------------------------------------------------------------------
 
 /**
- * A versão na tabela de desempenho é texto de catálogo (`200 TSI`,
- * `Intense Plus 1.6`, `1.0 12V aspirado`). Duas checagens bastam e nenhuma
- * delas chuta: se o texto traz cilindrada, ela tem de bater; se traz marca de
- * sobrealimentação, a aspiração tem de bater.
+ * Palavras de um acabamento, em maiúsculas e sem pontuação. `SRX Plat.` vira
+ * `["SRX", "PLAT"]`. Por PALAVRA, e não string colada, porque o acabamento `S`
+ * do Compass existe e casaria dentro de qualquer outra palavra.
+ */
+const trimWords = (value) =>
+  String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+
+/**
+ * O acabamento da linha bate com o do carro?
+ *
+ * Casa por PREFIXO DE PALAVRA, e a escolha é medida na base, não estética. A
+ * FIPE escreve o acabamento e o código do motor no mesmo lugar da string —
+ * `COMPASS LIMITED T270 1.3 TB 4x2 Flex Aut`, `COMPASS S T270 1.3 TB 4x2 Flex
+ * Aut.` —, então exigir igualdade exata perderia todos os T270, que são
+ * justamente os que esta função existe para separar. Prefixo pega o acabamento
+ * e ignora o que vem depois dele.
+ *
+ * O QUE FICA DE FORA, DE PROPÓSITO: FIPE truncada NÃO casa. `COMPASS LONG. T270`
+ * não vira Longitude e `Toro Vol. TRIBUTO 125` não vira Volcano. Dá para
+ * adivinhar? Dá. Mas `LONG.` também abreviaria um Longitude Night Eagle, que é
+ * outra ficha, e o preço de errar aqui é servir 9,7 s onde são 8,9 s. Sem
+ * acabamento legível, a resposta certa é não ter número.
+ *
+ * O RISCO QUE SOBRA, dito por escrito: acabamento longo que COMEÇA com o nome
+ * de um curto casa com o curto — `MOBI EASY COMFORT` casa com a linha `Easy`.
+ * Hoje a janela de ano segura esse caso (a linha Easy é MY21 e o Easy Comfort é
+ * de 2018), mas isso é segunda linha de defesa, não a primeira. Se aparecer um
+ * par assim dentro da MESMA janela, a saída é escrever as duas linhas, não
+ * afrouxar esta regra.
+ */
+const trimMatches = (rowTrims, parsedTrim) => {
+  const got = trimWords(parsedTrim);
+  if (!got.length) return false;
+  return (rowTrims || []).some((candidate) => {
+    const want = trimWords(candidate);
+    return want.length > 0 && want.every((word, i) => got[i] === word);
+  });
+};
+
+/**
+ * A versão na tabela de desempenho é texto de catálogo (`1.0 200 TSI`,
+ * `Intense Plus 1.6`, `1.0 12V aspirado`). Três checagens, e nenhuma chuta.
+ *
+ * 1. ACABAMENTO. Só entra quando a linha declara `trim`, e aí é ELIMINATÓRIA:
+ *    linha com acabamento só responde por aquele acabamento, e se o acabamento
+ *    do carro não for legível ela não responde por ninguém. É o que destrava as
+ *    12 fichas que estavam paradas em `_meta.bloqueadoPorTrim`: sem isto,
+ *    Compass Sport e Compass Limited são o MESMO carro para o matcher, caem
+ *    sempre em `multiple_performance_candidates` e a tela fica retida. Com
+ *    isto, cada um recebe o número da ficha dele — e a diferença é de 0,9 s no
+ *    0-100 do Compass e de 4,5 km/h na ponta da Toro. Não é ruído.
+ *
+ *    Linha SEM `trim` continua respondendo pelo modelo inteiro, como antes. É
+ *    assim que as 32 linhas que já existiam seguem funcionando sem retoque.
+ *
+ * 2. CABINE, mesma regra do acabamento.
+ * 3. CILINDRADA, se o texto trouxer.
+ *
+ * A ASPIRAÇÃO SAIU DAQUI e foi para `performanceRowAspiration`, e é a mudança
+ * mais importante deste arquivo nesta rodada. Antes ela era o `else` da
+ * cilindrada: `if (displacement) return ...` retornava na hora e a checagem de
+ * aspiração nunca rodava para nenhuma linha que tivesse cilindrada no texto.
+ * Consequência medida em 20/08/2026 sobre as 4.864 versões da FIPE:
+ *
+ *   - 11 versões de Creta 1.6 ASPIRADO recebiam os 8,1 s da ficha do 1.6 TURBO
+ *     GDI de dupla embreagem. O aspirado faz uns 11 s. Três segundos.
+ *   - 29 versões de HB20 e HB20S recebiam os 14,5 s da ficha do 1.0 ASPIRADO,
+ *     incluindo as versões `TB` — que fazem 10,7 s.
+ *
+ * Nenhum desses casos era detectável lendo o código: os dois números eram
+ * plausíveis, vinham de camada 1 e apareciam na tela com a mesma cara de
+ * certeza. Só a varredura versão a versão mostra.
+ *
+ * A aspiração também não podia virar um simples `&&` aqui, porque filtrar em
+ * silêncio transforma abstenção em "ninguém publicou" — ver o comentário de
+ * `performanceRowAspiration`.
  */
 const performanceVersionMatches = (row, parsed) => {
   const version = String(row.version || "");
-  const displacement = version.match(/(?<!\d)(\d)\.(\d)(?!\d)/);
-  if (displacement) {
-    return Number(displacement[0]) === parsed.displacement?.value;
-  }
 
-  const looksTurbo = /\bTSI\b|\bTCe\b|\bTGDI\b|\bTurbo\b|\bT\d{3}\b/i.test(version);
-  const looksNatural = /aspirado|\bSCe\b|\bMSI\b/i.test(version);
-  if (looksTurbo) return parsed.aspiration?.value === ASPIRATION.TURBO;
-  if (looksNatural) return parsed.aspiration?.value === ASPIRATION.NATURAL;
+  if ((row.trim || []).length && !trimMatches(row.trim, parsed?.trim?.value)) return false;
+
+  // CABINE, mesma regra do acabamento: só entra quando a linha declara, e aí é
+  // eliminatória. Numa picape a cabine é meia tonelada de diferença — a ficha
+  // do Saveiro CD Cross diz, com todas as letras, "cabine simples é mais leve e
+  // o número é outro, não extrapolar", e sem este campo o código extrapolava
+  // para 28 versões de Saveiro, cabine simples e estendida inclusive.
+  if (row.cab && parsed?.body?.cab?.value !== row.cab) return false;
+
+  const displacement = version.match(/(?<!\d)(\d)\.(\d)(?!\d)/);
+  if (displacement && Number(displacement[0]) !== parsed.displacement?.value) return false;
+
   return true;
 };
 
+/**
+ * Aspiração que o texto da linha declara, ou `null` quando ele não declara.
+ *
+ * Está separada de `performanceVersionMatches` por um motivo de TELA, não de
+ * organização: quando o parser se absteve da aspiração, filtrar aqui apagaria a
+ * abstenção e a linha sumiria em silêncio — o campo sairia como `no_performance_row`
+ * ("ninguém publicou"), que é MENTIRA quando a Hyundai publicou os dois números
+ * e o que falta é saber qual é o carro. O certo é RETER, e reter é uma decisão
+ * de `matchPerformanceRow`, que enxerga o conjunto.
+ *
+ * Caso medido: `HB20 Comfort 1.0 Flex 12V Mec.` tem duas linhas candidatas na
+ * tabela (1.0 aspirado, 15,4 s; 1.0 Turbo GDI, 10,7 s) e a FIPE não escreve o
+ * marcador. Cinco segundos de diferença. Retido, e destravável pela pessoa.
+ */
+const performanceRowAspiration = (row) => {
+  const version = String(row.version || "");
+  if (/\bTSI\b|\bTCe\b|\bTGDI\b|\bTurbo\b|\bT\d{3}\b/i.test(version)) return ASPIRATION.TURBO;
+  if (/aspirado|\bSCe\b|\bMSI\b/i.test(version)) return ASPIRATION.NATURAL;
+  return null;
+};
+
 export function matchPerformanceRow(parsed) {
-  const nameplate = normalizeName(parsed?.nameplate?.value);
-  if (!nameplate || !parsed?.brand?.value) {
+  // Os MESMOS apelidos da tabela de motor, e não `normalizeName` cru como era
+  // antes. A divergência entre as duas tabelas era invisível e custava linha:
+  // a FIPE escreve `ONIX HATCH`, a linha de desempenho da Chevrolet diz `Onix`,
+  // e o resultado é que a única linha de Onix da tabela nunca respondia por
+  // nenhuma versão de Onix da base. O mesmo valeria para o Oroch, cujo nome na
+  // FIPE é `DUSTER OROCH`.
+  const names = carNameplates(parsed);
+  if (!names.length || !parsed?.brand?.value) {
     return { row: null, reason: ABSENT_REASON.NO_PERFORMANCE_ROW };
+  }
+
+  // Nenhuma linha desta tabela é de híbrido ou de elétrico, e a tabela não tem
+  // coluna de combustível para dizer isso — então quem diz é este corte, espelho
+  // do que `matchEngineRow` já faz.
+  //
+  // O caso concreto que ele existe para barrar: `COMPASS S 1.3 TB 4XE Aut.
+  // (Híbrido)` é o plug-in, e tem a MESMA marca, a MESMA cilindrada, o MESMO
+  // acabamento (`S`) e a mesma marca de turbo do `COMPASS S T270 1.3 TB 4x2
+  // Flex Aut.`. Sem este corte, o 4xe — que faz o 0-100 em torno de 7 s com os
+  // dois motores somados — receberia os 9,8 s da ficha do T270 a combustão.
+  // Dois carros diferentes com o mesmo nome, de novo.
+  //
+  // Quando entrar ficha de híbrido, isto vira comparação de combustível de
+  // verdade e deixa de ser um corte.
+  const fuel = parsed?.fuel?.value;
+  if (fuel === FUEL.ELECTRIC || fuel === FUEL.HYBRID || fuel === FUEL.PLUGIN_HYBRID) {
+    return { row: null, reason: ABSENT_REASON.OUT_OF_TABLE_SCOPE };
   }
 
   const byVehicle = (performanceTable.performance || []).filter(
     (row) =>
       row.brand === parsed.brand.value &&
-      normalizeName(row.nameplate) === nameplate &&
+      names.includes(normalizeName(row.nameplate)) &&
       performanceVersionMatches(row, parsed),
   );
   if (!byVehicle.length) return { row: null, reason: ABSENT_REASON.NO_PERFORMANCE_ROW };
 
-  const inWindow = byVehicle.filter((row) =>
+  // Aspiração, e a ordem importa: primeiro se pergunta se a tabela DEPENDE dela
+  // para este carro, e só depois se filtra. Se depende e o parser se absteve,
+  // a resposta é RETIDO — que some no instante em que a pessoa disser qual é o
+  // motor dela — e não "ninguém publicou", que seria falso.
+  const byAspiration = byVehicle.filter((row) => {
+    const declared = performanceRowAspiration(row);
+    return !declared || declared === parsed.aspiration?.value;
+  });
+  if (!byAspiration.length) {
+    const dependeDaAspiracao = byVehicle.some((row) => performanceRowAspiration(row) !== null);
+    if (dependeDaAspiracao && !parsed.aspiration?.value) {
+      return { row: null, reason: HOLD_REASON.ASPIRATION_UNKNOWN };
+    }
+    return { row: null, reason: ABSENT_REASON.NO_PERFORMANCE_ROW };
+  }
+
+  const inWindow = byAspiration.filter((row) =>
     inYearWindow(parsed.modelYear?.value, row.yearFrom, row.yearTo),
   );
   if (!inWindow.length) return { row: null, reason: ABSENT_REASON.OUTSIDE_YEAR_WINDOW };
@@ -616,7 +792,14 @@ const performanceCell = (id, match, keys) => {
   const ethanol = num(row[keys.ethanol]);
 
   if (single === null && gasoline === null && ethanol === null) {
-    return emptyCell(id, ABSENT_REASON.FIELD_NOT_PUBLISHED);
+    // Campo vazio porque NÓS não confiamos no que está publicado é outra frase
+    // de "o fabricante não publicou". Ver ABSENT_REASON.SOURCE_DISPUTED.
+    return emptyCell(
+      id,
+      (row.disputedFields || []).includes(id)
+        ? ABSENT_REASON.SOURCE_DISPUTED
+        : ABSENT_REASON.FIELD_NOT_PUBLISHED,
+    );
   }
 
   return valueCell(id, {

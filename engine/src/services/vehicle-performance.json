@@ -2,17 +2,19 @@
   "_meta": {
     "descricao": "Desempenho medido/declarado por VEÍCULO: 0-100 km/h e velocidade máxima. Separado de engine-specs.json de propósito — desempenho é propriedade do veículo (massa, relação de marchas, aerodinâmica, pneu), não do motor.",
     "compiladoEm": "2026-08-19",
-    "versao": "0.2.0-esparso",
+    "versao": "0.3.0-esparso-com-acabamento",
     "porQueSeparado": "O MESMO motor 200 TSI (116 cv G / 128 cv E, 20,4 kgfm) aparece em cinco veículos com cinco desempenhos diferentes, todos em ficha oficial da Volkswagen: Polo 9,6 s / 192 km/h (etanol), T-Cross manual 9,6 s / 189, Virtus 9,9 s / 194, Nivus 10,0 s / 189, T-Cross automático 10,4 s / 184. Um segundo inteiro de espalhamento e 10 km/h. E a Duster 1.6 muda de 11,4 s / 178 km/h para 12,9 s / 167 km/h só trocando manual por CVT. Chavear isso por motor serviria número plausível para o carro errado — o mesmo defeito do fipe-consumption-db.json com roupa nova.",
     "chave": {
       "campos": [
         "brand",
         "nameplate",
         "version",
+        "trim",
         "transmission",
         "yearFrom",
         "yearTo"
       ],
+      "trim": "OPCIONAL, e quando existe é ELIMINATÓRIO. Lista de acabamentos pelos quais a linha responde, escritos como o fabricante escreve (Sport, Longitude, Volcano). Linha SEM trim responde pelo modelo inteiro, que é o comportamento das 32 linhas originais. Linha COM trim só responde por aquele acabamento — e se a FIPE tiver truncado o acabamento a ponto de não dar para ler (COMPASS LONG. T270, Toro Vol. TRIBUTO 125), a linha não responde por ninguém e o campo fica ausente. O casamento é por prefixo de PALAVRA contra o trim que o parser da FIPE extrai; ver trimMatches em src/services/vehicleSpecs.js.",
       "transmission": "OBRIGATÓRIO. É o que mais move o número depois do modelo: no T-Cross 200 TSI o câmbio automático custa 0,8 s e 5 km/h contra o manual, com motor idêntico."
     },
     "coberturaEsparsa": "Assumidamente esparsa, e esparsa de forma IRREGULAR — não é 'tem tudo ou não tem nada' por carro. Varia por fabricante E por campo dentro do mesmo fabricante: o catálogo do Kwid publica 0-100 e omite velocidade máxima. A tela precisa de estado por campo, não por veículo.",
@@ -29,9 +31,9 @@
       "Ford": "NÃO publica no manual. O manual da Ranger (Built From 08-06-2020) tem 'Especificações do motor' com kW, CV, Nm e rotações — e zero desempenho."
     },
     "bloqueadoPorTrim": {
-      "porQueEstaAqui": "Dado JÁ EXTRAÍDO, camada 1, conferido — e que NÃO PODE virar linha desta tabela hoje. Guardo aqui para não perder a coleta e para que vire linha no dia em que o casamento de versão souber ler o acabamento.",
-      "oBloqueio": "matchPerformanceRow -> performanceVersionMatches (src/services/vehicleSpecs.js) NÃO compara o texto de acabamento do campo 'version'. Ele extrai a cilindrada da string e, se achar, RETORNA na hora comparando só cilindrada; se não achar, testa apenas se a versão parece turbo ou aspirada. Consequência: 'Volcano T270' e 'Endurance T270' são indistinguíveis para o matcher. Duas linhas de acabamentos diferentes do mesmo carro, mesma cilindrada e mesmo câmbio sempre caem em multiple_performance_candidates e a tela fica RETIDA. Escrever uma só delas seria servir o número de um acabamento a todos os outros — o erro que esta tabela existe para não cometer.",
-      "oQueDestrava": "Ensinar performanceVersionMatches a casar a palavra de acabamento contra a string da FIPE quando ela existir em 'version' (a FIPE escreve o acabamento: 'Toro Volcano 1.3 T270 16V Flex Aut.', 'COMPASS Longitude 1.3 T270 4x2 Flex Aut.'), mantendo o comportamento atual quando 'version' não trouxer acabamento. Com isso, os 12 conjuntos abaixo viram linha direto, sem nova coleta.",
+      "porQueEstaAqui": "PROMOVIDO EM 20/08/2026 — OS 12 CONJUNTOS ABAIXO VIRARAM LINHA E NÃO ESTÃO MAIS BLOQUEADOS. O bloco fica como registro de coleta e trilha de auditoria: é daqui que os números das 12 linhas novas foram transcritos, e é aqui que está o aviso sobre a ficha do Mobi Trekking MY22. Se alguém precisar conferir uma linha com trim contra a coleta original, o original é este. Nada a fazer aqui; nova coleta de acabamento deve virar linha direto.",
+      "oBloqueio": "RESOLVIDO. Era este: matchPerformanceRow -> performanceVersionMatches (src/services/vehicleSpecs.js) não comparava acabamento. Extraía a cilindrada da string de 'version' e, se achasse, RETORNAVA na hora comparando só cilindrada; se não achasse, testava apenas se a versão parecia turbo ou aspirada. Consequência medida: 'Volcano T270' e 'Endurance T270' eram indistinguíveis, os irmãos caíam todos em multiple_performance_candidates e a tela ficava RETIDA em 10 versões de Compass, Toro e Mobi.",
+      "oQueDestrava": "FEITO em 20/08/2026, e de um jeito um pouco diferente do proposto aqui: em vez de garimpar a palavra de acabamento dentro do texto livre de 'version', as linhas ganharam um campo próprio, 'trim', que é uma lista. Motivo: campo explícito não muda o comportamento das 32 linhas antigas por acidente, e deixa auditável quais linhas dependem de acabamento. O casamento compara esse campo com o trim que o parser da FIPE já extrai (o texto entre o nome comercial e o primeiro token técnico), por prefixo de palavra. FIPE truncada continua sem casar, de propósito. Efeito medido na amostra de 4.864 versões: 10 versões saíram de multiple_performance_candidates para número próprio, e nenhuma passou a receber número de outro acabamento.",
       "medidoEmQuantoCusta": "No Compass T270 o espalhamento entre acabamentos é de 0,9 s no 0-100 (8,9 s no Sport contra 9,8 s no Limited/S) — 9%. Na Toro T270 é de 4,5 km/h na velocidade máxima (195,5 no Volcano contra 200 no Endurance). Não é ruído de arredondamento; é carro diferente.",
       "dados": [
         {
@@ -164,7 +166,7 @@
     {
       "brand": "Volkswagen",
       "nameplate": "Polo",
-      "version": "200 TSI",
+      "version": "1.0 200 TSI",
       "transmission": null,
       "yearFrom": 2017,
       "yearTo": null,
@@ -183,7 +185,7 @@
       "sourceLayer": 1,
       "sourceDate": "2017-09",
       "verifiedAt": "2026-08-17",
-      "note": "CORRIGIDO na revisão. Eu havia escrito 0-1.000 m = 31,4 s sem ter lido o campo; o documento diz 31,6 (gasolina) / 30,9 (etanol). Erro meu, pego na dupla checagem. Também havia rotulado transmission='Automático' sem base: o cabeçalho não declara o câmbio. O documento cita 'Retomada 80-120 km/h, 5a.', o que INDICA manual de 5 marchas, mas isso é inferência e inferência não entra na chave — transmission fica nulo. A retomada em si está publicada como '--', ou seja, a VW não mediu."
+      "note": "CORRIGIDO na revisão. Eu havia escrito 0-1.000 m = 31,4 s sem ter lido o campo; o documento diz 31,6 (gasolina) / 30,9 (etanol). Erro meu, pego na dupla checagem. Também havia rotulado transmission='Automático' sem base: o cabeçalho não declara o câmbio. O documento cita 'Retomada 80-120 km/h, 5a.', o que INDICA manual de 5 marchas, mas isso é inferência e inferência não entra na chave — transmission fica nulo. A retomada em si está publicada como '--', ou seja, a VW não mediu. CILINDRADA NO TEXTO DA VERSÃO desde 20/08/2026, pelo mesmo motivo que o Han escreveu na linha do Pulse: sem o `1.0`, o casamento de versão só exige `ser turbo` e esta linha responde por todo turbo do modelo. Estava servindo o 0-100 deste 1.0 de três cilindros ao Polo GTI 1.8 Mi 20V Turbo, ao Polo GTS 1.4 TSI, ao Nivus GTS 1.4 250 TSI, aos dois T-Cross 250 TSI 1.4 e aos Virtus 1.4 (250 TSI e GTS). Carro impossível: um 1.8 20V turbo com a ficha de um 1.0."
     },
     {
       "brand": "Volkswagen",
@@ -210,7 +212,7 @@
     {
       "brand": "Volkswagen",
       "nameplate": "Virtus",
-      "version": "200 TSI",
+      "version": "1.0 200 TSI",
       "transmission": "Automático",
       "yearFrom": 2018,
       "yearTo": null,
@@ -228,7 +230,8 @@
       "sourceDoc": "VW do Brasil — Ficha Técnica Virtus 1.0l TSI 94kW, dados oficiais Janeiro/2018",
       "sourceLayer": 1,
       "sourceDate": "2018-01",
-      "verifiedAt": "2026-08-17"
+      "verifiedAt": "2026-08-17",
+      "note": " CILINDRADA NO TEXTO DA VERSÃO desde 20/08/2026, pelo mesmo motivo que o Han escreveu na linha do Pulse: sem o `1.0`, o casamento de versão só exige `ser turbo` e esta linha responde por todo turbo do modelo. Estava servindo o 0-100 deste 1.0 de três cilindros ao Polo GTI 1.8 Mi 20V Turbo, ao Polo GTS 1.4 TSI, ao Nivus GTS 1.4 250 TSI, aos dois T-Cross 250 TSI 1.4 e aos Virtus 1.4 (250 TSI e GTS). Carro impossível: um 1.8 20V turbo com a ficha de um 1.0."
     },
     {
       "brand": "Volkswagen",
@@ -250,7 +253,7 @@
     {
       "brand": "Volkswagen",
       "nameplate": "T-Cross",
-      "version": "200 TSI",
+      "version": "1.0 200 TSI",
       "transmission": "Manual",
       "yearFrom": 2019,
       "yearTo": null,
@@ -262,12 +265,13 @@
       "sourceDoc": "VW do Brasil — Ficha Técnica T-Cross 200 TSI (manual), dados oficiais Fevereiro/2019",
       "sourceLayer": 1,
       "sourceDate": "2019-02",
-      "verifiedAt": "2026-08-17"
+      "verifiedAt": "2026-08-17",
+      "note": " CILINDRADA NO TEXTO DA VERSÃO desde 20/08/2026, pelo mesmo motivo que o Han escreveu na linha do Pulse: sem o `1.0`, o casamento de versão só exige `ser turbo` e esta linha responde por todo turbo do modelo. Estava servindo o 0-100 deste 1.0 de três cilindros ao Polo GTI 1.8 Mi 20V Turbo, ao Polo GTS 1.4 TSI, ao Nivus GTS 1.4 250 TSI, aos dois T-Cross 250 TSI 1.4 e aos Virtus 1.4 (250 TSI e GTS). Carro impossível: um 1.8 20V turbo com a ficha de um 1.0."
     },
     {
       "brand": "Volkswagen",
       "nameplate": "T-Cross",
-      "version": "200 TSI",
+      "version": "1.0 200 TSI",
       "transmission": "Automático",
       "yearFrom": 2019,
       "yearTo": null,
@@ -280,12 +284,12 @@
       "sourceLayer": 1,
       "sourceDate": "2019-02",
       "verifiedAt": "2026-08-17",
-      "note": "Par direto com a linha manual acima: mesmo carro, mesmo motor, mesmo documento oficial, 0,9 s e 5 km/h de diferença só pelo câmbio. É a prova de que transmission tem que estar na chave."
+      "note": "Par direto com a linha manual acima: mesmo carro, mesmo motor, mesmo documento oficial, 0,9 s e 5 km/h de diferença só pelo câmbio. É a prova de que transmission tem que estar na chave. CILINDRADA NO TEXTO DA VERSÃO desde 20/08/2026, pelo mesmo motivo que o Han escreveu na linha do Pulse: sem o `1.0`, o casamento de versão só exige `ser turbo` e esta linha responde por todo turbo do modelo. Estava servindo o 0-100 deste 1.0 de três cilindros ao Polo GTI 1.8 Mi 20V Turbo, ao Polo GTS 1.4 TSI, ao Nivus GTS 1.4 250 TSI, aos dois T-Cross 250 TSI 1.4 e aos Virtus 1.4 (250 TSI e GTS). Carro impossível: um 1.8 20V turbo com a ficha de um 1.0."
     },
     {
       "brand": "Volkswagen",
       "nameplate": "Nivus",
-      "version": "200 TSI",
+      "version": "1.0 200 TSI",
       "transmission": "Automático",
       "yearFrom": 2020,
       "yearTo": null,
@@ -298,12 +302,16 @@
       "sourceLayer": 1,
       "sourceDate": "2020-04",
       "verifiedAt": "2026-08-17",
-      "note": "URL com nome de hash, não de arquivo. Frágil — se sumir, o dado vira não verificado."
+      "note": "URL com nome de hash, não de arquivo. Frágil — se sumir, o dado vira não verificado. CILINDRADA NO TEXTO DA VERSÃO desde 20/08/2026, pelo mesmo motivo que o Han escreveu na linha do Pulse: sem o `1.0`, o casamento de versão só exige `ser turbo` e esta linha responde por todo turbo do modelo. Estava servindo o 0-100 deste 1.0 de três cilindros ao Polo GTI 1.8 Mi 20V Turbo, ao Polo GTS 1.4 TSI, ao Nivus GTS 1.4 250 TSI, aos dois T-Cross 250 TSI 1.4 e aos Virtus 1.4 (250 TSI e GTS). Carro impossível: um 1.8 20V turbo com a ficha de um 1.0."
     },
     {
       "brand": "Volkswagen",
       "nameplate": "Saveiro",
       "version": "CD Cross 1.6",
+      "trim": [
+        "Cross"
+      ],
+      "cab": "double",
       "transmission": "Manual",
       "yearFrom": 2018,
       "yearTo": null,
@@ -316,7 +324,7 @@
       "sourceLayer": 1,
       "sourceDate": "2018-06",
       "verifiedAt": "2026-08-17",
-      "note": "Vale só para a Cabine Dupla Cross. Cabine simples é mais leve e o número é outro — não extrapolar."
+      "note": "Vale só para a Cabine Dupla Cross. Cabine simples é mais leve e o número é outro — não extrapolar. ACABAMENTO E CABINE OBRIGATÓRIOS nesta linha desde 20/08/2026, e é a observação acima virando código em vez de ficar em comentário. Sem os dois cortes, esta ficha de 2018 da CD Cross 1.6 16V respondia por 28 versões de Saveiro na FIPE — cabine simples, cabine estendida e a geração 1.6 8V do EA111, que é outro motor. Agora responde só por `Saveiro CROSS 1.6 T.Flex 16V CD`, que é o carro do documento. As outras 27 voltam a ficar sem número, e é o certo."
     },
     {
       "brand": "Hyundai",
@@ -590,6 +598,9 @@
       "brand": "Fiat",
       "nameplate": "Pulse",
       "version": "Drive 1.3",
+      "trim": [
+        "Drive"
+      ],
       "transmission": "Manual",
       "yearFrom": 2022,
       "yearTo": null,
@@ -602,12 +613,15 @@
       "sourceLayer": 1,
       "sourceDate": "2022",
       "verifiedAt": "2026-08-19",
-      "note": "CORRIGE O _meta DESTA TABELA. Até esta rodada o 'quemPublica' afirmava que a Fiat NÃO publica desempenho, com base em sete fichas do media.stellantis.com que de fato não trazem. A afirmação estava ERRADA por amostra pequena: enumerando media.stellantis.com/br-pt/download-model-document/<id> de 1 a 45 aparecem DOIS templates de ficha, e um deles tem bloco 'Desempenho' completo com velocidade máxima e 0-100 separados por combustível. As sete que eu tinha lido eram todas do template sem desempenho. O título traz (MY22), então esta é das poucas fichas Fiat com ano declarado."
+      "note": "CORRIGE O _meta DESTA TABELA. Até esta rodada o 'quemPublica' afirmava que a Fiat NÃO publica desempenho, com base em sete fichas do media.stellantis.com que de fato não trazem. A afirmação estava ERRADA por amostra pequena: enumerando media.stellantis.com/br-pt/download-model-document/<id> de 1 a 45 aparecem DOIS templates de ficha, e um deles tem bloco 'Desempenho' completo com velocidade máxima e 0-100 separados por combustível. As sete que eu tinha lido eram todas do template sem desempenho. O título traz (MY22), então esta é das poucas fichas Fiat com ano declarado. ACABAMENTO OBRIGATÓRIO nesta linha desde 20/08/2026: a ficha é do PULSE DRIVE 1.3 ASPIRADO e, sem o corte, ela respondia também pelo `PULSE ABARTH 1.3 Turbo 16V Flex Aut.`, que é o T270 de 185 cv. Servir 12,2 s a um Abarth não é imprecisão, é outro carro. O Abarth passa a ficar sem número, que é a resposta certa enquanto não houver ficha dele."
     },
     {
       "brand": "Fiat",
       "nameplate": "Pulse",
       "version": "Drive 1.3",
+      "trim": [
+        "Drive"
+      ],
       "transmission": "Automático",
       "yearFrom": 2022,
       "yearTo": null,
@@ -620,7 +634,7 @@
       "sourceLayer": 1,
       "sourceDate": "2022",
       "verifiedAt": "2026-08-19",
-      "note": "Par direto com a linha manual acima, mesmo carro e mesmo motor: o automático é 0,3 s MAIS RÁPIDO no etanol (11,4 x 11,7) e 1 km/h MAIS LENTO na ponta. Efeito pequeno e de sinal misto — mais um caso de que a direção do efeito do câmbio não se infere."
+      "note": "Par direto com a linha manual acima, mesmo carro e mesmo motor: o automático é 0,3 s MAIS RÁPIDO no etanol (11,4 x 11,7) e 1 km/h MAIS LENTO na ponta. Efeito pequeno e de sinal misto — mais um caso de que a direção do efeito do câmbio não se infere. ACABAMENTO OBRIGATÓRIO nesta linha desde 20/08/2026: a ficha é do PULSE DRIVE 1.3 ASPIRADO e, sem o corte, ela respondia também pelo `PULSE ABARTH 1.3 Turbo 16V Flex Aut.`, que é o T270 de 185 cv. Servir 12,2 s a um Abarth não é imprecisão, é outro carro. O Abarth passa a ficar sem número, que é a resposta certa enquanto não houver ficha dele."
     },
     {
       "brand": "Fiat",
@@ -753,6 +767,261 @@
       "verifiedAt": "2026-08-19",
       "crossCheck": "A ficha de id 111 é o mesmo documento (TORO FREEDOM 1.8 FLEX AT6 MY21) e traz os mesmos quatro números.",
       "note": "NÚMERO ESTRANHO E CONFIRMADO EM DOIS DOCUMENTOS: contra a Toro 1.8 manual, a automática acelera MAIS (12,8 x 14,0 s na gasolina) e tem velocidade máxima 26 km/h MENOR (154 x 180). Vinte e seis km/h só de câmbio é muito, e eu esperaria erro de digitação — mas as fichas de id 110 e 111 dizem a mesma coisa. Transcrevo como está e deixo o aviso: se alguém achar uma terceira ficha oficial da Toro 1.8 AT6, confrontar esta linha primeiro."
+    },
+    {
+      "brand": "Jeep",
+      "nameplate": "Compass",
+      "version": "1.3 T270",
+      "trim": [
+        "Sport"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 8.9,
+      "accel0to100Ethanol": 8.8,
+      "topSpeedGasoline": 204.5,
+      "topSpeedEthanol": 207,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/134",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/134 (Jeep Compass Sport, T270 Turbo Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. DOCUMENTO SEM ANO DECLARADO: a ficha não traz MY no título nem data impressa registrada na coleta, então a janela de ano fica nula (curinga), como já é nas linhas de Argo e Cronos. Se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. É o mais rápido dos quatro acabamentos: 8,9 s contra 9,8 s do Limited e do S, com o MESMO motor e o MESMO câmbio. Nove décimos em 8,9 é 10% — é peso e relação final, não ruído de medição. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Jeep",
+      "nameplate": "Compass",
+      "version": "1.3 T270",
+      "trim": [
+        "Longitude"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 9.7,
+      "accel0to100Ethanol": 9.3,
+      "topSpeedGasoline": 204,
+      "topSpeedEthanol": 206.5,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/132",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/132 (Jeep Compass Longitude, T270 Turbo Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. DOCUMENTO SEM ANO DECLARADO: a ficha não traz MY no título nem data impressa registrada na coleta, então a janela de ano fica nula (curinga), como já é nas linhas de Argo e Cronos. Se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. O documento 133 é idêntico ao 132 e traz os mesmos quatro números. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Jeep",
+      "nameplate": "Compass",
+      "version": "1.3 T270",
+      "trim": [
+        "Limited"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 9.8,
+      "accel0to100Ethanol": 9.4,
+      "topSpeedGasoline": 203.5,
+      "topSpeedEthanol": 206,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/131",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/131 (Jeep Compass Limited, T270 Turbo Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. DOCUMENTO SEM ANO DECLARADO: a ficha não traz MY no título nem data impressa registrada na coleta, então a janela de ano fica nula (curinga), como já é nas linhas de Argo e Cronos. Se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. Mesmos quatro números do acabamento S (documento 130), que tem linha própria porque é documento próprio. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Jeep",
+      "nameplate": "Compass",
+      "version": "1.3 T270",
+      "trim": [
+        "S"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 9.8,
+      "accel0to100Ethanol": 9.4,
+      "topSpeedGasoline": 203.5,
+      "topSpeedEthanol": 206,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/130",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/130 (Jeep Compass S, T270 Turbo Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. DOCUMENTO SEM ANO DECLARADO: a ficha não traz MY no título nem data impressa registrada na coleta, então a janela de ano fica nula (curinga), como já é nas linhas de Argo e Cronos. Se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. Mesmos quatro números do Limited (documento 131). Acabamento de UMA LETRA: o casamento é por palavra inteira, então `COMPASS S T270 1.3 TB 4x2 Flex Aut.` casa e `COMPASS SPORT T270 ...` não. O plug-in `COMPASS S 1.3 TB 4XE Aut. (Híbrido)`, que também é `S` e também é 1.3 turbo, é barrado antes, no corte de combustível de matchPerformanceRow. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Toro",
+      "version": "1.3 T270",
+      "trim": [
+        "Endurance"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 10.7,
+      "accel0to100Ethanol": 10.6,
+      "topSpeedGasoline": 200,
+      "topSpeedEthanol": 202,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/86",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/86 (Fiat Toro Endurance, Turbo 270 Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. Único dos três com ano-modelo declarado no título da ficha (MY22), por isso é o único com janela. Faz 200 km/h na gasolina contra 195,5 do Volcano — 4,5 km/h de diferença entre acabamentos do mesmo carro. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Toro",
+      "version": "1.3 T270",
+      "trim": [
+        "Freedom"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 10.8,
+      "accel0to100Ethanol": 10.7,
+      "topSpeedGasoline": 199.5,
+      "topSpeedEthanol": 201.5,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/88",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/88 (Fiat Toro Freedom, Turbo 270 Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. DOCUMENTO SEM ANO DECLARADO: a ficha não traz MY no título nem data impressa registrada na coleta, então a janela de ano fica nula (curinga), como já é nas linhas de Argo e Cronos. Se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Toro",
+      "version": "1.3 T270",
+      "trim": [
+        "Volcano"
+      ],
+      "transmission": "Automático",
+      "yearFrom": 2022,
+      "yearTo": null,
+      "accel0to100Gasoline": 10.8,
+      "accel0to100Ethanol": 10.7,
+      "topSpeedGasoline": 195.5,
+      "topSpeedEthanol": 201.5,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/92",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/92 (Fiat Toro Volcano, Turbo 270 Flex, câmbio AT6). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": null,
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. DOCUMENTO SEM ANO DECLARADO: a ficha não traz MY no título nem data impressa registrada na coleta, então a janela de ano fica nula (curinga), como já é nas linhas de Argo e Cronos. Se aparecer ficha datada mostrando recalibração, esta linha precisa ser fechada. A velocidade máxima na gasolina (195,5) destoa das irmãs (199,5 e 200) enquanto a do etanol (201,5) é igual à do Freedom. Transcrito como está: é plausível — o Volcano é o mais pesado e o mais calçado dos três — e não há contradição interna que justifique reter. LIMITE INFERIOR DA JANELA É FATO SOBRE O CARRO, NÃO SOBRE O DOCUMENTO, e a distinção fica escrita porque as duas coisas se parecem: a ficha é undated e por isso o limite SUPERIOR continua aberto; mas o T270 não existe neste modelo antes do ano-modelo 2022 — ele chega com a reestilização lançada no fim de 2021 —, e sem piso na janela um Compass ou uma Toro 1.3 de 2018, que nunca existiram, receberiam estes números. Carro que não pode existir é o detector, e aqui ele pede um piso."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Mobi",
+      "version": "1.0",
+      "trim": [
+        "Easy"
+      ],
+      "transmission": "Manual",
+      "yearFrom": 2021,
+      "yearTo": 2021,
+      "accel0to100Gasoline": 14.3,
+      "accel0to100Ethanol": 13.2,
+      "topSpeedGasoline": 152.5,
+      "topSpeedEthanol": 153.6,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/82",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/82 (Fiat Mobi Easy 1.0 manual, MY21). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": "2021",
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. JANELA FECHADA NO ANO-MODELO, e aqui isso não é excesso de zelo: o MESMO Mobi Like passa de 14,4 s para 15,8 s na gasolina entre MY21 e MY22, com a mesma ficha e o mesmo motor. Se o número muda de um ano-modelo para o outro, janela aberta serve o ano errado. A linha vale para o manual, que é o único câmbio do Mobi 1.0 nestes dois anos-modelo — o CVT só chega depois. A FIPE não escreve câmbio nas versões de Mobi, então transmissionCompatible não descarta nada, e é este parágrafo que responde por isso. O mais rápido dos três acabamentos MY21, e o único com velocidade máxima diferente (152,5/153,6 contra 151/152,2)."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Mobi",
+      "version": "1.0",
+      "trim": [
+        "Like"
+      ],
+      "transmission": "Manual",
+      "yearFrom": 2021,
+      "yearTo": 2021,
+      "accel0to100Gasoline": 14.4,
+      "accel0to100Ethanol": 13.8,
+      "topSpeedGasoline": 151,
+      "topSpeedEthanol": 152.2,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/83",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/83 (Fiat Mobi Like 1.0 manual, MY21). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": "2021",
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. JANELA FECHADA NO ANO-MODELO, e aqui isso não é excesso de zelo: o MESMO Mobi Like passa de 14,4 s para 15,8 s na gasolina entre MY21 e MY22, com a mesma ficha e o mesmo motor. Se o número muda de um ano-modelo para o outro, janela aberta serve o ano errado. A linha vale para o manual, que é o único câmbio do Mobi 1.0 nestes dois anos-modelo — o CVT só chega depois. A FIPE não escreve câmbio nas versões de Mobi, então transmissionCompatible não descarta nada, e é este parágrafo que responde por isso."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Mobi",
+      "version": "1.0",
+      "trim": [
+        "Trekking"
+      ],
+      "transmission": "Manual",
+      "yearFrom": 2021,
+      "yearTo": 2021,
+      "accel0to100Gasoline": 14.4,
+      "accel0to100Ethanol": 13.8,
+      "topSpeedGasoline": 151,
+      "topSpeedEthanol": 152.2,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/84",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/84 (Fiat Mobi Trekking 1.0 manual, MY21). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": "2021",
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. JANELA FECHADA NO ANO-MODELO, e aqui isso não é excesso de zelo: o MESMO Mobi Like passa de 14,4 s para 15,8 s na gasolina entre MY21 e MY22, com a mesma ficha e o mesmo motor. Se o número muda de um ano-modelo para o outro, janela aberta serve o ano errado. A linha vale para o manual, que é o único câmbio do Mobi 1.0 nestes dois anos-modelo — o CVT só chega depois. A FIPE não escreve câmbio nas versões de Mobi, então transmissionCompatible não descarta nada, e é este parágrafo que responde por isso. Mesmos quatro números do Like MY21 (documento 83)."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Mobi",
+      "version": "1.0",
+      "trim": [
+        "Like"
+      ],
+      "transmission": "Manual",
+      "yearFrom": 2022,
+      "yearTo": 2022,
+      "accel0to100Gasoline": 15.8,
+      "accel0to100Ethanol": 14,
+      "topSpeedGasoline": 151,
+      "topSpeedEthanol": 152.2,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/71",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/71 (Fiat Mobi Like 1.0 manual, MY22). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. JANELA FECHADA NO ANO-MODELO, e aqui isso não é excesso de zelo: o MESMO Mobi Like passa de 14,4 s para 15,8 s na gasolina entre MY21 e MY22, com a mesma ficha e o mesmo motor. Se o número muda de um ano-modelo para o outro, janela aberta serve o ano errado. A linha vale para o manual, que é o único câmbio do Mobi 1.0 nestes dois anos-modelo — o CVT só chega depois. A FIPE não escreve câmbio nas versões de Mobi, então transmissionCompatible não descarta nada, e é este parágrafo que responde por isso. Contra o Like MY21: 1,4 s A MAIS na gasolina com o mesmo motor e a mesma velocidade máxima. É a prova de que a janela por ano-modelo tem de ser fechada nesta tabela."
+    },
+    {
+      "brand": "Fiat",
+      "nameplate": "Mobi",
+      "version": "1.0",
+      "trim": [
+        "Trekking"
+      ],
+      "transmission": "Manual",
+      "yearFrom": 2022,
+      "yearTo": 2022,
+      "accel0to100Gasoline": null,
+      "accel0to100Ethanol": null,
+      "topSpeedGasoline": 151,
+      "topSpeedEthanol": 152.2,
+      "source": "https://www.media.stellantis.com/br-pt/download-model-document/72",
+      "sourceDoc": "Stellantis Brasil — ficha técnica em media.stellantis.com/br-pt/download-model-document/72 (Fiat Mobi Trekking 1.0 manual, MY22). Transcrita de _meta.bloqueadoPorTrim deste mesmo arquivo, onde o Han deixou o dado guardado em 19/08/2026 porque o casamento de versão ainda não lia acabamento. Eu não reabri o PDF: quem leu e conferiu foi ele.",
+      "sourceLayer": 1,
+      "sourceDate": "2022",
+      "verifiedAt": "2026-08-19",
+      "note": "LINHA COM ACABAMENTO. Só responde por este acabamento (campo `trim`), e se a FIPE não escrever o acabamento de forma legível ela não responde por ninguém. É a razão de esta linha poder existir: sem o corte por acabamento, os irmãos de mesma cilindrada e mesmo câmbio caíam todos em multiple_performance_candidates e a tela ficava retida. JANELA FECHADA NO ANO-MODELO, e aqui isso não é excesso de zelo: o MESMO Mobi Like passa de 14,4 s para 15,8 s na gasolina entre MY21 e MY22, com a mesma ficha e o mesmo motor. Se o número muda de um ano-modelo para o outro, janela aberta serve o ano errado. A linha vale para o manual, que é o único câmbio do Mobi 1.0 nestes dois anos-modelo — o CVT só chega depois. A FIPE não escreve câmbio nas versões de Mobi, então transmissionCompatible não descarta nada, e é este parágrafo que responde por isso. 0-100 DELIBERADAMENTE EM BRANCO, e não por falta de fonte. A ficha publica 14,4 s na gasolina e 14,9 s no ETANOL — etanol MAIS LENTO que gasolina, o contrário do que um motor flex faz e o contrário do que as outras 20 fichas Fiat lidas mostram, inclusive a do MESMO Mobi Trekking no MY21 (14,4 / 13,8). O Han marcou como suspeita de erro de digitação da Fiat e se recusou a corrigir documento de fabricante; eu me recuso a repetir o número. A VELOCIDADE MÁXIMA da mesma ficha (151 / 152,2) é idêntica à do Like MY22 e à do Trekking MY21, não tem contradição nenhuma, e por isso vale.",
+      "disputedFields": [
+        "accel0to100S"
+      ]
     }
   ]
 }

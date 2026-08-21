@@ -1434,6 +1434,38 @@
       "verifiedAt": "2026-08-19",
       "crossCheck": null,
       "note": "DUAS COISAS ESTRANHAS, as duas transcritas como estão no documento. (1) A potência na GASOLINA é MAIOR que a no etanol: '176 (G) | 173 (E) @5,500 RPM'. A ordem dos rótulos está invertida em relação à coluna do 1.0 da mesma ficha ('120 (E) | 115 (G)'), o que descarta troca de coluna minha — a Hyundai escreveu (G) primeiro justamente porque é o maior. (2) O TORQUE só tem valor de gasolina: '27.0 (G) @1,600 ~ 4,000 RPM'. O etanol não é publicado, então torqueEthanol fica nulo — a montadora não mediu ou não divulgou. PISTA A VERIFICAR, NÃO CORREÇÃO: agregadores circulam 193 cv para o Creta 1.6 Turbo. A ficha oficial diz 176/173. Divergência de 17 cv entre camada 1 e camada 4 é lead, não erro — quem tiver uma segunda ficha oficial deve confrontar. valves nulo: a ficha declara DOHC D-CVVT e não declara número de válvulas; não invento 16V para completar a chave. Fonte única. Achado no press kit oficial: https://hyundai-csa-news.com/press-kit/ lista uma página por modelo (hb20, hb20s, novo-creta, novo-creta-n-line, kona-hibrido, palisade, ioniq-5) e cada uma linka a ficha técnica em PDF. É a fonte mais completa que achei nesta rodada: a MESMA ficha traz potência/torque com par flex E desempenho com par flex, ou seja, uma passada alimenta as duas tabelas."
+    },
+    {
+      "brand": "Toyota",
+      "displacementL": "2.8",
+      "valves": null,
+      "aspiration": "TB",
+      "fuel": "Diesel",
+      "yearFrom": 2023,
+      "yearTo": 2023,
+      "engineFamily": "1GD-FTV 2.8 turbodiesel (4 cilindros em linha, 92 x 103,6 mm)",
+      "cylinders": 4,
+      "displacementCm3": 2755,
+      "powerGasolineCv": null,
+      "powerEthanolCv": null,
+      "powerDieselCv": 224,
+      "powerRpm": "3000",
+      "torqueGasoline": null,
+      "torqueEthanol": null,
+      "torqueDiesel": 550,
+      "torqueUnit": "Nm",
+      "torqueRpm": "1600-2800",
+      "norma": null,
+      "models": [
+        "SW4"
+      ],
+      "source": "https://media.toyota.com.ar/accfd153-d853-4706-96ee-78fa465bcb07.pdf",
+      "sourceDoc": "Toyota do Brasil — Manual do Proprietário SW4 MY23",
+      "sourceLayer": 1,
+      "verifiedAt": "2026-08-19",
+      "sourceDate": null,
+      "crossCheck": "O manual da HILUX MY23 (media.toyota.com.ar/0de01d34-db5a-450e-b545-d958629e239d.pdf) imprime a MESMA calibração de 165 kW (224 CV) @3.000 rpm para a versão GR-S da picape, com o mesmo 1GD-FTV. Dois documentos, dois carros, o mesmo par kW/CV — é o que dá confiança de que 224 é a calibração alta do motor e não um erro de leitura do PDF do SW4.",
+      "note": "TRANSCRIÇÃO DA COLETA DO HAN, NÃO REABERTURA DO DOCUMENTO. O número, a URL e o verifiedAt vêm de naoVerificado -> Toyota -> dadoJaExtraido deste mesmo arquivo (Han, 19/08/2026), onde estavam guardados justamente porque a CHAVE não separava SW4 de Hilux. A chave passou a separar em 20/08/2026 (nameplate `HILUX SW4` em fipeVersion.js + apelido HILUXSW4 -> SW4 em vehicleSpecs.js) e a linha virou escrevível. Eu não abri o PDF: quem verificou foi o Han, e o rótulo de fonte é dele. POR QUE SÓ O SW4 E NÃO A HILUX: o mesmo bloco do Han traz 204 CV para a Hilux exceto GR-S e 224 CV para a Hilux GR-S — ou seja, a picape precisa de um corte por ACABAMENTO que esta tabela não sabe fazer (a chave não tem trim, e badge/válvulas/override já foram testados e rejeitados pelo Han). Além disso o TORQUE da Hilux está ilegível no PDF (a camada de texto perde um algarismo: sai '43 N.m'), e o próprio Han se recusou a completar o algarismo do meio. O SW4 não tem nenhum dos dois problemas: o manual dele imprime 550 N.m inteiro e o número vale para TODAS as versões (SRX 4x4 de 5 e 7 lugares, Diamond e GRS). Por isso escrevi este e deixei a Hilux em no_engine_row. JANELA DE ANO ESTREITA E DELIBERADA: o documento é o manual MY23, então respondo só por ano-modelo 2023. Isso custa cobertura de propósito — o SW4 2.8 de 2016 a 2020 é a calibração de 177 cv, e abrir a janela para trás serviria 224 cv num carro de 177. Abrir para a frente também não: não li o manual do facelift. ATENÇÃO PARA O HAN: o _meta de vehicle-performance.json registra a leitura de um manual 'SW4 MY2022-23'; se for este mesmo documento, a janela pode abrir para 2022. Não abri porque não sei se são o mesmo PDF, e chutar janela é chutar carro. valves nulo porque o dado do Han descreve o motor (4 cilindros, 92 x 103,6 mm, 2.755 L) e NÃO declara número de válvulas. O 1GD-FTV é 16V, mas isso é conhecimento meu e não está no documento — e com valves nulo a linha casa igual, inclusive com as versões em que a FIPE escreve 16V."
     }
   ],
   "overridesPorModelo": [
@@ -1580,7 +1612,7 @@
         "Hilux",
         "SW4"
       ],
-      "blocker": "NÃO É FALTA DE FONTE — o dado está lido e conferido; é a CHAVE que não separa os dois carros. O parser da FIPE reduz \"Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.\" ao nameplate \"Hilux\", igual a \"Hilux CD SRV 4x4 2.8 TDI Diesel Aut.\". Como Hilux e SW4 viram o mesmo nome, uma única linha Toyota/2.8/TB/Diesel teria de responder pelos dois — e eles diferem 20 cv. Testei as saídas antes de desistir: badge não resolve (badgeMatches exige 3 dígitos seguidos ou 3+ letras com fronteira de palavra, e SW4 não é nem um nem outro); valves não resolve (16V aparece nos dois); override por modelo não resolve (findOverride casa por nameplate, que é justamente o que está colapsado). Por isso NÃO escrevi linha nenhuma: melhor no_engine_row do que 204 cv num SW4 de 224. O QUE DESTRAVA: o parser reconhecer SW4 como nameplate próprio. São ~57 versões da FIPE esperando por isso.",
+      "blocker": "PARCIALMENTE RESOLVIDO EM 20/08/2026 — A METADE SW4 SAIU DAQUI E VIROU LINHA. O bloqueio era a CHAVE, não a fonte: o parser reduzia \"Hilux SW4 SRX 4x4 2.8 TDI 16V Dies. Aut.\" ao nameplate \"Hilux\", igual a \"Hilux CD SRV 4x4 2.8 TDI Diesel Aut.\", e as 20 versões de SW4 da FIPE caíam no mesmo balde das 57 da picape. O Han já tinha testado e descartado badge (badgeMatches exige 3 dígitos seguidos ou 3+ letras com fronteira de palavra, e \"SW4\" não é nem um nem outro), válvulas (16V nos dois) e override por modelo (findOverride casa por nameplate, que era justamente o que estava colapsado). O caminho certo era o que ele apontou: nameplate próprio. FEITO: \"HILUX SW4\" entrou em NAMEPLATES (fipeVersion.js) antes de \"HILUX\" — NAMEPLATES_SORTED ordena do mais longo para o mais curto, então ganha — e o apelido HILUXSW4 -> SW4 entrou em FIPE_NAMEPLATE_ALIAS (vehicleSpecs.js) para casar com o vocabulário da Toyota. Com isso a linha Toyota / 2.8 / TB / Diesel / models:[\"SW4\"] / 2023 foi escrita a partir do dadoJaExtraido abaixo: 224 CV e 550 Nm, verificados em 6 versões 2.8 do SW4 na FIPE. AINDA BLOQUEADO: A HILUX. E não é mais a chave, são DOIS problemas de dado. (1) TRIM. O dadoJaExtraido diz 204 CV para a Hilux exceto GR-S e 224 CV para a GR-S. A chave desta tabela não tem acabamento, e as três saídas para separá-lo já foram testadas e rejeitadas. Uma linha única de 204 daria 20 cv a menos na GR-S; uma de 224 daria 20 a mais nas outras 20 versões. Sem corte de trim, a resposta certa continua sendo no_engine_row. (2) TORQUE ILEGÍVEL, e ele não é opcional numa picape — é o número que a pessoa compra. O PDF perde um algarismo (\"43 N.m\" para os GUN126L de câmbio manual, \"50 N.m\" para o resto) e o do meio pode ser 430 ou 420. O Han se recusou a completar e está certo. O QUE DESTRAVA A HILUX: (a) um renderizador que rasterize a página do manual MY23 e resolva o torque, e (b) OU um corte por acabamento na chave desta tabela, OU — mais barato — a ficha técnica de imprensa da Hilux GR-S separada, que daria uma linha própria por documento próprio em vez de um mecanismo novo. Enquanto não houver os dois, 57 versões de Hilux seguem sem potência de fábrica, e é o certo.",
       "dadoJaExtraido": {
         "fonte": "https://media.toyota.com.ar/0de01d34-db5a-450e-b545-d958629e239d.pdf",
         "sourceDoc": "Toyota do Brasil — Manual do Proprietário HILUX MY23 01999-98390 (OM9A353b), capítulo \"8-2. Dados técnicos\"",
