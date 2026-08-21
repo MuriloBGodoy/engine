@@ -211,23 +211,68 @@ for (const income of GRID_INCOMES) {
 // A contradição que virou este trabalho: "cabe com folga" em 46px não pode
 // conviver com a legenda "este carro ocuparia X% da sua renda, o típico é Y%"
 // quando X passa do saudável para a situação de vida.
+// O contrato mudou em 21/08/2026 e esta assertiva mudou com ele, então vale
+// dizer o que ela ainda garante — e o que ela deixou de garantir de propósito.
+//
+// ANTES: "cabe com folga" nunca aparecia acima do teto, ponto. O corte era
+// exato, e dava à régua de percentual uma precisão que ela não tem: um caso
+// medido saía de "com folga" com R$ 17.789 SOBRANDO POR MÊS porque a fatia deu
+// 25,2% contra um teto de 25%.
+//
+// AGORA há duas saídas, e as duas são estreitas e nomeadas:
+//   1. a zona morta de 10% do próprio teto, que perdoa o empate; e
+//   2. a folga enfática — sobrar metade da renda depois do carro e das contas —,
+//      que tira autoridade do proxy quando a régua informada é categórica.
+//
+// A assertiva testa o que sobrou: fora dessas duas saídas, a proibição vale
+// igual. Se alguém alargar qualquer uma das duas constantes, esta conta muda e
+// o teste cai. É por isso que ela recalcula os limites a partir do módulo em
+// vez de repetir os números aqui.
 {
-  const offenders = cells.filter(
-    (cell) =>
-      cell.level === "comfortable" &&
-      cell.committedPct > LIFE_SITUATIONS[cell.ls].warning,
-  );
+  const offenders = cells.filter((cell) => {
+    if (cell.level !== "comfortable") return false;
+    const warning = LIFE_SITUATIONS[cell.ls].warning;
+    const dentroDaZonaMorta = cell.committedPct <= warning * 1.1;
+    const folgaEnfatica = cell.leftover >= cell.income * 0.5;
+    return cell.committedPct > warning && !dentroDaZonaMorta && !folgaEnfatica;
+  });
   if (offenders.length) {
     const worst = offenders.sort((a, b) => b.committedPct - a.committedPct)[0];
     fail(
-      "'cabe com folga' com o carro acima da fatia saudável de renda",
-      `${offenders.length} células; pior: renda ${brl(worst.income)}, contas ${brl(worst.expenses)}, ${worst.ls}, carro em ${pct(worst.committedPct)} da renda`,
+      "'cabe com folga' acima da fatia saudável, fora das duas saídas nomeadas",
+      `${offenders.length} células; pior: renda ${brl(worst.income)}, contas ${brl(worst.expenses)}, ${worst.ls}, carro em ${pct(worst.committedPct)} da renda, sobra ${brl(worst.leftover)}`,
     );
   } else {
     console.log(
-      "OK      'cabe com folga' nunca aparece acima da fatia saudável de renda",
+      "OK      'cabe com folga' acima do saudável só pela zona morta ou pela folga enfática",
     );
   }
+}
+
+// O CASO QUE CRIOU O TETO continua rebaixado, e é o que impede as duas saídas
+// acima de virarem porta. Renda R$ 11.000, contas R$ 500, carro de R$ 6.425/mês:
+// 58% da renda, e a tela dizia "cabe com folga" em 46px logo acima da legenda
+// "este carro ocuparia 58% da sua renda; o típico é 20%". Se esta assertiva
+// cair, as duas frases do mesmo motor voltaram a se contradizer.
+{
+  const guarda = assessAffordability({
+    monthlyIncome: 11000,
+    monthlyExpenses: 500,
+    monthlyCost: 6425,
+    lifeSituation: "shared",
+  });
+  check("o caso que criou o teto segue rebaixado", guarda.level, "tight");
+  check("e a tela sabe dizer por quê", guarda.cappedByIncomeShare, true);
+}
+
+// A FOLGA ENFÁTICA NÃO É PORTA DOS FUNDOS: ela só age em quem já passou pela
+// folga. Nenhuma célula pode virar "cabe com folga" sem os 20% de sobra que o
+// `hasSlack` exige — a saída nova mexe no teto do otimismo, não no piso.
+{
+  const offenders = cells.filter(
+    (cell) => cell.level === "comfortable" && cell.leftover < cell.income * 0.2,
+  );
+  check("folga enfática não cria 'com folga' em quem não tem folga", offenders.length, 0);
 }
 
 // O rebaixamento tem de ser exatamente isto: veredito "aperta" num orçamento

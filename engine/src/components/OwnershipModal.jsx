@@ -621,9 +621,18 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
   // primeiro carro. Sem dizer o porquê, a pessoa lê "aperta" com R$ 4.438 no
   // bolso e conclui que a conta está errada.
   const cappedByShare = Boolean(verdict?.cappedByIncomeShare);
-  // O número que DECIDIU é o `warning` da situação de vida. A régua mostrava o
-  // `typical` (o `suggestedShare`), que é referência e não corte: explicar o
-  // veredito com ele seria justificá-lo por um número que não o produziu.
+  // O número que a tela mostra é o `warning` da situação de vida — a fatia
+  // saudável. A régua mostrava o `typical` (o `suggestedShare`), que é
+  // referência e não corte, e explicar o veredito com ele seria justificá-lo
+  // por um número que não o produziu.
+  //
+  // RESSALVA DE 21/08/2026: desde a zona morta, o corte real não é o `warning`,
+  // é ele mais 10%. A tela segue mostrando o `warning`, e de propósito: 30% é a
+  // fatia saudável, uma recomendação que se pode dizer em voz alta; 33% é a
+  // tolerância que a gente se dá por saber que a régua é grossa, e apresentá-la
+  // como recomendação seria transformar margem de erro em conselho. A frase
+  // "leva 34% e o saudável vai até 30%" continua verdadeira — só não conta que
+  // entre 30% e 33% a gente teria deixado passar.
   const healthyCapPct = Math.round(
     (LIFE_SITUATIONS[inputs.lifeSituation]?.warning ?? LIFE_SITUATIONS.shared.warning) *
       100,
@@ -874,6 +883,18 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                         clicando a alavanca "à vista", que leva a 30,08% num teto
                         de 30%: nesse caso a frase para de comparar e diz o que é
                         verdade, que o carro está bem em cima do limite. */}
+                    {/*
+                      O ramo do empate está INALCANÇÁVEL hoje, e fica por ser o
+                      guarda da constante. Ele nasceu quando a alavanca "à
+                      vista" empurrava a fatia para 30,08% contra um teto de
+                      30% e a frase saía "leva 30% da renda, e o saudável vai
+                      até 30%". Com a zona morta de 10%, o rebaixamento só
+                      acontece bem depois do teto: varredura de 45.567 células
+                      rebaixadas em 21/08/2026 deu ZERO empates e distância
+                      mínima de 3 pontos. Se alguém devolver HEALTHY_SHARE_DEAD_ZONE
+                      para 1, o empate volta no mesmo dia — e a frase absurda
+                      volta com ele se este ramo tiver sido apagado.
+                    */}
                     {sharePctShown === healthyCapPct
                       ? t("ownership.answer.capReasonAtLimit", { cap: healthyCapPct })
                       : t("ownership.answer.capReason", {

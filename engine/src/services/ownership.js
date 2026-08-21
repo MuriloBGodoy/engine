@@ -815,9 +815,49 @@ export function assessAffordability({
   // com folga" em 46px, com a legenda da régua logo abaixo, na mesma tela,
   // dizendo "este carro ocuparia 58% da sua renda; o típico é 20%". As duas
   // frases eram do mesmo motor.
+  // A ZONA MORTA, e por que ela existe.
+  //
+  // O corte no ponto exato dava à régua de percentual uma precisão que ela não
+  // tem. Os tetos (25%, 30%, 45%) são números redondos de heurística de
+  // orçamento, não medição: são bons até uns cinco pontos, nunca até um décimo.
+  // Aplicá-los na casa decimal transforma arredondamento em veredito.
+  //
+  // O caso que criou a constante, medido na grade em 21/08/2026: renda
+  // R$ 25.500, contas R$ 1.275, sobra de R$ 17.789 POR MÊS — e o veredito
+  // deixava de ser "cabe com folga" porque a fatia deu 25,2% contra um teto de
+  // 25%. Dois décimos de ponto derrubando dezessete mil reais de folga.
+  //
+  // 10% do próprio teto, e é relativo de propósito: os três tetos vão de 25% a
+  // 45%, e uma banda fixa em pontos seria proporcionalmente quase o dobro no
+  // mais baixo. A banda acompanha a grossura da régua que ela corrige.
+  //
+  // O que ela NÃO afrouxa: o caso que criou o teto continua rebaixado. Renda
+  // R$ 11.000, contas R$ 500 e um carro de R$ 6.425/mês dão 58% da renda contra
+  // 33% de teto com a banda — longe da zona morta, e "aperta" continua sendo a
+  // resposta. A banda perdoa o empate, não o excesso.
+  const HEALTHY_SHARE_DEAD_ZONE = 1.1;
+
+  // A BANDA SOZINHA NÃO RESOLVE, e a medição é que disse isso.
+  //
+  // Qualquer corte duro numa régua grossa produz um caso logo depois dele: com
+  // a banda, o pior rebaixado passou de "sobra R$ 17.789 com 25,2%" para "sobra
+  // R$ 15.414 com 28,0%". O penhasco mudou de lugar, não sumiu.
+  //
+  // O que resolve é tirar autoridade do proxy quando a régua informada é
+  // enfática. A fatia da renda existe para desconfiar de quem parece ter folga;
+  // ela não tem o que desconfiar de quem termina o mês com mais da METADE da
+  // renda livre depois do carro e das contas. Aí a folga não é aparência, é o
+  // número medido, e ele vem da despesa que a pessoa declarou.
+  //
+  // Meia renda é o corte porque é o que a frase quer dizer: sobra mais do que
+  // se gasta. Abaixo disso o proxy segue mandando.
+  const EMPHATIC_SLACK_RATIO = 0.5;
+
   const fits = leftover > 0;
   const hasSlack = leftover >= monthlyIncome * 0.2;
-  const aboveHealthyShare = committedPct > situation.warning;
+  const emphaticSlack = leftover >= monthlyIncome * EMPHATIC_SLACK_RATIO;
+  const aboveHealthyShare =
+    committedPct > situation.warning * HEALTHY_SHARE_DEAD_ZONE && !emphaticSlack;
   const level = !fits ? "no_fit" : hasSlack && !aboveHealthyShare ? "comfortable" : "tight";
   // Para a tela poder dizer POR QUE aperta um orçamento em que sobra dinheiro.
   const cappedByIncomeShare = fits && hasSlack && aboveHealthyShare;
