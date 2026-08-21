@@ -3,7 +3,61 @@
 Lista acionável do que ficou pendente. O **porquê** de cada decisão está no
 `ROADMAP.md`; aqui é só o que fazer.
 
-Última atualização: 17 de agosto de 2026.
+Última atualização: 20 de agosto de 2026.
+
+---
+
+## Estado em 20/08/2026 — quanto falta, honestamente
+
+Leitura de escopo pedida pelo Murilo. O detalhe de cada item está nas seções
+abaixo; aqui é só a **ordem de grandeza** e quem é o dono de cada monte.
+
+### Monte 1 — depende de você. Poucas horas, e é o que trava o resto
+
+Sentry, PostHog, domínio, chave do `dados.gov.br`, Blaze, advogado. Somando, é
+o trabalho de um sábado. Não é grande em horas; é grande em consequência —
+enquanto o Sentry não tiver chave, ninguém fica sabendo quando um usuário toma
+erro, e o produto segue sendo decidido no escuro.
+
+### Monte 2 — código, com fim à vista. 2 a 3 dias
+
+- As três travas do casamento de versão na ficha (SW4 colapsando em Hilux,
+  `performanceVersionMatches` ignorando acabamento, `Flexone` lido como
+  não-flex). Dado já coletado e conferido no arquivo; falta o parser enxergar
+- O rasterizador de PDF, ~1h, que destrava Hilux, Tracker MY≤2025 e o 1.2T de
+  132/133 CV de uma vez
+- O parser por coluna do anexo SFP-40/25, meio dia
+- Híbrido em SP isento até 31/12/2026 — hoje cobramos 4%, o que é R$ 600/mês a
+  mais num híbrido de R$ 180 mil
+- Isenção de IPVA por idade nas ~15 UFs que faltam, um dia, lei por lei
+- O corte de 1 ponto na régua de conforto: um caso a 26% contra teto de 25%
+  perde o "cabe com folga" com R$ 12.143 sobrando no mês. Uma zona morta
+  resolve, e a tela não muda — ela só lê o campo
+- Os 5 erros de lint anteriores em `Services.jsx`
+
+### Monte 3 — não tem fim, e tudo bem
+
+Precisão de dado é esteira, não linha de chegada:
+
+- **Manutenção não distingue veículo nenhum** — um Lancer 2.0 e um Onix do mesmo
+  preço custam igual para manter. Sem fonte verificada; não inventar fator
+- **A base de consumo não é do INMETRO** e decide ~2/3 da conta da tela.
+  Bloqueada numa chave de API, não morta
+- **Ficha técnica**: potência em 15,5%, desempenho em 2,4%, frota em 16/26
+  motores. Cada rodada de pesquisa sobe alguns pontos
+
+### A resposta curta
+
+Para **abrir o link**, falta pouco, e quase tudo é decisão sua. Para o
+**simulador ser confiável**, falta sempre — a pergunta certa não é "quando
+acaba", é "dá para alguém decidir a compra de um carro com isto?". Para o custo
+mensal, hoje a resposta é sim. Para a ficha técnica, ainda não.
+
+### O que não está em lista nenhuma, e é o maior risco
+
+**O simulador nunca foi aberto por um humano num navegador logado.** Foi
+construído, medido, testado por script e prototipado — mas olho humano, zero.
+Isso não é uma linha de TODO que se marca; é a validação que falta.
 
 ---
 
