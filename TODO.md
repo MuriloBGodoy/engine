@@ -21,18 +21,26 @@ erro, e o produto segue sendo decidido no escuro.
 
 ### Monte 2 — código, com fim à vista. 2 a 3 dias
 
-- As três travas do casamento de versão na ficha (SW4 colapsando em Hilux,
-  `performanceVersionMatches` ignorando acabamento, `Flexone` lido como
-  não-flex). Dado já coletado e conferido no arquivo; falta o parser enxergar
+- [x] ~~As três travas do casamento de versão na ficha~~ — fechadas em
+  21/08/2026 (`dd9ab50`). A varredura versão a versão achou mais quatro casos
+  da mesma classe, e o defeito maior estava escondido: o `return` antecipado
+  da cilindrada engolia a checagem de aspiração, e isso **servia número errado
+  agora** — 11 Creta 1.6 aspirado recebendo os 8,1 s do 1.6 turbo, 29 HB20
+  recebendo o tempo do aspirado incluindo as TB. Cobertura de desempenho caiu
+  de 4,8% para 3,4%: 48 perdas, todas de outro carro, zero ganho por
+  afrouxamento
 - O rasterizador de PDF, ~1h, que destrava Hilux, Tracker MY≤2025 e o 1.2T de
   132/133 CV de uma vez
 - O parser por coluna do anexo SFP-40/25, meio dia
 - Híbrido em SP isento até 31/12/2026 — hoje cobramos 4%, o que é R$ 600/mês a
   mais num híbrido de R$ 180 mil
 - Isenção de IPVA por idade nas ~15 UFs que faltam, um dia, lei por lei
-- O corte de 1 ponto na régua de conforto: um caso a 26% contra teto de 25%
-  perde o "cabe com folga" com R$ 12.143 sobrando no mês. Uma zona morta
-  resolve, e a tela não muda — ela só lê o campo
+- [x] ~~O corte de 1 ponto na régua de conforto~~ — fechado em 21/08/2026
+  (`ade8575`), e o caso real era pior do que o anotado: sobra de **R$ 17.789
+  por mês** perdida por 0,2 ponto de fatia. A zona morta sozinha só mudou o
+  penhasco de lugar (pior caso R$ 15.414), então entrou junto a **folga
+  enfática**: quem termina o mês com mais da metade da renda livre não é
+  rebaixado pela fatia. Rebaixadas caem de 453 para 297 células
 - Os 5 erros de lint anteriores em `Services.jsx`
 
 ### Monte 3 — não tem fim, e tudo bem
