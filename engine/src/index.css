@@ -1145,6 +1145,15 @@ h5 {
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
+/* No celular a pílula é alvo de dedo, não de ponteiro: 40px ficava abaixo do
+   mínimo de 44px da diretriz da Apple. No desktop 40px segue melhor para a
+   densidade do header. */
+@media (max-width: 1023px) {
+  .region-pill {
+    height: 44px;
+  }
+}
+
 .region-pill:hover {
   background: var(--engine-surface-2);
   color: var(--engine-text);
@@ -1609,4 +1618,14 @@ h5 {
 .engine-slab-zone[data-on="true"][data-tone="no_fit"] {
   background: var(--engine-slab-accent);
   color: var(--engine-slab-accent-ink);
+}
+
+/* Tira de abas que rola no celular sem mostrar barra de rolagem — a rolagem se
+   anuncia pelo próprio conteúdo cortado na borda. */
+.engine-scroll-x {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.engine-scroll-x::-webkit-scrollbar {
+  display: none;
 }

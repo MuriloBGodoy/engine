@@ -6,6 +6,7 @@ import {
   AtSign,
   Bookmark,
   Building,
+  Calendar,
   Car,
   Check,
   ChevronLeft,
@@ -34,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { ClubsTab } from "../components/community/ClubsTab";
+import { Events } from "./Events";
 import { engineDB, POST_KIND_POST } from "../services/db";
 import { InfoTip } from "../components/InfoTip";
 import { SpecSheetModal } from "../components/specsheet/SpecSheetModal";
@@ -252,20 +254,31 @@ const isGoalShared = (goal, sharedGoalIds, userId = "") => {
 function AvatarButton({ person, onClick, size = "md" }) {
   const label = person?.author || person?.name || "Usuário Engine";
   const avatar = person?.avatar || person?.avatarInitials || getInitials(label);
-  const sizeClass = size === "sm" ? "h-8 w-8 text-xs" : "h-11 w-11";
+  const isSmall = size === "sm";
+  const sizeClass = isSmall ? "h-8 w-8 text-xs" : "h-11 w-11";
 
+  /* O desenho do avatar vive no `span`; o `button` é só o alvo. No tamanho
+     pequeno (32px) a bolinha ficaria abaixo dos 44px de toque, então o botão
+     cresce por fora com margem negativa e o avatar continua do tamanho que o
+     layout pede. */
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] font-black italic text-white transition hover:ring-2 hover:ring-red-500/40`}
+      className={`flex shrink-0 items-center justify-center rounded-full transition hover:ring-2 hover:ring-red-500/40 ${
+        isSmall ? "-m-1.5 h-11 w-11 sm:m-0 sm:h-8 sm:w-8" : "h-11 w-11"
+      }`}
       title={label}
     >
-      {isImageUrl(avatar) ? (
-        <img src={avatar} alt={label} className="h-full w-full object-cover" />
-      ) : (
-        avatar
-      )}
+      <span
+        className={`flex ${sizeClass} items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] font-black italic text-white`}
+      >
+        {isImageUrl(avatar) ? (
+          <img src={avatar} alt={label} className="h-full w-full object-cover" />
+        ) : (
+          avatar
+        )}
+      </span>
     </button>
   );
 }
@@ -308,7 +321,7 @@ function RatingControl({ value, onRate, label, size = 16 }) {
           key={star}
           type="button"
           onClick={() => onRate(star)}
-          className={`px-0.5 py-1.5 transition-transform hover:scale-110 ${
+          className={`-my-2 flex h-11 items-center px-1 transition-transform hover:scale-110 sm:my-0 sm:h-auto sm:py-1.5 ${
             star <= Math.round(value)
               ? "text-amber-400"
               : "text-[var(--engine-border-strong)]"
@@ -477,7 +490,7 @@ function PostMenu({ items, label }) {
         onClick={() => setOpen((value) => !value)}
         title={label}
         aria-label={label}
-        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+        className="-m-1.5 flex h-11 w-11 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)] sm:m-0 sm:h-8 sm:w-8"
       >
         <MoreHorizontal size={18} />
       </button>
@@ -692,7 +705,7 @@ export function GoalCard({
             <button
               type="button"
               onClick={() => onOpenProfile(goal.ownerId, goal)}
-              className="min-w-0 truncate text-left text-[13px] font-bold text-[var(--engine-text)] transition hover:text-[var(--engine-accent)]"
+              className="-my-3 inline-flex min-h-11 min-w-0 items-center truncate text-left text-[13px] font-bold text-[var(--engine-text)] transition hover:text-[var(--engine-accent)] sm:my-0 sm:min-h-0"
             >
               {goal.author}
             </button>
@@ -718,7 +731,7 @@ export function GoalCard({
             <button
               type="button"
               onClick={() => onFollow(goal)}
-              className="shrink-0 rounded-full px-2 text-[11px] font-black uppercase tracking-wide text-[var(--engine-accent)] transition hover:brightness-110"
+              className="-my-3 inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-[11px] font-black uppercase tracking-wide text-[var(--engine-accent)] transition hover:brightness-110 sm:my-0 sm:min-h-0"
             >
               {t("community.follow")}
             </button>
@@ -1212,7 +1225,7 @@ function ActionButton({ active = false, title, icon, onClick, count = 0, languag
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-9 items-center gap-1.5 rounded-full px-2 transition-colors ${
+      className={`flex h-11 items-center gap-1.5 rounded-full px-2 transition-colors sm:h-9 ${
         active
           ? "text-[var(--engine-accent)]"
           : "text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
@@ -2690,17 +2703,27 @@ export function Community({ cars = [], settings, user }) {
     { id: "videos", label: t("community.tabs.videos"), icon: Clapperboard },
     ...(hasRail ? [] : [{ id: "ranking", label: t("community.tabs.ranking"), icon: Trophy }]),
     { id: "clubes", label: t("community.tabs.clubs"), icon: Building },
+    { id: "eventos", label: t("community.tabs.events"), icon: Calendar },
   ];
 
-  const activeSection = topLevelTab === "clubes" ? "clubes" : activeSubTab;
+  const activeSectionRef = useRef(null);
+
+  /* Abas de primeiro nível vivem na URL (?tab=). "goals" guarda ainda uma
+     sub-aba própria (feed/vídeos/ranking); clubes e eventos não têm. */
+  const TOP_LEVEL = ["clubes", "eventos"];
+  const activeSection = TOP_LEVEL.includes(topLevelTab) ? topLevelTab : activeSubTab;
 
   const selectSection = (id) => {
     const params = new URLSearchParams(searchParams);
-    params.set("tab", id === "clubes" ? "clubes" : "goals");
+    params.set("tab", TOP_LEVEL.includes(id) ? id : "goals");
     params.delete("club");
     setSearchParams(params);
-    if (id !== "clubes") setActiveSubTab(id);
+    if (!TOP_LEVEL.includes(id)) setActiveSubTab(id);
   };
+
+  useEffect(() => {
+    activeSectionRef.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [activeSection]);
 
 
   return (
@@ -2714,7 +2737,11 @@ export function Community({ cars = [], settings, user }) {
         <div className="mx-auto w-full min-w-0 max-w-[620px]">
           {/* Uma barra só: seções à esquerda, ações à direita. */}
           <div className="mb-4 flex w-full items-center gap-2">
-            <div className="flex min-w-0 flex-1 rounded-full bg-[var(--engine-surface-2)] p-1">
+            {/* Com cinco seções os rótulos não cabem lado a lado num celular:
+                medido em 21/08/2026 davam 51px por aba e viravam "F.", "V.",
+                "R.". A tira rola na horizontal (o mesmo que YouTube e X fazem
+                quando passa de quatro) e no desktop volta a dividir igual. */}
+            <div className="engine-scroll-x flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-[var(--engine-surface-2)] p-1 sm:gap-0 sm:overflow-visible">
               {sections.map((section) => {
                 const Icon = section.icon;
                 const isActive = activeSection === section.id;
@@ -2722,15 +2749,19 @@ export function Community({ cars = [], settings, user }) {
                   <button
                     key={section.id}
                     type="button"
+                    /* Numa tira que rola, a aba ativa precisa se anunciar: caindo
+                       direto em ?tab=eventos ela nascia fora de vista à direita e
+                       a tela parecia estar no Feed. */
+                    ref={isActive ? activeSectionRef : undefined}
                     onClick={() => selectSection(section.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2.5 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs ${
+                    className={`flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:min-w-0 sm:flex-1 sm:shrink sm:px-2.5 sm:text-xs ${
                       isActive
                         ? "bg-[var(--engine-surface)] text-[var(--engine-accent)] shadow-[var(--engine-shadow-sm)]"
                         : "text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
                     }`}
                   >
                     <Icon size={15} className="shrink-0" />
-                    <span className="truncate">{section.label}</span>
+                    <span className="sm:truncate">{section.label}</span>
                   </button>
                 );
               })}
@@ -2743,7 +2774,7 @@ export function Community({ cars = [], settings, user }) {
                 title={t("community.search")}
                 aria-label={t("community.search")}
                 aria-expanded={searchOpen}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition ${
                   searchOpen || query
                     ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
                     : "border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
@@ -2759,7 +2790,7 @@ export function Community({ cars = [], settings, user }) {
                 onClick={() => setPeopleModalOpen(true)}
                 title={t("community.discoverPeople")}
                 aria-label={t("community.discoverPeople")}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
               >
                 <UserPlus size={18} />
               </button>
@@ -2790,7 +2821,7 @@ export function Community({ cars = [], settings, user }) {
                           type="button"
                           onClick={() => setQuery("")}
                           aria-label={t("community.clearSearch")}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+                          className="-m-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--engine-text-subtle)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)] sm:m-0 sm:h-8 sm:w-8"
                         >
                           <X size={15} />
                         </button>
@@ -2904,6 +2935,11 @@ export function Community({ cars = [], settings, user }) {
           {topLevelTab === "clubes" && (
             <ClubsTab searchParams={searchParams} setSearchParams={setSearchParams} />
           )}
+
+          {/* Eventos Tab — a mesma página de /events, sem o cabeçalho dela: aqui
+              quem anuncia onde você está é a barra de abas acima. A rota
+              /events continua existindo e é o que o menu do desktop usa. */}
+          {topLevelTab === "eventos" && <Events embedded />}
         </div>
 
         {/* Sidebar (only shown for Goals tab) */}

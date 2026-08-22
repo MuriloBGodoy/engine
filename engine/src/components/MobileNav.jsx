@@ -2,7 +2,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Car,
   BriefcaseBusiness,
-  Calendar,
   Home,
   LayoutDashboard,
   LogIn,
@@ -36,6 +35,18 @@ const getInitials = (name) => {
  * A barra de baixo leva as 5 áreas principais — com 6 itens os rótulos
  * ("Comunidade", "Configurações") não cabem num celular de 360px e viravam
  * texto cortado. Ajustes ficam no header, junto do avatar.
+ *
+ * Essa regra chegou a ser furada: Eventos entrou como sétima aba e o rótulo foi
+ * baixado para 7px para caber. Medido em 21/08/2026, dava 51px por aba num
+ * iPhone 14 (a diretriz da Apple pede que a aba não fique abaixo de 78pt) e um
+ * rótulo que ninguém lê. Voltamos a cinco:
+ *
+ *   - Mensagens virou ícone com contador aqui no header, que é onde Instagram
+ *     e X põem a caixa de entrada.
+ *   - Eventos virou a terceira aba de Comunidade, ao lado de Metas e Clubes.
+ *     A rota /events continua existindo e é o que o menu do desktop usa.
+ *
+ * Se um dia entrar uma área nova, ela tira outra da barra — não vira a sexta.
  */
 export function MobileNav({
   profileSettings = {},
@@ -67,14 +78,7 @@ export function MobileNav({
     { name: t("nav.dashboard"), path: "/dashboard", icon: LayoutDashboard },
     { name: t("nav.garage"), path: "/garagem", icon: Car },
     { name: t("nav.community"), path: "/community", icon: Users },
-    {
-      name: t("nav.messages"),
-      path: "/messages",
-      icon: MessageCircle,
-      badge: unreadMessages,
-    },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
-    { name: "Eventos", path: "/events", icon: Calendar },
   ];
 
   const isActivePath = (path) =>
@@ -85,7 +89,7 @@ export function MobileNav({
   return (
     <>
       <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/85 px-4 py-2.5 backdrop-blur-xl lg:hidden">
-        <Link to="/" aria-label="Engine">
+        <Link to="/" aria-label="Engine" className="flex h-11 items-center">
           <Logo markSize={36} collapsed />
         </Link>
 
@@ -103,21 +107,37 @@ export function MobileNav({
               <Link
                 to="/login"
                 title={t("nav.login")}
-                className="flex h-9 items-center gap-1.5 rounded-full bg-[var(--engine-accent)] px-3.5 text-[13px] font-semibold text-white transition active:scale-95"
+                className="flex h-11 items-center gap-1.5 rounded-full bg-[var(--engine-accent)] px-4 text-[13px] font-semibold text-white transition active:scale-95"
               >
                 <LogIn size={16} />
                 {t("nav.login")}
               </Link>
-              <GuestLoginHint placement="bottom-right" />
+              <GuestLoginHint placement="dock" />
             </div>
           ) : (
             <>
+              {/* Mensagens saiu da barra de baixo para caber cinco abas; aqui no
+                  header com contador é onde Instagram e X põem a caixa de
+                  entrada. O contador é o que faz o ícone valer o lugar. */}
+              <Link
+                to="/messages"
+                title={t("nav.messages")}
+                aria-label={t("nav.messages")}
+                className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:text-[var(--engine-accent)]"
+              >
+                <MessageCircle size={21} />
+                {unreadMessages > 0 && (
+                  <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--engine-accent)] px-1 text-[9px] font-black leading-none text-white">
+                    {unreadMessages > 9 ? "9+" : unreadMessages}
+                  </span>
+                )}
+              </Link>
               {/* O avatar é a porta de entrada de Perfil no mobile. */}
               <Link
                 to={username ? `/community/@${username.replace(/^@/, "")}` : "/community"}
                 title={t("settings.sections.profile")}
                 aria-label={t("settings.sections.profile")}
-                className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95`}
+                className={`ml-0.5 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--engine-accent)] text-xs font-bold text-white transition-transform active:scale-95`}
               >
                 {avatar ? (
                   <img
@@ -132,7 +152,7 @@ export function MobileNav({
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:text-[var(--engine-accent)]"
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:text-[var(--engine-accent)]"
                 title={t("nav.logout")}
                 aria-label={t("nav.logout")}
               >
@@ -143,8 +163,7 @@ export function MobileNav({
         </div>
       </header>
 
-      {/* 7 colunas para mobile (incluindo Eventos) */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-7 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-0.5 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
         {menuItems.map((item) => {
           const active = isActivePath(item.path);
           const Icon = item.icon;
@@ -153,14 +172,14 @@ export function MobileNav({
               key={item.path}
               to={item.path}
               aria-current={active ? "page" : undefined}
-              className={`flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-0.5 text-[7px] font-semibold tracking-tight transition-colors ${
+              className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[11px] font-semibold leading-tight tracking-tight transition-colors ${
                 active
                   ? "text-[var(--engine-accent)]"
                   : "text-[var(--engine-text-subtle)]"
               }`}
             >
               <span
-                className={`relative flex h-7 w-full max-w-12 items-center justify-center rounded-lg transition-colors ${
+                className={`relative flex h-7 w-full max-w-14 items-center justify-center rounded-lg transition-colors ${
                   active ? "bg-[var(--engine-accent-soft)]" : ""
                 }`}
               >

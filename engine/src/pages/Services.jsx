@@ -655,7 +655,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
             <button
               type="button"
               onClick={(event) => movePhoto(event, -1)}
-              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-[var(--engine-accent)] sm:left-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+              className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-[var(--engine-accent)] sm:left-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
               title={t("services.previousPhoto")}
             >
               <ChevronLeft size={18} />
@@ -663,7 +663,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
             <button
               type="button"
               onClick={(event) => movePhoto(event, 1)}
-              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-[var(--engine-accent)] sm:right-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+              className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-100 backdrop-blur transition hover:bg-[var(--engine-accent)] sm:right-3 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
               title={t("services.nextPhoto")}
             >
               <ChevronRight size={18} />
@@ -677,11 +677,19 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
                     stopAction(event);
                     setActivePhotoIndex(index);
                   }}
-                  className={`h-1.5 rounded-full transition ${
-                    index === activePhotoIndex ?"w-6 bg-white" :"w-1.5 bg-white/45"
-                  }`}
+                  /* O ponto continua com 6px de altura; quem cresce para 44px
+                     é a área de toque em volta dele (o `span` é o desenho, o
+                     `button` é o alvo). */
+                  className="-my-[19px] flex h-11 items-center justify-center px-0.5"
                   title={t("services.viewPhoto", { value: index + 1 })}
-                />
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`block h-1.5 rounded-full transition ${
+                      index === activePhotoIndex ? "w-6 bg-white" : "w-1.5 bg-white/45"
+                    }`}
+                  />
+                </button>
               ))}
             </div>
           </>
@@ -787,7 +795,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               rel="noreferrer"
               aria-disabled={!phone}
               aria-label={t("services.whatsapp")}
-              className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
+              className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
                 phone
                   ?"bg-emerald-600 text-white hover:bg-emerald-700"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
@@ -802,7 +810,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               onClick={stopAction}
               aria-disabled={!listing.email}
               aria-label={t("services.sendEmail")}
-              className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
+              className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
                 listing.email
                   ?"bg-[var(--engine-accent)] text-white hover:brightness-95"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
@@ -819,7 +827,7 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
               rel="noreferrer"
               aria-disabled={!showMap}
               aria-label={t("services.viewRoute")}
-              className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
+              className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg text-xs font-black transition sm:h-9 ${
                 showMap
                   ?"border border-[var(--engine-border)] text-[var(--engine-text-muted)] hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
                   :"pointer-events-none bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)]"
@@ -2592,7 +2600,7 @@ export function Services({ user, settings }) {
             type="button"
             onClick={() => setFiltersOpen((open) => !open)}
             aria-expanded={filtersOpen}
-            className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-bold text-[var(--engine-text)] transition-colors hover:text-[var(--engine-accent)]"
+            className="-mx-1 flex min-h-11 items-center gap-2 rounded-lg px-1 py-1 text-sm font-bold text-[var(--engine-text)] transition-colors hover:text-[var(--engine-accent)] sm:min-h-0"
           >
             <SlidersHorizontal size={18} className="text-[var(--engine-accent)]" />
             {t("services.filtersTitle")}
@@ -2612,7 +2620,7 @@ export function Services({ user, settings }) {
             <button
               type="button"
               onClick={clearFilters}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+              className="flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)] sm:min-h-0"
             >
               <RotateCcw size={14} />
               {t("services.clearFilters")}

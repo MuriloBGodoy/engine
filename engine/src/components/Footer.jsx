@@ -58,7 +58,7 @@ const SOCIAL = [
 function FooterLink({ href, children }) {
   const isInternal = href.startsWith("/");
   const className =
-    "text-[13px] font-medium text-[var(--engine-text-muted)] transition-colors hover:text-[var(--engine-accent)]";
+    "inline-flex min-h-11 items-center text-[13px] font-medium text-[var(--engine-text-muted)] transition-colors hover:text-[var(--engine-accent)] lg:min-h-0";
   if (isInternal) {
     return (
       <Link to={href} className={className}>
@@ -146,7 +146,7 @@ export function Footer() {
                   rel="noreferrer"
                   aria-label={label}
                   title={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--engine-border)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--engine-border)] text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)] sm:h-9 sm:w-9"
                 >
                   <Icon size={16} />
                 </a>

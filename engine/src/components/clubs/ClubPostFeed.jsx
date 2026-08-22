@@ -6,7 +6,7 @@ import { useToast } from "../ToastProvider";
 import { auth } from "../../services/firebase";
 
 export function ClubPostFeed({ clubId }) {
-  const { showToast } = useToast();
+  const showToast = useToast();
   const { posts, loading, error, hasMore, fetch } = useClubPosts(clubId);
   const [allPosts, setAllPosts] = useState([]);
   const [offset, setOffset] = useState(0);

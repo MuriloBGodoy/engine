@@ -1,16 +1,34 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
 /**
- * Dica contextual para visitantes — um balão discreto ancorado no botão
- * "Entrar" que explica o que se ganha ao entrar. Como o Engine agora é aberto
- * (dá pra explorar sem conta), esse empurrãozinho convida a criar conta sem
- * bloquear ninguém. Some ao ser fechado e não volta (lembrado no localStorage).
+ * Dica contextual para visitantes — explica o que se ganha ao entrar. Como o
+ * Engine agora é aberto (dá pra explorar sem conta), esse empurrãozinho convida
+ * a criar conta sem bloquear ninguém. Some ao ser fechado e não volta (lembrado
+ * no localStorage).
  *
- * Deve ser renderizado dentro de um container `relative`. `placement` orienta
- * o balão e a setinha em relação ao botão-âncora.
+ * Duas formas, porque no celular a mesma peça não serve:
+ *
+ * - `top` / `bottom-right`: balão ancorado no botão "Entrar". Precisa estar
+ *   dentro de um container `relative`. Só no desktop, onde sobra espaço ao lado
+ *   do botão e o balão não cobre nada.
+ *
+ * - `dock`: barra presa acima da navegação inferior, desenhada num portal no
+ *   `body`. O portal não é enfeite: o header do mobile usa `backdrop-blur`, e
+ *   `backdrop-filter` cria bloco de contenção — um filho `position: fixed` passa
+ *   a se posicionar pelo header em vez da tela. Medido em 21/08/2026: a barra
+ *   ia parar em `top: -62px`, fora de vista. Se um dia ela voltar pra dentro do
+ *   header sem o portal, some de novo.
+ *
+ *   No celular o balão de 240px
+ *   pendurado no header cobria o título de todas as páginas públicas (medido em
+ *   21/08/2026: tapava o H1 de Início, Serviços e Eventos, e como o header é
+ *   `sticky` ele descia junto com a rolagem cobrindo o feed inteiro). Barra no
+ *   rodapé é o padrão de convite a visitante em Reddit, X e Pinterest: fica na
+ *   zona do polegar e não disputa espaço com o conteúdo.
  */
 const STORAGE_KEY = "engine_guest_hint_dismissed";
 
@@ -36,6 +54,44 @@ export function GuestLoginHint({ placement = "top" }) {
   };
 
   if (!visible) return null;
+
+  if (placement === "dock") {
+    if (typeof document === "undefined") return null;
+    return createPortal(
+      <div
+        role="dialog"
+        aria-label={t("guest.hint.title")}
+        /* `bottom` acompanha a altura da barra inferior (~3.25rem) mais a área
+           segura do aparelho, para a dica pousar logo acima dela. */
+        className="engine-rise fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-2 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] py-2 pl-3.5 pr-2 shadow-[var(--engine-shadow-md)] lg:hidden"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-bold leading-tight text-[var(--engine-text)]">
+            {t("guest.hint.title")}
+          </p>
+          <p className="mt-0.5 line-clamp-1 text-[12px] leading-tight text-[var(--engine-text-muted)]">
+            {t("guest.hint.desc")}
+          </p>
+        </div>
+        <Link
+          to="/register"
+          onClick={dismiss}
+          className="flex h-11 shrink-0 items-center rounded-full bg-[var(--engine-accent)] px-3.5 text-[13px] font-bold text-white transition active:scale-95"
+        >
+          {t("guest.hint.cta")}
+        </Link>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label={t("guest.hint.close")}
+          className="flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:bg-[var(--engine-surface-2)]"
+        >
+          <X size={16} />
+        </button>
+      </div>,
+      document.body,
+    );
+  }
 
   const isTop = placement === "top";
   const boxPosition = isTop

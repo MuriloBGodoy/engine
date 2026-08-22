@@ -356,6 +356,7 @@ const resources = {
         community: "Comunidade",
         messages: "Mensagens",
         services: "Serviços",
+        events: "Eventos",
         settings: "Configurações",
         logout: "Sair",
         collapse: "Recolher menu",
@@ -862,7 +863,7 @@ const resources = {
         title: "A garagem agora também é uma rede.",
         subtitle:
           "Veja metas de amigos, acompanhe progresso, curta, comente, avalie e compartilhe sem expor valores privados.",
-        tabs: { feed: "Feed", videos: "Vídeos", ranking: "Ranking", clubs: "Clubes" },
+        tabs: { feed: "Feed", videos: "Vídeos", ranking: "Ranking", clubs: "Clubes", events: "Eventos" },
         discoverPeople: "Descobrir pessoas",
         clearSearch: "Limpar busca",
         stats: {
@@ -1459,6 +1460,7 @@ const resources = {
         community: "Community",
         messages: "Messages",
         services: "Services",
+        events: "Events",
         settings: "Settings",
         logout: "Log out",
         collapse: "Collapse menu",
@@ -1956,7 +1958,7 @@ const resources = {
         title: "The garage is a network now.",
         subtitle:
           "See friends' goals, follow progress, like, comment, rate, and share without exposing private amounts.",
-        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking", clubs: "Clubs" },
+        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking", clubs: "Clubs", events: "Events" },
         discoverPeople: "Discover people",
         clearSearch: "Clear search",
         stats: {
@@ -2551,6 +2553,7 @@ const resources = {
         community: "Comunidad",
         messages: "Mensajes",
         services: "Servicios",
+        events: "Eventos",
         settings: "Configuración",
         logout: "Salir",
         collapse: "Contraer menú",
@@ -3049,7 +3052,7 @@ const resources = {
         title: "El garaje ahora también es una red.",
         subtitle:
           "Mira metas de amigos, sigue el progreso, da like, comenta, evalúa y comparte sin exponer valores privados.",
-        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking", clubs: "Clubes" },
+        tabs: { feed: "Feed", videos: "Videos", ranking: "Ranking", clubs: "Clubes", events: "Eventos" },
         discoverPeople: "Descubrir personas",
         clearSearch: "Limpiar búsqueda",
         stats: {

@@ -75,7 +75,7 @@ export function ToastProvider({ children }) {
                 type="button"
                 onClick={() => dismiss(item.id)}
                 aria-label="Fechar"
-                className="shrink-0 rounded-md p-1.5 text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+                className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)] sm:m-0 sm:h-auto sm:w-auto sm:p-1.5"
               >
                 <X size={15} />
               </button>

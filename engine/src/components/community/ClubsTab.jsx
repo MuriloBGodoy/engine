@@ -8,7 +8,7 @@ import { ClubDiscoveryTab } from "../clubs/ClubDiscoveryTab";
 import { ClubDetailModal } from "../clubs/ClubDetailModal";
 
 export function ClubsTab({ searchParams, setSearchParams }) {
-  const { showToast } = useToast();
+  const showToast = useToast();
   const { clubs, loading, error, fetch } = useMyClubs();
   const { create: createClub, loading: creatingClub } = useCreateClub();
 

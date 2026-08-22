@@ -12,7 +12,7 @@ import { ClubMemberList } from "./ClubMemberList";
 import { CreatePostModal } from "./CreatePostModal";
 
 export function ClubDetailModal({ clubId, onClose }) {
-  const { showToast } = useToast();
+  const showToast = useToast();
 
   const { club, loading, error, isMember, fetch: fetchClub } = useClubDetail(clubId);
   const { create: createPost, loading: creatingPost } = useCreatePost(clubId);

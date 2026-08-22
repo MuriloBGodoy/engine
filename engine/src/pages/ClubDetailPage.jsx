@@ -16,7 +16,7 @@ import { CreatePostModal } from "../components/clubs/CreatePostModal";
 export function ClubDetailPage() {
   const { clubId } = useParams();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const showToast = useToast();
 
   const { club, loading, error, isMember, fetch: fetchClub } = useClubDetail(clubId);
   const { create: createPost, loading: creatingPost } = useCreatePost(clubId);

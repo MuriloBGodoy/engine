@@ -7,7 +7,7 @@ import { ClubCreateModal } from "../components/clubs/ClubCreateModal";
 import { ClubDiscoveryTab } from "../components/clubs/ClubDiscoveryTab";
 
 export function ClubsPage() {
-  const { showToast } = useToast();
+  const showToast = useToast();
   const { clubs, loading, error, fetch } = useMyClubs();
   const { create: createClub, loading: creatingClub } = useCreateClub();
 

@@ -19,7 +19,7 @@ const SORT_OPTIONS = [
 ];
 
 export function ClubDiscoveryTab({ onSelectClub = null }) {
-  const { showToast } = useToast();
+  const showToast = useToast();
   const { clubs, loading, error, fetch } = useDiscoverClubs();
 
   const [search, setSearch] = useState("");

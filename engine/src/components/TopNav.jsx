@@ -71,7 +71,7 @@ export function TopNav({
       badge: unreadMessages,
     },
     { name: t("nav.services"), path: "/services", icon: BriefcaseBusiness },
-    { name: "Eventos", path: "/events", icon: Calendar },
+    { name: t("nav.events"), path: "/events", icon: Calendar },
     { name: t("nav.settings"), path: "/settings", icon: Settings },
   ];
 

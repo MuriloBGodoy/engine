@@ -27,7 +27,7 @@ const labelClass =
 export function EventDetails() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const showToast = useToast();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);

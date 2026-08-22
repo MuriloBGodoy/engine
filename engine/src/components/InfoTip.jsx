@@ -27,7 +27,7 @@ export function InfoTip({ text, align = "left" }) {
         }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="flex items-center text-[var(--engine-text-subtle)] transition-colors hover:text-[var(--engine-accent)] focus-visible:text-[var(--engine-accent)]"
+        className="-m-4 flex h-11 w-11 items-center justify-center text-[var(--engine-text-subtle)] transition-colors hover:text-[var(--engine-accent)] focus-visible:text-[var(--engine-accent)] lg:m-0 lg:h-auto lg:w-auto"
       >
         <HelpCircle size={13} />
       </button>

@@ -28,9 +28,15 @@ const EVENT_TYPES = [
 ];
 
 
-export function Events() {
+/**
+ * `embedded` — a mesma tela servida como aba de Comunidade (?tab=eventos). Lá a
+ * barra de abas já diz onde a pessoa está, então o título e o subtítulo daqui
+ * seriam eco; sobra só o botão de criar. A rota /events segue usando a forma
+ * completa.
+ */
+export function Events({ embedded = false }) {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const showToast = useToast();
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,19 +75,25 @@ export function Events() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className={embedded ? "space-y-5" : "space-y-8"}>
       {/* Header */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-[var(--engine-text)]">Eventos</h1>
-            <p className="text-[var(--engine-text-muted)] mt-2">
-              Encontre e participe de eventos automotivos
-            </p>
-          </div>
+          {!embedded && (
+            <div>
+              <h1 className="text-3xl font-bold text-[var(--engine-text)] sm:text-4xl">
+                Eventos
+              </h1>
+              <p className="text-[var(--engine-text-muted)] mt-2">
+                Encontre e participe de eventos automotivos
+              </p>
+            </div>
+          )}
           <button
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-[var(--engine-accent)] text-white rounded-xl font-semibold hover:opacity-90 transition whitespace-nowrap"
+            className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-6 py-3 font-semibold text-white transition hover:opacity-90 ${
+              embedded ? "w-full sm:w-auto" : "whitespace-nowrap"
+            }`}
           >
             <Plus size={20} />
             Criar Evento

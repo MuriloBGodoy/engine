@@ -11,6 +11,7 @@
     "fetch:consumption": "node scripts/fetch-inmetro-consumption.mjs --report",
     "fetch:fipe-sample": "node scripts/fetch-fipe-sample.mjs",
     "check:fipe-parser": "node scripts/check-fipe-parser.mjs",
+    "check:mobile": "node scripts/check-mobile-contract.mjs",
     "icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {

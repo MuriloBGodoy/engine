@@ -105,7 +105,7 @@ const EVENT_TYPES = [
 
 export function CreateEventForm({ onSuccess, onCancel }) {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const showToast = useToast();
 
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);

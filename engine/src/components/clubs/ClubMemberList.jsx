@@ -4,7 +4,7 @@ import { useClubMembers } from "../../services/clubs";
 import { useToast } from "../ToastProvider";
 
 export function ClubMemberList({ clubId }) {
-  const { showToast } = useToast();
+  const showToast = useToast();
   const { members, loading, error, hasMore, fetch } = useClubMembers(clubId);
   const [allMembers, setAllMembers] = useState([]);
   const [offset, setOffset] = useState(0);
