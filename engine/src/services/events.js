@@ -1,20 +1,60 @@
 import {
   addDoc,
-  arrayUnion,
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
 import { auth, firestore } from "./firebase";
 
 const EVENTS_COLLECTION = "events";
+
+/**
+ * Quem vai ao evento mora numa SUBCOLEÇÃO, um documento por pessoa, com o uid
+ * como id: `events/{eventId}/participants/{uid}`.
+ *
+ * Antes era um array `participants` no próprio documento do evento. O problema
+ * não era o array: era que confirmar presença é escrita no documento de OUTRA
+ * pessoa. Como `cancelRsvp` reescrevia o array inteiro, nenhuma regra
+ * conseguia provar QUEM tinha entrado ou saído — o melhor que dava para fazer
+ * era limitar a mudança a um item por escrita, e um usuário logado ainda podia
+ * apagar a presença de outro.
+ *
+ * Com um documento por pessoa a regra fica trivial e forte: você só escreve no
+ * doc cujo id é o seu uid. Não existe mais escrita de terceiro.
+ *
+ * O contador também saiu do documento do evento. Contador desnormalizado
+ * precisava ser escrito por quem confirma — de novo, escrita no doc alheio — e
+ * ainda podia sair de sincronia com a lista. Agora o número vem de
+ * `getCountFromServer` na subcoleção: uma agregação, sem leitura de documento,
+ * e sempre igual à verdade.
+ */
+const PARTICIPANTS_SUBCOLLECTION = "participants";
+
+const participantsRef = (eventId) =>
+  collection(firestore, EVENTS_COLLECTION, eventId, PARTICIPANTS_SUBCOLLECTION);
+
+const participantRef = (eventId, uid) =>
+  doc(firestore, EVENTS_COLLECTION, eventId, PARTICIPANTS_SUBCOLLECTION, uid);
+
+/** Conta quem confirmou, direto da subcoleção. */
+const contarParticipantes = async (eventId) => {
+  try {
+    const snapshot = await getCountFromServer(participantsRef(eventId));
+    return snapshot.data().count;
+  } catch {
+    // Contagem é enfeite: se falhar, a tela mostra zero em vez de quebrar.
+    return 0;
+  }
+};
 
 const normalizeEvent = (event) => ({
   title: String(event.title || "").trim().slice(0, 120),
@@ -42,7 +82,6 @@ const normalizeEvent = (event) => ({
   createdBy: String(event.createdBy || ""),
   createdAt: event.createdAt || serverTimestamp(),
   updatedAt: event.updatedAt || serverTimestamp(),
-  participantCount: Number(event.participantCount) || 0,
 });
 
 export const engineEvents = {
@@ -91,10 +130,15 @@ export const engineEvents = {
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.slice(0, resultLimit).map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    const eventos = snapshot.docs.slice(0, resultLimit).map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
     }));
+
+    // O contador nao mora mais no documento; vem da subcolecao. Uma agregacao
+    // por evento, em paralelo — nao le documento nenhum, so conta.
+    const contagens = await Promise.all(eventos.map((e) => contarParticipantes(e.id)));
+    return eventos.map((evento, i) => ({ ...evento, participantCount: contagens[i] }));
   },
 
   async updateEvent(eventId, updates) {
@@ -127,8 +171,9 @@ export const engineEvents = {
   async rsvpEvent(eventId, carDetails = {}) {
     if (!auth.currentUser) throw new Error("Usuário não autenticado.");
 
+    const uid = auth.currentUser.uid;
     const participantData = {
-      uid: auth.currentUser.uid,
+      uid,
       displayName: auth.currentUser.displayName || "Anônimo",
       carDetails: {
         brand: String(carDetails.brand || "").trim(),
@@ -138,66 +183,55 @@ export const engineEvents = {
       rsvpDate: serverTimestamp(),
     };
 
-    const eventRef = doc(firestore, EVENTS_COLLECTION, eventId);
-    const eventSnap = await getDoc(eventRef);
-
+    const eventSnap = await getDoc(doc(firestore, EVENTS_COLLECTION, eventId));
     if (!eventSnap.exists()) throw new Error("Evento não encontrado.");
 
-    const eventData = eventSnap.data();
-    const participants = eventData.participants || [];
-    const alreadyRsvped = participants.some((p) => p.uid === auth.currentUser.uid);
-
-    if (alreadyRsvped) {
+    const meuDoc = await getDoc(participantRef(eventId, uid));
+    if (meuDoc.exists()) {
       throw new Error("Você já confirmou presença neste evento.");
     }
 
-    if (eventData.maxParticipants > 0 && participants.length >= eventData.maxParticipants) {
+    // O limite de vagas continua sendo checado aqui, no cliente, como já era.
+    // Regra do Firestore não consegue contar uma subcoleção, então duas pessoas
+    // confirmando no mesmo instante ainda podem estourar o teto por um. Quem
+    // precisar de teto duro precisa de Cloud Function.
+    const maxParticipants = eventSnap.data().maxParticipants || 0;
+    if (maxParticipants > 0 && (await contarParticipantes(eventId)) >= maxParticipants) {
       throw new Error("Evento lotado. Desculpe!");
     }
 
-    await updateDoc(eventRef, {
-      participants: arrayUnion(participantData),
-      participantCount: (eventData.participantCount || 0) + 1,
-      updatedAt: serverTimestamp(),
-    });
-
+    await setDoc(participantRef(eventId, uid), participantData);
     return participantData;
   },
 
   async cancelRsvp(eventId) {
     if (!auth.currentUser) throw new Error("Usuário não autenticado.");
 
-    const eventRef = doc(firestore, EVENTS_COLLECTION, eventId);
-    const eventSnap = await getDoc(eventRef);
-
-    if (!eventSnap.exists()) throw new Error("Evento não encontrado.");
-
-    const eventData = eventSnap.data();
-    const participants = eventData.participants || [];
-    const filtered = participants.filter((p) => p.uid !== auth.currentUser.uid);
-
-    if (filtered.length === participants.length) {
+    const uid = auth.currentUser.uid;
+    const meuDoc = await getDoc(participantRef(eventId, uid));
+    if (!meuDoc.exists()) {
       throw new Error("Você não confirmou presença neste evento.");
     }
 
-    await updateDoc(eventRef, {
-      participants: filtered,
-      participantCount: Math.max((eventData.participantCount || 0) - 1, 0),
-      updatedAt: serverTimestamp(),
-    });
+    await deleteDoc(participantRef(eventId, uid));
   },
 
   async getEventParticipants(eventId) {
-    const event = await this.getEventById(eventId);
-    return event.participants || [];
+    const snapshot = await getDocs(participantsRef(eventId));
+    return snapshot.docs.map((d) => ({ uid: d.id, ...d.data() }));
+  },
+
+  /** Quantos confirmaram. Vem da subcoleção, então não sai de sincronia. */
+  async countParticipants(eventId) {
+    return contarParticipantes(eventId);
   },
 
   async isUserRsvped(eventId) {
     if (!auth.currentUser) return false;
 
     try {
-      const event = await this.getEventById(eventId);
-      return (event.participants || []).some((p) => p.uid === auth.currentUser.uid);
+      const meuDoc = await getDoc(participantRef(eventId, auth.currentUser.uid));
+      return meuDoc.exists();
     } catch {
       return false;
     }

@@ -52,8 +52,11 @@ export function EventDetails() {
 
   const loadEvent = async () => {
     try {
-      const data = await engineEvents.getEventById(eventId);
-      setEvent(data);
+      const [data, participantCount] = await Promise.all([
+        engineEvents.getEventById(eventId),
+        engineEvents.countParticipants(eventId),
+      ]);
+      setEvent({ ...data, participantCount });
 
       if (auth.currentUser) {
         const rsvped = await engineEvents.isUserRsvped(eventId);

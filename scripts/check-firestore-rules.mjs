@@ -16,16 +16,18 @@
  * encontrado", que soa como ausência e não como proibição. Regra de segurança
  * que falha calada é exatamente o que precisa de teste.
  *
- * As asserções foram mutadas em 22/08/2026 (barrar o visitante, tirar os pisos
- * do RSVP, deixar o RSVP mexer no título, liberar delete pra qualquer logado) —
- * todas ficaram vermelhas.
+ * Presença virou subcoleção em 22/08/2026. Antes era um array no documento do
+ * evento, e confirmar presença era escrita no documento de OUTRA pessoa: como o
+ * cancelamento reescrevia o array inteiro, nenhuma regra conseguia provar QUEM
+ * tinha saído, e um usuário logado podia apagar a presença alheia. Os dois
+ * testes marcados "o motivo da mudança" são exatamente esse caso.
  *
  * Duas armadilhas encontradas ao mutar, para quem for mexer aqui:
- *   - `allow read: if true;` aparece 3x no arquivo de regras; âncora de mutação
- *     precisa ser única, senão você muta o publicProfiles e conclui que o teste
- *     é fraco.
- *   - os dois pisos do RSVP (tamanho da lista e contador) se cobrem: tirar só
- *     um não muda comportamento nenhum e a mutação passa verde à toa.
+ *   - `allow read: if true;` aparece várias vezes no arquivo de regras; âncora
+ *     de mutação precisa ser única, senão você muta o publicProfiles e conclui
+ *     que o teste é fraco.
+ *   - no modelo antigo os dois pisos do RSVP se cobriam: tirar só um não mudava
+ *     comportamento nenhum e a mutação passava verde à toa.
  */
 import {
   initializeTestEnvironment,
@@ -52,15 +54,14 @@ const visitante = env.unauthenticatedContext().firestore();
 const dono = env.authenticatedContext("dono").firestore();
 const outro = env.authenticatedContext("outro").firestore();
 
-const semear = (id, data) =>
-  env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "events", id), data));
+const semear = (caminho, data) =>
+  env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), caminho), data));
 
 const base = (extra = {}) => ({
   title: "Encontro",
   type: "casual",
   eventDate: "2026-09-01",
   createdBy: "dono",
-  participantCount: 0,
   ...extra,
 });
 
@@ -77,9 +78,9 @@ const t = async (nome, fn) => {
   }
 };
 
-console.log("\nregras de /events\n");
+console.log("\nevento\n");
 
-await semear("e1", base());
+await semear("events/e1", base());
 await t("visitante LÊ um evento (era isso que estava quebrado)", () =>
   assertSucceeds(getDoc(doc(visitante, "events/e1"))));
 await t("visitante LISTA eventos", () =>
@@ -92,63 +93,52 @@ await t("logado NÃO cria se passar por outro", () =>
   assertFails(setDoc(doc(outro, "events/e3"), base({ createdBy: "dono" }))));
 await t("dono edita o próprio evento", () =>
   assertSucceeds(updateDoc(doc(dono, "events/e1"), { title: "Novo título" })));
-await t("estranho NÃO edita título alheio", () =>
+await t("estranho NÃO edita evento alheio", () =>
   assertFails(updateDoc(doc(outro, "events/e1"), { title: "Invadido" })));
 await t("estranho NÃO se promove a dono", () =>
   assertFails(updateDoc(doc(outro, "events/e1"), { createdBy: "outro" })));
-
-await semear("e4", base({ participants: [], participantCount: 0 }));
-await t("estranho CONFIRMA presença (RSVP entra)", () =>
-  assertSucceeds(updateDoc(doc(outro, "events/e4"), {
-    participants: [{ uid: "outro" }],
-    participantCount: 1,
-  })));
-
-await semear("e5", base({
-  participants: [{ uid: "a" }, { uid: "b" }, { uid: "c" }],
-  participantCount: 3,
-}));
-await t("estranho CANCELA a própria presença (lista -1)", () =>
-  assertSucceeds(updateDoc(doc(outro, "events/e5"), {
-    participants: [{ uid: "a" }, { uid: "b" }],
-    participantCount: 2,
-  })));
-await t("estranho NÃO apaga a lista inteira", () =>
-  assertFails(updateDoc(doc(outro, "events/e5"), { participants: [], participantCount: 0 })));
-await t("estranho NÃO infla o contador", () =>
-  assertFails(updateDoc(doc(outro, "events/e5"), {
-    participants: [{ uid: "a" }, { uid: "b" }, { uid: "c" }],
-    participantCount: 999,
-  })));
-await t("visitante deslogado NÃO faz RSVP", () =>
-  assertFails(updateDoc(doc(visitante, "events/e5"), {
-    participants: [{ uid: "a" }, { uid: "b" }, { uid: "c" }, { uid: "z" }],
-    participantCount: 4,
-  })));
 await t("estranho NÃO apaga evento alheio", () =>
-  assertFails(deleteDoc(doc(outro, "events/e5"))));
-await t("dono apaga o próprio evento", () =>
-  assertSucceeds(deleteDoc(doc(dono, "events/e5"))));
+  assertFails(deleteDoc(doc(outro, "events/e1"))));
 
-// `normalizeEvent` NÃO grava `participants`, então o evento nasce sem o campo.
-// Semear com `participants: []` esconderia justamente o caso real do primeiro
-// RSVP — foi um buraco no primeiro teste que escrevi.
-console.log("\nforma real de produção: evento sem o campo `participants`\n");
-await semear("prod1", {
-  title: "Encontro",
-  type: "casual",
-  eventDate: "2026-09-01",
-  createdBy: "dono",
-  participantCount: 0,
-  maxParticipants: 0,
-});
-await t("primeiro RSVP num evento que nasceu sem `participants`", () =>
-  assertSucceeds(updateDoc(doc(outro, "events/prod1"), {
-    participants: [{ uid: "outro" }],
-    participantCount: 1,
+console.log("\npresença (subcoleção: um documento por pessoa)\n");
+
+await semear("events/e4", base());
+await t("visitante LÊ quem vai (a lista é pública, como o evento)", () =>
+  assertSucceeds(getDocs(collection(visitante, "events/e4/participants"))));
+await t("visitante deslogado NÃO confirma presença", () =>
+  assertFails(setDoc(doc(visitante, "events/e4/participants/outro"), { uid: "outro" })));
+await t("logado confirma a PRÓPRIA presença", () =>
+  assertSucceeds(setDoc(doc(outro, "events/e4/participants/outro"), {
+    uid: "outro",
+    displayName: "Outro",
   })));
-await t("estranho ainda NÃO edita título nesse mesmo evento", () =>
-  assertFails(updateDoc(doc(outro, "events/prod1"), { title: "Invadido" })));
+await t("logado atualiza o próprio doc (trocar o carro)", () =>
+  assertSucceeds(updateDoc(doc(outro, "events/e4/participants/outro"), {
+    carDetails: { brand: "BMW", model: "M4", year: "2023" },
+  })));
+await t("logado cancela a PRÓPRIA presença", () =>
+  assertSucceeds(deleteDoc(doc(outro, "events/e4/participants/outro"))));
+
+// O motivo de a subcoleção existir: no modelo de array, estas duas escritas
+// eram possíveis, porque a regra não conseguia ver quem tinha saído.
+await semear("events/e4/participants/terceiro", { uid: "terceiro", displayName: "Terceiro" });
+await t("o motivo da mudança: estranho NÃO apaga a presença de OUTRA pessoa", () =>
+  assertFails(deleteDoc(doc(outro, "events/e4/participants/terceiro"))));
+await t("o motivo da mudança: estranho NÃO altera a presença de OUTRA pessoa", () =>
+  assertFails(updateDoc(doc(outro, "events/e4/participants/terceiro"), {
+    displayName: "Sequestrado",
+  })));
+await t("estranho NÃO confirma presença no nome de outro", () =>
+  assertFails(setDoc(doc(outro, "events/e4/participants/alguem"), { uid: "alguem" })));
+await t("uid do corpo tem que bater com o id do documento", () =>
+  assertFails(setDoc(doc(outro, "events/e4/participants/outro"), { uid: "terceiro" })));
+await t("nem o dono do evento mexe na presença alheia", () =>
+  assertFails(deleteDoc(doc(dono, "events/e4/participants/terceiro"))));
+
+// Contador: saiu do documento do evento de propósito. Se voltar, volta junto o
+// buraco de escrita alheia — este teste existe para o caso de alguém tentar.
+await t("estranho NÃO escreve contador no documento do evento", () =>
+  assertFails(updateDoc(doc(outro, "events/e4"), { participantCount: 99 })));
 
 await env.cleanup();
 console.log(`\n${pass} passaram, ${fail} falharam\n`);
