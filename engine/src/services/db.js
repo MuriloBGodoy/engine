@@ -8,6 +8,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getCountFromServer,
   getDocs,
   increment,
   limit,
@@ -1819,6 +1820,47 @@ export const engineDB = {
     });
   },
 
+  /**
+   * Quantas curtidas UM post tem, contadas na subcoleção.
+   *
+   * Diferente de `likesCount`, que fica no documento do post e é mantido por
+   * quem curte: aquele é número de vitrine, e a regra só consegue prender o
+   * passo em 1 pra cima ou 1 pra baixo. Este aqui conta a fonte, e ninguém
+   * escreve no documento de curtida alheio. Marco de conquista se decide por
+   * este, nunca pelo outro.
+   */
+  async countPostLikes(goalId) {
+    if (!goalId) return 0;
+    try {
+      const alvo = collection(firestore, COMMUNITY_COLLECTION, goalId, LIKES_SUBCOLLECTION);
+      return (await getCountFromServer(alvo)).data().count;
+    } catch (error) {
+      warnFirestoreFallback("countPostLikes", error);
+      return 0;
+    }
+  },
+
+  /**
+   * Total de curtidas que a pessoa recebeu somando todos os posts dela.
+   *
+   * Uma consulta de grupo em vez de abrir post por post — é o número que os
+   * degraus de 1k a 1M olham. Também não dá pra forjar: `postOwnerId` é
+   * conferido contra o dono real do post na regra de escrita.
+   */
+  async countLikesReceived(userId) {
+    if (!userId) return 0;
+    try {
+      const alvo = query(
+        collectionGroup(firestore, LIKES_SUBCOLLECTION),
+        where("postOwnerId", "==", userId),
+      );
+      return (await getCountFromServer(alvo)).data().count;
+    } catch (error) {
+      warnFirestoreFallback("countLikesReceived", error);
+      return 0;
+    }
+  },
+
   async getPublicProfile(userId) {
     if (!userId) return null;
 
@@ -1830,7 +1872,9 @@ export const engineDB = {
       await Promise.all([
         getDoc(publicProfileDoc(userId)),
         getDocs(query(collection(firestore, COMMUNITY_COLLECTION), where("ownerId", "==", userId))),
-        getDocs(followersCollection(userId)).catch(() => ({ size: 0 })),
+        // Agregação em vez de baixar todo seguidor só para tirar o `.size`:
+        // com mil seguidores isso eram mil leituras para mostrar um número.
+        getCountFromServer(followersCollection(userId)).catch(() => null),
         currentUserId && currentUserId !== userId
           ? getDoc(followerDoc(userId, currentUserId)).catch(() => null)
           : Promise.resolve(null),
@@ -1872,7 +1916,7 @@ export const engineDB = {
         0,
       ),
       averageProgress: goals.length ? totalProgress / goals.length : 0,
-      followersCount: followersSnapshot?.size || 0,
+      followersCount: followersSnapshot?.data?.().count || 0,
       isFollowedByMe: Boolean(myFollowSnapshot?.exists?.()),
     };
   },
