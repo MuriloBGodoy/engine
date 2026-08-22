@@ -216,7 +216,7 @@ function parseEngine(raw) {
   const text = clean(raw).toUpperCase();
   const match = text.match(/(\d)[.,](\d)/);
   const turbo =
-    /\d[.,]\d\s*(T|TB|TURBO)/.test(text) || /\s(T|TB|TURBO)/.test(text.replace(/[-/]/g, " "));
+    /\d[.,]\d\s*(T|TB|TURBO)\b/.test(text) || /\s(T|TB|TURBO)\b/.test(text.replace(/[-/]/g, " "));
   if (!match) return { displacement: null, turbo };
   return { displacement: Number(`${match[1]}.${match[2]}`), turbo };
 }
