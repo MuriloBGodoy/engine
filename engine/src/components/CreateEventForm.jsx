@@ -5,6 +5,7 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "../services/firebase";
 import { auth } from "../services/firebase";
 import { useToast } from "./ToastProvider";
+import { eventTypeOptions } from "../services/eventTypes";
 import { engineEvents } from "../services/events";
 import { countries, getStates, getCities } from "../services/locations";
 
@@ -69,10 +70,11 @@ function getInitials(name = "U") {
 }
 
 function MapPreview({ event, compact = false }) {
+  const { t } = useTranslation();
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]">
       <iframe
-        title={`Mapa de ${event.city}`}
+        title={t("events.form.mapOf", { city: event.city })}
         src={getMapUrl(event)}
         loading="lazy"
         className={`${compact ? "h-44" : "h-64"} w-full border-0`}
@@ -84,24 +86,13 @@ function MapPreview({ event, compact = false }) {
         className="flex items-center justify-center gap-2 border-t border-[var(--engine-border)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--engine-accent)] transition hover:bg-[var(--engine-accent)] hover:text-white"
       >
         <ExternalLink size={15} />
-        Abrir no Google Maps
+        {t("events.form.openInMaps")}
       </a>
     </div>
   );
 }
 
-const EVENT_TYPES = [
-  { value: "casual", label: "Casual" },
-  { value: "cars-and-coffee", label: "Cars & Coffee" },
-  { value: "cruise", label: "Cruise" },
-  { value: "concours", label: "Concurso" },
-  { value: "drift", label: "Drift" },
-  { value: "track-day", label: "Track Day" },
-  { value: "auto-meet", label: "Auto Meet" },
-  { value: "autocross", label: "Autocross" },
-  { value: "drag-racing", label: "Drag Racing" },
-  { value: "rallye", label: "Rallye" },
-];
+
 
 export function CreateEventForm({ onSuccess, onCancel }) {
   const { t } = useTranslation();
@@ -133,7 +124,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
   const formCities = getCities(form.country, form.state);
   const cityListId = "event-city-suggestions";
   const sellerProfile = {
-    displayName: auth.currentUser?.displayName || "Você",
+    displayName: auth.currentUser?.displayName || t("events.form.you"),
     avatar: auth.currentUser?.photoURL || "",
   };
 
@@ -162,7 +153,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         if (form.photos.length >= MAX_PHOTOS) break;
         if (!file.type.startsWith("image/")) continue;
         if (file.size > 5 * 1024 * 1024) {
-          showToast(`${file.name} é muito grande (máx 5MB)`, "error");
+          showToast(t("events.toast.photoTooBig", { name: file.name }), "error");
           continue;
         }
 
@@ -177,7 +168,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         }));
       }
     } catch (error) {
-      showToast("Erro ao fazer upload de fotos", "error");
+      showToast(t("events.toast.uploadError"), "error");
     } finally {
       setPhotoUploading(false);
     }
@@ -194,17 +185,17 @@ export function CreateEventForm({ onSuccess, onCancel }) {
     e.preventDefault();
 
     if (!form.title.trim()) {
-      showToast("Título do evento é obrigatório", "error");
+      showToast(t("events.toast.titleRequired"), "error");
       return;
     }
 
     if (!form.eventDate) {
-      showToast("Data do evento é obrigatória", "error");
+      showToast(t("events.toast.dateRequired"), "error");
       return;
     }
 
     if (!form.state || !form.city) {
-      showToast("Selecione estado e cidade", "error");
+      showToast(t("events.toast.locationRequired"), "error");
       return;
     }
 
@@ -239,10 +230,10 @@ export function CreateEventForm({ onSuccess, onCancel }) {
       };
 
       await engineEvents.createEvent(eventData);
-      showToast("Evento criado com sucesso", "success");
+      showToast(t("events.toast.created"), "success");
       onSuccess?.();
     } catch (error) {
-      showToast(error.message || "Erro ao criar evento", "error");
+      showToast(error.message || t("events.toast.createError"), "error");
     } finally {
       setSaving(false);
     }
@@ -258,13 +249,13 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         <div className="flex items-start justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-surface)] p-4 sm:gap-4 sm:p-6">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--engine-accent)]">
-              Novo Evento
+              {t("events.form.heading")}
             </p>
             <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[var(--engine-text)] dark:text-white sm:text-xl">
-              Cadastrar Evento
+              {t("events.form.submitTitle")}
             </h2>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--engine-text-muted)]">
-              Compartilhe seu evento com a comunidade automotiva
+              {t("events.form.subtitle")}
             </p>
             <div className="mt-4 flex max-w-xl items-center gap-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--engine-accent)] text-sm font-bold uppercase text-white">
@@ -276,7 +267,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
-                  Publicado como
+                  {t("events.form.publishedAs")}
                 </p>
                 <p className="truncate text-sm font-bold italic text-[var(--engine-text)] dark:text-white">
                   {sellerProfile?.displayName}
@@ -296,7 +287,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
         {/* Formulário */}
         <div className="grid gap-5 p-4 pb-28 sm:p-6 md:grid-cols-2">
           {/* Fotos */}
-          <Field label="Fotos do Evento" wide>
+          <Field label={t("events.form.photos")} wide>
             <div className="grid gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
               {form.photos.map((photo) => (
                 <div key={photo} className="relative overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)]">
@@ -318,7 +309,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
                     <ImagePlus className="mb-2 text-[var(--engine-accent)]" size={24} />
                   )}
                   <span className="text-xs font-black uppercase tracking-widest">
-                    {photoUploading ? "Enviando..." : "Adicionar Foto"}
+                    {photoUploading ? t("events.form.uploading") : t("events.form.addPhoto")}
                   </span>
                   <span className="mt-1 text-[11px] font-bold text-[var(--engine-text-subtle)]">
                     Máx {MAX_PHOTOS} imagens
@@ -337,29 +328,29 @@ export function CreateEventForm({ onSuccess, onCancel }) {
           </Field>
 
           {/* Título */}
-          <Field label="Título do Evento" wide>
+          <Field label={t("events.form.title")} wide>
             <TextInput
               value={form.title}
               onChange={(e) => handleChange("title", e.target.value)}
-              placeholder="ex: 3ª Edição Cars & Coffee SP"
+              placeholder={t("events.form.titlePlaceholder")}
             />
           </Field>
 
           {/* Tipo + Data + Hora */}
-          <Field label="Tipo">
+          <Field label={t("events.form.type")}>
             <Select
               value={form.type}
               onChange={(e) => handleChange("type", e.target.value)}
             >
-              {EVENT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+              {eventTypeOptions(t).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </Select>
           </Field>
 
-          <Field label="Data de Início">
+          <Field label={t("events.form.startDate")}>
             <TextInput
               type="date"
               value={form.eventDate}
@@ -367,16 +358,16 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             />
           </Field>
 
-          <Field label="Data de Término (Opcional)">
+          <Field label={t("events.form.endDate")}>
             <TextInput
               type="date"
               value={form.endDate}
               onChange={(e) => handleChange("endDate", e.target.value)}
-              placeholder="Se for dia diferente"
+              placeholder={t("events.form.endDatePlaceholder")}
             />
           </Field>
 
-          <Field label="Hora de Início">
+          <Field label={t("events.form.startTime")}>
             <TextInput
               type="time"
               value={form.startTime}
@@ -384,26 +375,26 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             />
           </Field>
 
-          <Field label="Hora de Término (Opcional)">
+          <Field label={t("events.form.endTime")}>
             <TextInput
               type="time"
               value={form.endTime}
               onChange={(e) => handleChange("endTime", e.target.value)}
-              placeholder="Deixe em branco se não souber"
+              placeholder={t("events.form.endTimePlaceholder")}
             />
           </Field>
 
           {/* Descrição */}
-          <Field label="Descrição" wide>
+          <Field label={t("events.form.description")} wide>
             <TextArea
               value={form.description}
               onChange={(e) => handleChange("description", e.target.value)}
-              placeholder="Descreva seu evento..."
+              placeholder={t("events.form.descriptionPlaceholder")}
             />
           </Field>
 
           {/* Localização */}
-          <Field label="País">
+          <Field label={t("events.form.country")}>
             <Select
               value={form.country || "BR"}
               onChange={(e) => {
@@ -420,7 +411,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             </Select>
           </Field>
 
-          <Field label="Estado">
+          <Field label={t("events.form.state")}>
             <Select
               value={form.state || ""}
               onChange={(e) => {
@@ -430,7 +421,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
               disabled={!formStates.length}
             >
               <option value="">
-                {formStates.length ? "Selecione..." : "Não disponível"}
+                {formStates.length ? t("events.form.selectPlaceholder") : t("events.form.unavailable")}
               </option>
               {formStates.map((item) => (
                 <option key={item.code} value={item.code}>
@@ -440,11 +431,11 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             </Select>
           </Field>
 
-          <Field label="Cidade">
+          <Field label={t("events.form.city")}>
             <TextInput
               value={form.city}
               onChange={(e) => handleChange("city", e.target.value)}
-              placeholder="ex: São Paulo"
+              placeholder={t("events.form.cityPlaceholder")}
               list={formCities.length ? cityListId : undefined}
             />
             {formCities.length > 0 && (
@@ -456,11 +447,11 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             )}
           </Field>
 
-          <Field label="Endereço (Opcional)">
+          <Field label={t("events.form.address")}>
             <TextInput
               value={form.address}
               onChange={(e) => handleChange("address", e.target.value)}
-              placeholder="ex: Rua das Flores, 123"
+              placeholder={t("events.form.addressPlaceholder")}
             />
           </Field>
 
@@ -468,25 +459,25 @@ export function CreateEventForm({ onSuccess, onCancel }) {
           {hasMapAddress(form) && (
             <div className="md:col-span-2">
               <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
-                Visualização do Mapa
+                {t("events.form.mapPreview")}
               </p>
               <MapPreview event={form} />
             </div>
           )}
 
           {/* Máx Participantes */}
-          <Field label="Máx Participantes">
+          <Field label={t("events.form.maxParticipants")}>
             <TextInput
               type="number"
               value={form.maxParticipants}
               onChange={(e) => handleChange("maxParticipants", e.target.value)}
-              placeholder="0 = Ilimitado"
+              placeholder={t("events.form.maxParticipantsPlaceholder")}
               min="0"
             />
           </Field>
 
           {/* Links de Comunidade */}
-          <Field label="Grupo WhatsApp">
+          <Field label={t("events.form.whatsappGroup")}>
             <TextInput
               type="url"
               value={form.communityLinks.whatsappGroup}
@@ -495,7 +486,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             />
           </Field>
 
-          <Field label="Grupo Facebook">
+          <Field label={t("events.form.facebookGroup")}>
             <TextInput
               type="url"
               value={form.communityLinks.facebookGroup}
@@ -513,14 +504,14 @@ export function CreateEventForm({ onSuccess, onCancel }) {
             className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-5 text-sm font-bold uppercase text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? <Wrench className="animate-spin" size={18} /> : <Plus size={18} />}
-            {saving ? "Criando..." : "Criar Evento"}
+            {saving ? t("events.creating") : t("events.create")}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--engine-border)] px-5 text-sm font-black uppercase tracking-widest text-[var(--engine-text-muted)] transition hover:border-[var(--engine-accent)] hover:text-[var(--engine-accent)]"
           >
-            Cancelar
+            {t("events.cancel")}
           </button>
         </div>
       </form>

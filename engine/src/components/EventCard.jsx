@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { eventTypeLabel as typeLabel } from "../services/eventTypes";
 import {
   MapPin,
   Users,
@@ -11,31 +13,23 @@ import {
 
 export function EventCard({ event }) {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  // A data seguia cravada em pt-BR: quem lia em ingles via "3 de set.".
+  const locale = i18n.language || "pt-BR";
 
   const eventDate = new Date(event.eventDate);
-  const startDateStr = eventDate.toLocaleDateString("pt-BR", {
+  const startDateStr = eventDate.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
   });
   const endDate = event.endDate ? new Date(event.endDate) : null;
   const endDateStr = endDate
-    ? endDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })
+    ? endDate.toLocaleDateString(locale, { day: "numeric", month: "short" })
     : null;
   const dateDisplay =
     endDateStr && endDateStr !== startDateStr ? `${startDateStr} - ${endDateStr}` : startDateStr;
 
-  const eventTypeLabel = {
-    casual: "Casual",
-    "cars-and-coffee": "Cars & Coffee",
-    cruise: "Cruise",
-    concours: "Concurso",
-    drift: "Drift",
-    "track-day": "Track Day",
-    "auto-meet": "Auto Meet",
-    autocross: "Autocross",
-    "drag-racing": "Drag Racing",
-    rallye: "Rallye",
-  }[event.type] || event.type;
+  const eventTypeLabel = typeLabel(t, event.type);
 
   const spotsLeft = event.maxParticipants
     ? Math.max(0, event.maxParticipants - (event.participantCount || 0))
@@ -112,10 +106,10 @@ export function EventCard({ event }) {
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition"
-                title="Grupo do WhatsApp"
+                title={t("events.links.whatsappTitle")}
               >
                 <MessageCircle size={14} />
-                WhatsApp
+                {t("events.links.whatsapp")}
               </a>
             )}
             {event.communityLinks?.facebookGroup && (
@@ -125,10 +119,10 @@ export function EventCard({ event }) {
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-500/25 transition"
-                title="Grupo do Facebook"
+                title={t("events.links.facebookTitle")}
               >
                 <Share2 size={14} />
-                Facebook
+                {t("events.links.facebook")}
               </a>
             )}
           </div>

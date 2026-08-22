@@ -6,6 +6,7 @@ import { EventCard } from "../components/EventCard";
 import { CreateEventForm } from "../components/CreateEventForm";
 import { useToast } from "../components/ToastProvider";
 import { getStates } from "../services/locations";
+import { eventTypeOptions } from "../services/eventTypes";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] outline-none transition-colors focus:border-[var(--engine-accent)]";
@@ -13,19 +14,6 @@ const inputClass =
 const labelClass =
   "text-[10px] font-bold uppercase tracking-widest text-[var(--engine-text-muted)]";
 
-const EVENT_TYPES = [
-  { value: "all", label: "Todos" },
-  { value: "casual", label: "Casual" },
-  { value: "cars-and-coffee", label: "Cars & Coffee" },
-  { value: "cruise", label: "Cruise" },
-  { value: "concours", label: "Concurso" },
-  { value: "drift", label: "Drift" },
-  { value: "track-day", label: "Track Day" },
-  { value: "auto-meet", label: "Auto Meet" },
-  { value: "autocross", label: "Autocross" },
-  { value: "drag-racing", label: "Drag Racing" },
-  { value: "rallye", label: "Rallye" },
-];
 
 
 /**
@@ -43,7 +31,7 @@ export function Events({ embedded = false }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [filters, setFilters] = useState({
     type: "all",
-    state: "Todos",
+    state: "all",
   });
 
   useEffect(() => {
@@ -55,14 +43,14 @@ export function Events({ embedded = false }) {
     try {
       const filterParams = {
         type: filters.type === "all" ? null : filters.type,
-        state: filters.state === "Todos" ? null : filters.state,
+        state: filters.state === "all" ? null : filters.state,
         limit: 50,
       };
 
       const result = await engineEvents.getUpcomingEvents(filterParams);
       setEvents(result);
     } catch (error) {
-      showToast(error.message || "Erro ao carregar eventos", "error");
+      showToast(error.message || t("events.toast.loadError"), "error");
     } finally {
       setLoading(false);
     }
@@ -71,7 +59,7 @@ export function Events({ embedded = false }) {
   const handleCreateSuccess = () => {
     setShowCreateForm(false);
     loadEvents();
-    showToast("Evento criado com sucesso", "success");
+    showToast(t("events.toast.created"), "success");
   };
 
   return (
@@ -82,10 +70,10 @@ export function Events({ embedded = false }) {
           {!embedded && (
             <div>
               <h1 className="text-3xl font-bold text-[var(--engine-text)] sm:text-4xl">
-                Eventos
+                {t("events.title")}
               </h1>
               <p className="text-[var(--engine-text-muted)] mt-2">
-                Encontre e participe de eventos automotivos
+                {t("events.subtitle")}
               </p>
             </div>
           )}
@@ -96,7 +84,7 @@ export function Events({ embedded = false }) {
             }`}
           >
             <Plus size={20} />
-            Criar Evento
+            {t("events.create")}
           </button>
         </div>
       </div>
@@ -105,13 +93,13 @@ export function Events({ embedded = false }) {
       <div className="engine-card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Filter size={20} className="text-[var(--engine-accent)]" />
-          <h2 className="font-semibold text-[var(--engine-text)]">Filtros</h2>
+          <h2 className="font-semibold text-[var(--engine-text)]">{t("events.filters.title")}</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Tipo de Evento */}
           <div className="space-y-2">
-            <label className={labelClass}>Tipo de Evento</label>
+            <label className={labelClass}>{t("events.filters.type")}</label>
             <select
               value={filters.type}
               onChange={(e) =>
@@ -122,9 +110,9 @@ export function Events({ embedded = false }) {
               }
               className={inputClass}
             >
-              {EVENT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+              {eventTypeOptions(t, { withAll: true }).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -132,7 +120,7 @@ export function Events({ embedded = false }) {
 
           {/* Estado */}
           <div className="space-y-2">
-            <label className={labelClass}>Estado</label>
+            <label className={labelClass}>{t("events.filters.state")}</label>
             <select
               value={filters.state}
               onChange={(e) =>
@@ -143,7 +131,7 @@ export function Events({ embedded = false }) {
               }
               className={inputClass}
             >
-              <option value="Todos">Todos</option>
+              <option value="all">{t("events.filters.all")}</option>
               {getStates("BR").map((state) => (
                 <option key={state.code} value={state.code}>
                   {state.name}
@@ -158,22 +146,22 @@ export function Events({ embedded = false }) {
       {loading ? (
         <div className="text-center py-20">
           <Loader2 size={48} className="mx-auto text-[var(--engine-accent)] animate-spin mb-4" />
-          <p className="text-[var(--engine-text-muted)]">Carregando eventos...</p>
+          <p className="text-[var(--engine-text-muted)]">{t("events.loading")}</p>
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-20 engine-card p-8">
           <p className="text-lg font-semibold text-[var(--engine-text)] mb-2">
-            Nenhum evento encontrado
+            {t("events.emptyTitle")}
           </p>
           <p className="text-[var(--engine-text-muted)] mb-6">
-            Tente ajustar seus filtros ou crie um novo evento
+            {t("events.emptyCopy")}
           </p>
           <button
             onClick={() => setShowCreateForm(true)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--engine-accent)] text-white rounded-xl font-semibold hover:opacity-90 transition"
           >
             <Plus size={20} />
-            Criar Evento
+            {t("events.create")}
           </button>
         </div>
       ) : (
