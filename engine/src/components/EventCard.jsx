@@ -82,9 +82,8 @@ export function EventCard({ event }) {
           <div className="flex items-center gap-2 text-[var(--engine-text-muted)]">
             <Users size={16} className="text-[var(--engine-accent)]" />
             <span>
-              {event.participantCount || 0} confirmado
-              {event.participantCount !== 1 ? "s" : ""}
-              {spotsLeft !== null && ` • ${spotsLeft} vagas`}
+              {t("events.confirmed", { count: event.participantCount || 0 })}
+              {spotsLeft !== null && ` • ${t("events.spotsLeft", { count: spotsLeft })}`}
             </span>
           </div>
 

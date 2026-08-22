@@ -239,9 +239,8 @@ export function EventDetails() {
                     {t("events.details.participants")}
                   </p>
                   <p className="font-semibold text-[var(--engine-text)]">
-                    {event.participantCount || 0} confirmado
-                    {event.participantCount !== 1 ? "s" : ""}
-                    {spotsLeft !== null && ` • ${spotsLeft} vagas restantes`}
+                    {t("events.confirmed", { count: event.participantCount || 0 })}
+                    {spotsLeft !== null && ` • ${t("events.spotsLeftLong", { count: spotsLeft })}`}
                   </p>
                 </div>
               </div>
@@ -265,7 +264,7 @@ export function EventDetails() {
           {/* Descrição */}
           {event.description && (
             <div className="engine-card p-6 space-y-3">
-              <h2 className="font-bold text-[var(--engine-text)]">Sobre o Evento</h2>
+              <h2 className="font-bold text-[var(--engine-text)]">{t("events.details.aboutEvent")}</h2>
               <p className="text-[var(--engine-text-muted)] leading-relaxed whitespace-pre-wrap">
                 {event.description}
               </p>
@@ -299,7 +298,7 @@ export function EventDetails() {
           {/* Links de comunidade */}
           {(event.communityLinks?.whatsappGroup || event.communityLinks?.facebookGroup) && (
             <div className="engine-card p-6 space-y-3">
-              <h2 className="font-bold text-[var(--engine-text)]">Grupos da Comunidade</h2>
+              <h2 className="font-bold text-[var(--engine-text)]">{t("events.details.communityGroups")}</h2>
               <div className="flex flex-col sm:flex-row gap-3">
                 {event.communityLinks?.whatsappGroup && (
                   <a

@@ -129,7 +129,11 @@ check("achou as chaves de events no código", usadas.size >= 40, `achei ${usadas
 
 for (const lng of IDIOMAS) {
   const disponiveis = chavesDe(blocos[lng]);
-  const faltando = [...usadas].filter((k) => !disponiveis.has(k.replace(/^events\./, "")));
+  // i18next resolve `t("x", { count })` em `x_one` / `x_other`; a chave crua
+  // nunca existe no arquivo, então procurar só por ela daria falso negativo.
+  const existe = (k) =>
+    disponiveis.has(k) || disponiveis.has(`${k}_one`) || disponiveis.has(`${k}_other`);
+  const faltando = [...usadas].filter((k) => !existe(k.replace(/^events\./, "")));
   check(
     `${lng}: as ${usadas.size} chaves usadas existem`,
     faltando.length === 0,
@@ -150,25 +154,77 @@ for (let i = 1; i < IDIOMAS.length; i += 1) {
 }
 
 // 3. frases-prova precisam mesmo mudar de idioma
-const provas = ["title", "emptyTitle", "loading", "form.heading", "details.location"];
-const iguais = provas.filter(
-  (k) => valorDe(blocos["pt-BR"], k) === valorDe(blocos["en-US"], k),
-);
-check("pt-BR e en-US diferem nas frases-prova", iguais.length === 0, iguais.join(", "));
+// Comparar TODOS os pares, não só pt-BR contra en-US: um bloco copiado do
+// inglês para o espanhol passava batido enquanto a prova era só de um par.
+// `title` fica de fora de propósito — "Eventos" é a palavra certa em português
+// e em espanhol, e exigir que difiram seria exigir uma tradução errada.
+const provas = ["emptyTitle", "loading", "form.heading", "details.location"];
+for (let i = 0; i < IDIOMAS.length; i += 1) {
+  for (let j = i + 1; j < IDIOMAS.length; j += 1) {
+    const iguais = provas.filter(
+      (k) => valorDe(blocos[IDIOMAS[i]], k) === valorDe(blocos[IDIOMAS[j]], k),
+    );
+    check(
+      `${IDIOMAS[i]} e ${IDIOMAS[j]} diferem nas frases-prova`,
+      iguais.length === 0,
+      iguais.join(", "),
+    );
+  }
+}
 
 // 5. português cravado sobrando no JSX
-const SUSPEITO = /(Evento|Criar|Filtros|Nenhum|Carregando|Cadastrar|Presen|Selecione|Cidade|Endere|Visualiza)/;
+// Regra ESTRUTURAL, não lista de palavras.
+//
+// A primeira versão procurava palavras em português e só em linha que COMEÇAVA
+// com maiúscula. Deixou passar duas coisas: `{count} confirmado`, porque o
+// texto estava colado numa expressão, e `<h2>Sobre o Evento</h2>`, porque o
+// texto estava no meio da linha. Lista de palavras sempre vai ter buraco — o
+// que se procura aqui é a FORMA: texto literal dentro de JSX, em qualquer
+// idioma. O que passa é o que vem de `t()`, de variável, ou de atributo.
+const temLetras = /[A-Za-zÀ-ÿ]{3,}/;
 const vazando = [];
 for (const rel of ARQUIVOS) {
+  let dentroDeImport = false;
   fs.readFileSync(path.join(ROOT, rel), "utf8")
     .split("\n")
     .forEach((linha, n) => {
+      // Import de uma linha e import de várias: nos dois casos a linha do
+      // `from` fecha o bloco, e nenhuma delas é conteúdo de tela.
+      if (/^\s*import\s/.test(linha)) {
+        dentroDeImport = !/\bfrom\b/.test(linha);
+        return;
+      }
+      if (dentroDeImport) {
+        if (/\bfrom\b/.test(linha)) dentroDeImport = false;
+        return;
+      }
       if (/^\s*(\/\/|\*|\/\*)/.test(linha)) return;
-      if (/t\(|import |from "|key=|className/.test(linha)) return;
-      const jsx = linha.match(/^\s*([A-ZÀ-Ú][^<>{}]{3,})\s*$/);
-      const attr = linha.match(/(?:placeholder|title|label)="([^"]{4,})"/);
-      const alvo = jsx?.[1] || attr?.[1];
-      if (alvo && SUSPEITO.test(alvo)) vazando.push(`${rel}:${n + 1} ${alvo.trim().slice(0, 40)}`);
+
+      const semComentarioJsx = linha.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, "");
+
+      // (a) nó de texto entre tags, na mesma linha: <h2>Sobre o Evento</h2>
+      for (const m of semComentarioJsx.matchAll(/>([^<>{}]+)</g)) {
+        if (temLetras.test(m[1])) vazando.push(`${rel}:${n + 1} >${m[1].trim().slice(0, 45)}<`);
+      }
+      // (b) texto colado numa expressão: `{count} confirmado`. A linha precisa
+      // COMEÇAR com a expressão — é a forma que vazou de verdade, e exigir isso
+      // é o que separa JSX de JS comum (`type: "all",`, `try {`, ternário em
+      // className). Fica de fora o caso inverso, `Total {n}`, que a regra (a)
+      // também não pega quando a tag abre numa linha e fecha noutra: guarda que
+      // grita à toa é guarda que alguém desliga.
+      const corpo = semComentarioJsx.trim();
+      if (corpo.startsWith("{")) {
+        const semExpressao = corpo.replace(/\{[^{}]*\}/g, "");
+        if (!/[=`;()]/.test(semExpressao) && temLetras.test(semExpressao)) {
+          vazando.push(`${rel}:${n + 1} ${corpo.slice(0, 55)}`);
+        }
+      }
+      // (c) atributo de texto com literal. URL não se traduz — um exemplo de
+      // link de grupo é o mesmo em qualquer idioma.
+      const attr = semComentarioJsx.match(/(?:placeholder|title|label|alt)="([^"]{3,})"/);
+      if (attr && temLetras.test(attr[1]) && !/^https?:\/\//.test(attr[1])) {
+        vazando.push(`${rel}:${n + 1} ${attr[0].slice(0, 50)}`);
+      }
     });
 }
 check(
