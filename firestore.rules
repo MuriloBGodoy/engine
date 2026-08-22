@@ -83,9 +83,24 @@ service cloud.firestore {
       // foto, valores ou legenda de qualquer publicação. Visitante só encosta
       // nestes campos, e em likesBy/ratingsBy só na própria chave.
       // O `.get(campo, {})` cobre documento antigo que nem tem o mapa.
+      //
+      // `likesCount` é número de VITRINE, mantido por quem curte. Como é escrita
+      // no documento alheio, a regra prende o passo em 1 pra cima ou 1 pra baixo
+      // — sem isso um cliente manda increment(9999) numa curtida só. Quem manda
+      // na verdade é a subcoleção `likes` abaixo, que ninguém consegue forjar;
+      // por isso o marco de conquista se conta lá, não neste número.
+      //
+      // `likesBy` continua na lista só durante a transição: o mapa está sendo
+      // esvaziado e o código novo não escreve nele. Sai numa limpeza depois de a
+      // migração estar confirmada — tirar agora quebraria qualquer build antigo
+      // que ainda esteja no ar.
       function onlyInteraction() {
+        let antes = resource.data.get("likesCount", 0);
+        let depois = request.resource.data.get("likesCount", 0);
         return request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["likesBy", "ratingsBy", "comments", "updatedAt"])
+            .hasOnly(["likesBy", "likesCount", "ratingsBy", "comments", "updatedAt"])
+          && depois >= antes - 1
+          && depois <= antes + 1
           && request.resource.data.get("likesBy", {})
             .diff(resource.data.get("likesBy", {}))
             .affectedKeys().hasOnly([request.auth.uid])
@@ -101,6 +116,36 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if isGoalOwner() || (signedIn() && onlyInteraction());
       allow delete: if isGoalOwner();
+
+      // Quem curtiu: um documento por pessoa, com o uid como id.
+      //
+      // Antes a curtida era uma chave no mapa `likesBy`, DENTRO do documento do
+      // post. Documento no Firestore tem teto de 1 MiB, e comentários dividem o
+      // mesmo espaço — medido em 22/08/2026, o post travava em ~16.900 curtidas,
+      // e em ~2.800 num post com 2.000 comentários. Ou seja: quanto mais viral,
+      // menor o teto. Os marcos de 50k pra cima que o produto quer eram
+      // impossíveis, não difíceis.
+      //
+      // Mesma forma que os participantes de evento: o id ser o uid dá dedup de
+      // graça e torna a escrita de terceiro inexistente em vez de limitada.
+      match /likes/{likerId} {
+        // Post é público; quem curtiu também.
+        allow read: if true;
+
+        // `postOwnerId` é conferido contra o dono real do post porque é o campo
+        // que soma o total do perfil — sem isso dava pra inflar o número de
+        // outra pessoa gravando o uid dela numa curtida qualquer.
+        allow create: if signedIn()
+          && request.auth.uid == likerId
+          && request.resource.data.likerId == likerId
+          && request.resource.data.postOwnerId ==
+             get(/databases/$(database)/documents/communityGoals/$(goalId)).data.ownerId;
+
+        // Curtida não tem estado pra mudar: ou existe, ou não existe.
+        allow update: if false;
+
+        allow delete: if signedIn() && request.auth.uid == likerId;
+      }
     }
 
     // A colecao `events` nao tinha regra nenhuma e caia no deny padrao. Medido
@@ -146,6 +191,22 @@ service cloud.firestore {
 
         allow delete: if signedIn() && request.auth.uid == participantId;
       }
+    }
+
+    // Consulta de GRUPO (collectionGroup) NÃO passa pela regra aninhada dentro de
+    // communityGoals: o Firestore avalia um caminho recursivo, não o caminho
+    // concreto do documento. Sem este bloco a leitura direta da subcoleção
+    // funciona e a consulta de grupo é negada — foi exatamente o que aconteceu
+    // em 22/08/2026, e os 35 testes não pegaram porque nenhum fazia consulta de
+    // grupo.
+    //
+    // O feed usa essa consulta uma vez por sessão para saber quais posts a
+    // pessoa já curtiu; sem ela, voltaria a perguntar post a post.
+    //
+    // Só LEITURA. Escrita continua presa ao caminho concreto acima, onde o id
+    // do documento tem que ser o uid de quem escreve.
+    match /{caminho=**}/likes/{likerId} {
+      allow read: if true;
     }
 
     // Denúncias: qualquer pessoa logada abre uma, ninguém além da moderação lê

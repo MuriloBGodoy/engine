@@ -34,7 +34,9 @@ import {
   assertSucceeds,
   assertFails,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection } from "firebase/firestore";
+import {
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, collectionGroup, query, where,
+} from "firebase/firestore";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -139,6 +141,65 @@ await t("nem o dono do evento mexe na presença alheia", () =>
 // buraco de escrita alheia — este teste existe para o caso de alguém tentar.
 await t("estranho NÃO escreve contador no documento do evento", () =>
   assertFails(updateDoc(doc(outro, "events/e4"), { participantCount: 99 })));
+
+console.log("\ncurtida (subcoleção: um documento por pessoa)\n");
+
+await semear("communityGoals/g1", { ownerId: "dono", title: "Meta", likesCount: 0 });
+
+await t("visitante LÊ quem curtiu (post é público)", () =>
+  assertSucceeds(getDocs(collection(visitante, "communityGoals/g1/likes"))));
+await t("visitante deslogado NÃO curte", () =>
+  assertFails(setDoc(doc(visitante, "communityGoals/g1/likes/outro"),
+    { likerId: "outro", postOwnerId: "dono" })));
+await t("logado curte em nome PRÓPRIO", () =>
+  assertSucceeds(setDoc(doc(outro, "communityGoals/g1/likes/outro"),
+    { likerId: "outro", postOwnerId: "dono" })));
+await t("estranho NÃO curte no nome de outro", () =>
+  assertFails(setDoc(doc(outro, "communityGoals/g1/likes/terceiro"),
+    { likerId: "terceiro", postOwnerId: "dono" })));
+// Estes dois precisam de post NOVO: em cima de `g1` a curtida de `outro` já
+// existe, e aí o setDoc vira update — passaria barrado pelo `update: if false`
+// em vez da regra que se quer testar. Mutação foi quem mostrou isso.
+await semear("communityGoals/g3", { ownerId: "dono", title: "Meta", likesCount: 0 });
+await t("likerId do corpo tem que bater com o id do documento", () =>
+  assertFails(setDoc(doc(outro, "communityGoals/g3/likes/outro"),
+    { likerId: "terceiro", postOwnerId: "dono" })));
+await semear("communityGoals/g4", { ownerId: "dono", title: "Meta", likesCount: 0 });
+await t("o motivo do postOwnerId: não dá pra inflar o total alheio", () =>
+  assertFails(setDoc(doc(outro, "communityGoals/g4/likes/outro"),
+    { likerId: "outro", postOwnerId: "vitima" })));
+await t("curtida não tem update — nada pra mudar", () =>
+  assertFails(updateDoc(doc(outro, "communityGoals/g1/likes/outro"),
+    { postOwnerId: "outro" })));
+await t("logado descurte o PRÓPRIO", () =>
+  assertSucceeds(deleteDoc(doc(outro, "communityGoals/g1/likes/outro"))));
+
+await semear("communityGoals/g1/likes/terceiro", { likerId: "terceiro", postOwnerId: "dono" });
+await t("o motivo da mudança: estranho NÃO apaga a curtida de OUTRA pessoa", () =>
+  assertFails(deleteDoc(doc(outro, "communityGoals/g1/likes/terceiro"))));
+// Consulta de grupo é o que o feed usa para saber "quais posts eu curti?".
+// Ela NÃO é coberta pela regra aninhada — precisa de um match recursivo. Os
+// primeiros 35 testes passaram sem isso e a produção negou mesmo assim.
+await t("consulta de GRUPO em likes funciona (o que a aninhada não cobre)", () =>
+  assertSucceeds(
+    getDocs(query(collectionGroup(outro, "likes"), where("likerId", "==", "outro"))),
+  ));
+await t("nem o dono do post apaga a curtida alheia", () =>
+  assertFails(deleteDoc(doc(dono, "communityGoals/g1/likes/terceiro"))));
+
+console.log("\ncontador de vitrine no post\n");
+
+await semear("communityGoals/g2", { ownerId: "dono", title: "Meta", likesCount: 10 });
+await t("quem curte pode somar 1 no contador", () =>
+  assertSucceeds(updateDoc(doc(outro, "communityGoals/g2"), { likesCount: 11 })));
+await t("quem descurte pode tirar 1", () =>
+  assertSucceeds(updateDoc(doc(outro, "communityGoals/g2"), { likesCount: 10 })));
+await t("ninguém pula o contador (o increment(9999) que o Han apontou)", () =>
+  assertFails(updateDoc(doc(outro, "communityGoals/g2"), { likesCount: 9999 })));
+await t("nem zera o contador alheio", () =>
+  assertFails(updateDoc(doc(outro, "communityGoals/g2"), { likesCount: 0 })));
+await t("contador não abre porta pro resto do post", () =>
+  assertFails(updateDoc(doc(outro, "communityGoals/g2"), { likesCount: 11, title: "Invadido" })));
 
 await env.cleanup();
 console.log(`\n${pass} passaram, ${fail} falharam\n`);

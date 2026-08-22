@@ -4,8 +4,8 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  collectionGroup,
   deleteDoc,
-  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -91,6 +91,7 @@ const LEGACY_CARS_KEY = "engine_cars";
 const LEGACY_SETTINGS_KEY = "engine_settings";
 const USERS_COLLECTION = "users";
 const USERNAMES_COLLECTION = "usernames";
+const LIKES_SUBCOLLECTION = "likes";
 const COMMUNITY_COLLECTION = "communityGoals";
 const PUBLIC_PROFILES_COLLECTION = "publicProfiles";
 const REPORTS_COLLECTION = "reports";
@@ -112,6 +113,35 @@ const defaultCommunityState = {
   savedVideos: [],
 };
 let currentUserId = null;
+
+/**
+ * Quais publicações a pessoa que está olhando já curtiu.
+ *
+ * A curtida virou documento numa subcoleção, então a resposta não vem mais de
+ * graça junto do post — o feed teria que consultar a subcoleção post a post. Em
+ * vez disso, uma consulta de grupo por sessão traz tudo que ESTA pessoa curtiu,
+ * e o feed responde de memória. O conjunto também é atualizado na hora quando
+ * ela curte ou descurte, para o coração não esperar o servidor.
+ */
+let myLikedGoalIds = new Set();
+
+const refreshMyLikedGoals = async (userId) => {
+  if (!userId) {
+    myLikedGoalIds = new Set();
+    return;
+  }
+  try {
+    const snapshot = await getDocs(
+      query(collectionGroup(firestore, LIKES_SUBCOLLECTION), where("likerId", "==", userId)),
+    );
+    // O pai do documento de curtida é a subcoleção; o pai dela é o post.
+    myLikedGoalIds = new Set(snapshot.docs.map((d) => d.ref.parent.parent?.id).filter(Boolean));
+  } catch (error) {
+    // Índice de grupo ainda propagando, ou rede caindo: o coração fica apagado
+    // até a próxima carga, e curtir de novo é idempotente (o id é o uid).
+    warnFirestoreFallback("refreshMyLikedGoals", error);
+  }
+};
 let communityGoalsCursorDoc = null;
 let communityGoalsHasMore = true;
 
@@ -551,7 +581,7 @@ const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
     // Legenda escrita na hora de publicar — não é mais a bio do perfil.
     note: String(note || "").trim().slice(0, 280),
     verified: true,
-    likesBy: {},
+    likesCount: 0,
     comments: [],
     ratingsBy: {},
     createdAt: serverTimestamp(),
@@ -677,7 +707,12 @@ const normalizeCommunityGoal = (goal = {}) => {
     savedValue: Number(goal.savedValue) || 0,
     targetValue: Number(goal.targetValue) || 0,
     streak: Number(goal.streak) || 1,
-    likes: Object.keys(goal.likesBy || {}).length,
+    // Durante a transição um post pode ter só o mapa antigo, só o contador
+    // novo, ou os dois. `likesCount` ganha quando existe.
+    likes:
+      typeof goal.likesCount === "number"
+        ? goal.likesCount
+        : Object.keys(goal.likesBy || {}).length,
     comments: (goal.comments || []).map((comment) =>
       typeof comment === "string"
         ? { text: comment, author: "Engine", username: "@engine" }
@@ -701,7 +736,13 @@ const normalizeCommunityGoal = (goal = {}) => {
     ownerId: goal.ownerId,
     userId: goal.userId || goal.ownerId,
     carId: goal.carId,
-    likesBy: goal.likesBy || {},
+    // Projeção por leitor, não a lista inteira: a UI só pergunta
+    // `likesBy?.[user.uid]`, então mandar o mapa completo era carregar a lista
+    // de todo mundo para responder uma pergunta sobre uma pessoa.
+    likesBy:
+      currentUserId && myLikedGoalIds.has(goal.id)
+        ? { [currentUserId]: true }
+        : goal.likesBy || {},
     ratingsBy: goal.ratingsBy || {},
   };
 };
@@ -844,6 +885,8 @@ const normalizeServiceListing = (listing = {}) => {
 export const engineDB = {
   setCurrentUser(userId) {
     currentUserId = userId || null;
+    // Conjunto é por pessoa: trocar de conta não pode herdar coração aceso.
+    refreshMyLikedGoals(currentUserId);
   },
 
   async migrateLegacyData(userId) {
@@ -1229,6 +1272,10 @@ export const engineDB = {
     communityGoalsCursorDoc = null;
     communityGoalsHasMore = true;
 
+    // Uma consulta por assinatura do feed. Não bloqueia: quando a resposta
+    // chega, o próximo snapshot já sai com os corações certos.
+    refreshMyLikedGoals(currentUserId);
+
     const communityQuery = query(
       collection(firestore, COMMUNITY_COLLECTION),
       orderBy("updatedAt", "desc"),
@@ -1603,7 +1650,7 @@ export const engineDB = {
       goalRef,
       {
         ...payload,
-        likesBy: existingData.likesBy || {},
+        likesCount: existingData.likesCount ?? 0,
         comments: existingData.comments || [],
         ratingsBy: existingData.ratingsBy || {},
         createdAt: existingData.createdAt || payload.createdAt,
@@ -1658,7 +1705,7 @@ export const engineDB = {
       brand: car?.brand || "",
       model: car?.model || "",
       year: car?.year || "",
-      likesBy: {},
+      likesCount: 0,
       comments: [],
       ratingsBy: {},
       createdAt: serverTimestamp(),
@@ -1816,7 +1863,14 @@ export const engineDB = {
       note: pick(profile.note, fromGoals.note),
       goals,
       goalsCount: goals.length,
-      likesCount: goals.reduce((sum, goal) => sum + Object.keys(goal.likesBy || {}).length, 0),
+      likesCount: goals.reduce(
+        (sum, goal) =>
+          sum +
+          (typeof goal.likesCount === "number"
+            ? goal.likesCount
+            : Object.keys(goal.likesBy || {}).length),
+        0,
+      ),
       averageProgress: goals.length ? totalProgress / goals.length : 0,
       followersCount: followersSnapshot?.size || 0,
       isFollowedByMe: Boolean(myFollowSnapshot?.exists?.()),
@@ -2098,10 +2152,32 @@ export const engineDB = {
     const goal = await getDoc(goalRef);
     const goalData = goal.exists() ? goal.data() : null;
 
-    await updateDoc(doc(firestore, COMMUNITY_COLLECTION, goalId), {
-      [`likesBy.${userId}`]: liked ? true : deleteField(),
-      updatedAt: serverTimestamp(),
-    });
+    // A curtida virou um documento com o uid como id, na subcoleção `likes`.
+    // Antes era uma chave no mapa `likesBy`, dentro do próprio post — e
+    // documento no Firestore tem teto de 1 MiB, dividido com os comentários.
+    // Medido em 22/08/2026: o post travava em ~16.900 curtidas, e em ~2.800
+    // quando tinha 2.000 comentários. Quanto mais viral, menor o teto.
+    //
+    // `likesCount` fica no post só como número de vitrine, para a lista não
+    // precisar contar a subcoleção post a post. Quem manda na verdade é a
+    // subcoleção: marco de conquista se conta lá, com getCountFromServer, que
+    // ninguém consegue forjar.
+    const likeRef = doc(goalRef, LIKES_SUBCOLLECTION, userId);
+    const jaCurtiu = (await getDoc(likeRef)).exists();
+
+    if (liked && !jaCurtiu) {
+      await setDoc(likeRef, {
+        likerId: userId,
+        postOwnerId: goalData?.ownerId || "",
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(goalRef, { likesCount: increment(1), updatedAt: serverTimestamp() });
+      myLikedGoalIds.add(goalId);
+    } else if (!liked && jaCurtiu) {
+      await deleteDoc(likeRef);
+      await updateDoc(goalRef, { likesCount: increment(-1), updatedAt: serverTimestamp() });
+      myLikedGoalIds.delete(goalId);
+    }
 
     if (liked && goalData) {
       const actorSettings = await this.getSettings();
