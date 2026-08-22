@@ -99,6 +99,16 @@ são secretas.
 - [ ] `STRIPE_PRICE_ID`
 - [ ] `STRIPE_WEBHOOK_SECRET`
 
+**`SITE_URL` não precisa em produção.** O endereço de retorno do checkout sai de
+`URL`, que a Netlify entrega sozinha às funções. Só defina `SITE_URL` em dois
+casos:
+
+- rodando `netlify dev` na sua máquina (lá `URL` não existe, e sem ela a função
+  falha de propósito em vez de mandar quem pagou para um domínio inventado);
+- em **Deploy Preview**, se quiser testar assinatura sem ser devolvido ao site
+  de produção — `URL` na preview aponta para produção, e o endereço da preview
+  (`DEPLOY_PRIME_URL`) não chega às funções.
+
 Aproveitar e colar também as de observabilidade, que ficaram pendentes:
 
 - [ ] `VITE_SENTRY_DSN`

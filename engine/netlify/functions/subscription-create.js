@@ -17,7 +17,36 @@ import {
   providerForCountry,
 } from "./lib/providers.js";
 
-const siteUrl = () => process.env.URL || "https://engine.netlify.app";
+/**
+ * Endereço para onde o gateway devolve a pessoa no fim do checkout.
+ *
+ * Aqui havia uma reserva: `process.env.URL || "https://engine.netlify.app"`.
+ * Esse domínio responde 404 — era um chute de quando se supôs que o site se
+ * chamaria "engine". Em produção ela nunca disparava, porque `URL` é
+ * justamente a variável de deploy que a Netlify entrega às funções em tempo de
+ * execução. Disparava no `netlify dev`, mandando o checkout de teste para um
+ * domínio morto em vez de avisar que faltava configuração.
+ *
+ * Reserva que esconde configuração ausente é pior que erro: troca uma falha
+ * barulhenta por uma resposta errada e silenciosa, e quem descobre é o usuário.
+ * Agora falha, igual às outras chaves ausentes deste mesmo arquivo.
+ *
+ * `SITE_URL` vem antes de propósito, e serve a dois casos:
+ *   - `netlify dev`, onde `URL` não existe;
+ *   - Deploy Preview, onde `URL` aponta para PRODUÇÃO e não para a preview (o
+ *     endereço da preview é `DEPLOY_PRIME_URL`, que não chega às funções).
+ *     Sem isso, testar assinatura numa preview devolve a pessoa no site real.
+ */
+const siteUrl = () => {
+  const url = process.env.SITE_URL || process.env.URL;
+  if (!url) {
+    throw new Error(
+      "URL do site ausente: defina SITE_URL para o endereço de retorno do checkout.",
+    );
+  }
+  // Barra sobrando viraria `//settings` no retorno.
+  return url.replace(/\/+$/, "");
+};
 
 async function createMercadoPago({ user, country, email }) {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
