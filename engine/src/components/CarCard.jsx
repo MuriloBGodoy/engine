@@ -107,7 +107,7 @@ export function CarCard({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
         <button
           onClick={onDelete}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg bg-black/45 text-white opacity-0 backdrop-blur-sm transition hover:bg-[var(--engine-accent)] focus-visible:opacity-100 group-hover:opacity-100 max-lg:opacity-100"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg bg-black/45 text-white opacity-0 backdrop-blur-sm transition hover:bg-[var(--engine-accent)] focus-visible:opacity-100 group-hover:opacity-100 max-lg:opacity-100 lg:h-9 lg:w-9"
           title={t("common.delete")}
         >
           <Trash2 size={16} />

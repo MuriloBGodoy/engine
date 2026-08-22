@@ -103,6 +103,51 @@ service cloud.firestore {
       allow delete: if isGoalOwner();
     }
 
+    // A colecao `events` nao tinha regra nenhuma e caia no deny padrao. Medido
+    // em 21/08/2026: 10/10 carregamentos devolviam "Missing or insufficient
+    // permissions" e a tela mostrava "Nenhum evento encontrado" — que e mentira,
+    // nao e ausencia, e proibicao. A feature de Eventos nunca funcionou em
+    // producao para ninguem, nem para quem estava logado.
+    match /events/{eventId} {
+      // Confirmar ou cancelar presenca e escrita de terceiro: acontece no evento
+      // de outra pessoa. So os tres campos do RSVP podem mudar, e a lista so pode
+      // andar de um em um — assim um estranho nao apaga a lista inteira.
+      //
+      // LIMITE CONHECIDO: como `cancelRsvp` reescreve o array inteiro, a regra
+      // nao consegue provar QUEM entrou ou saiu. Um usuario logado ainda pode
+      // remover a presenca de UMA outra pessoa por escrita. A versao segura de
+      // verdade quer os participantes numa subcolecao
+      // (events/{id}/participants/{uid}), onde cada um so escreve o proprio doc.
+      // Isso e mudanca de modelo de dados, nao de regra.
+      function onlyRsvp() {
+        let fields = ["participants", "participantCount", "updatedAt"];
+        let before = resource.data;
+        let after = request.resource.data;
+        return after.diff(before).affectedKeys().hasOnly(fields)
+          && after.get("participants", []).size() >= before.get("participants", []).size() - 1
+          && after.get("participants", []).size() <= before.get("participants", []).size() + 1
+          && after.get("participantCount", 0) >= before.get("participantCount", 0) - 1
+          && after.get("participantCount", 0) <= before.get("participantCount", 0) + 1;
+      }
+
+      // O Engine abre sem login e a agenda e parte do convite: evento e publico.
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if signedIn()
+        && (
+          (
+            resource.data.createdBy == request.auth.uid
+            && request.resource.data.createdBy == request.auth.uid
+          )
+          || onlyRsvp()
+        );
+
+      allow delete: if signedIn() && resource.data.createdBy == request.auth.uid;
+    }
+
     // Denúncias: qualquer pessoa logada abre uma, ninguém além da moderação lê
     // ou mexe depois — inclusive quem denunciou não relê a própria denúncia.
     match /reports/{reportId} {
