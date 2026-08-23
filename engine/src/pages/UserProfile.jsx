@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,7 +6,6 @@ import {
   MessageCircle,
   Share2,
   Users,
-  Trophy,
   ArrowLeft,
   UserPlus,
   UserCheck,
@@ -15,6 +14,7 @@ import {
 import { engineDB } from "../services/db";
 import { auth } from "../services/firebase";
 import { EditProfileModal } from "../components/EditProfileModal";
+import { AchievementsTab } from "../components/achievements/AchievementsTab";
 
 // Banner will be solid color gradient - no default image
 const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-accent)]/70";
@@ -88,6 +88,12 @@ export function UserProfile({ settings = {}, user = null }) {
   const [isEditing, setIsEditing] = useState(false);
   const [publicProfiles, setPublicProfiles] = useState(null);
   const isOwnProfile = currentUserId === profile?.userId;
+  // Com quatro abas a tira não cabe em 390px (medido em 21/08/2026, mesmo
+  // limite que apareceu na Comunidade) e já rola na horizontal — mas a aba
+  // ativa não se anunciava: setActiveTab("achievements") nascia fora da
+  // vista e a tela parecia estar em Metas. Mesmo gesto de `Community.jsx`
+  // (`activeSectionRef`).
+  const activeTabRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -171,6 +177,10 @@ export function UserProfile({ settings = {}, user = null }) {
       console.error("Error starting conversation:", error);
     }
   };
+
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -327,23 +337,29 @@ export function UserProfile({ settings = {}, user = null }) {
         <div className="border-b border-[var(--engine-border)]">
           <div className="flex gap-6 overflow-x-auto px-4 sm:px-6">
             {[
-              { id: "posts", label: "Metas" },
-              { id: "followers", label: "Seguidores" },
-              { id: "following", label: "Seguindo" },
-              { id: "achievements", label: "Conquistas" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap border-b-2 py-4 text-sm font-bold uppercase tracking-wide transition ${
-                  activeTab === tab.id
-                    ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
-                    : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+              { id: "posts", label: t("profile.tabs.goals") },
+              { id: "followers", label: t("profile.tabs.followers") },
+              { id: "following", label: t("profile.tabs.following") },
+              { id: "achievements", label: t("profile.tabs.achievements") },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  // A aba ativa precisa de uma ref para se anunciar quando a
+                  // tira rola na horizontal (ver `activeTabRef` acima).
+                  ref={isActive ? activeTabRef : undefined}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`whitespace-nowrap border-b-2 py-4 text-sm font-bold uppercase tracking-wide transition ${
+                    isActive
+                      ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
+                      : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -452,17 +468,16 @@ export function UserProfile({ settings = {}, user = null }) {
           )}
 
           {activeTab === "achievements" && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-3 rounded-lg border border-[var(--engine-border)] p-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--engine-accent)]/10">
-                  <Trophy size={24} className="text-[var(--engine-accent)]" />
-                </div>
-                <div>
-                  <p className="font-bold text-[var(--engine-text)]">Primeira Meta</p>
-                  <p className="text-xs text-[var(--engine-text-muted)]">Desbloqueado</p>
-                </div>
-              </div>
-            </div>
+            // TODO: ligar em achievements.js — `unlocked` deve vir de
+            // `listAchievements(profile.userId)` e `likesReceived` da soma de
+            // curtidas recebidas (contagem por documento, não `goal.likes`,
+            // ver nota em `syncLikeAchievements`). `followersCount` já é real
+            // (mesmo `followers.length` usado no cabeçalho do perfil).
+            <AchievementsTab
+              unlocked={new Set(["first_goal"])}
+              likesReceived={11}
+              followersCount={followers.length}
+            />
           )}
         </div>
       </div>

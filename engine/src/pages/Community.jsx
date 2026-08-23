@@ -37,6 +37,8 @@ import {
 import { ClubsTab } from "../components/community/ClubsTab";
 import { Events } from "./Events";
 import { engineDB, POST_KIND_POST } from "../services/db";
+import { postBadgeTier } from "../services/achievements";
+import { AchievementBadge } from "../components/achievements/AchievementBadge";
 import { InfoTip } from "../components/InfoTip";
 import { SpecSheetModal } from "../components/specsheet/SpecSheetModal";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -581,6 +583,11 @@ export function GoalCard({
   const comments = [...goal.comments, ...interactions.comments];
   const liked = interactions.liked;
   const likeCount = Number(goal.likes) || 0;
+  // A faixa mais alta que ESTE post bateu sozinho — 10K sobrescreve 1K no
+  // post (decisão da sessão de 22/08/2026); as duas continuam somando na aba
+  // de Conquistas do perfil, que lê de outra fonte (curtidas recebidas no
+  // total, não por post).
+  const postLikeTier = postBadgeTier(likeCount);
   const rating = interactions.rating || goal.rating;
   const isFollowing = following.includes(goal.ownerId || goal.username);
   const isOwner = goal.isMine || goal.ownerId === currentUserId;
@@ -719,24 +726,32 @@ export function GoalCard({
           </p>
         </div>
 
-        {/* "Compartilhada / Privada" diz se o carro da GARAGEM está publicado.
-            Num post livre não significa nada: ele nasce no feed, e o selo só
-            aparecia como "privada" porque post nenhum entra em sharedGoalIds. */}
-        {isOwner && !isFreePost ? (
-          <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
-            {shared ? t("community.shared") : t("community.privateDraft")}
-          </span>
-        ) : isOwner ? null : (
-          !isFollowing && (
-            <button
-              type="button"
-              onClick={() => onFollow(goal)}
-              className="-my-3 inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-[11px] font-black uppercase tracking-wide text-[var(--engine-accent)] transition hover:brightness-110 sm:my-0 sm:min-h-0"
-            >
-              {t("community.follow")}
-            </button>
-          )
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Selo de curtidas do POST: só a faixa mais alta que ele bateu
+              sozinho — 10K substitui 1K aqui, mas os dois continuam contando
+              na aba de Conquistas do perfil (decisão da sessão de
+              22/08/2026). Sem faixa batida, nada aparece. */}
+          {postLikeTier && <AchievementBadge tier={postLikeTier} state="unlocked" />}
+
+          {/* "Compartilhada / Privada" diz se o carro da GARAGEM está publicado.
+              Num post livre não significa nada: ele nasce no feed, e o selo só
+              aparecia como "privada" porque post nenhum entra em sharedGoalIds. */}
+          {isOwner && !isFreePost ? (
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
+              {shared ? t("community.shared") : t("community.privateDraft")}
+            </span>
+          ) : isOwner ? null : (
+            !isFollowing && (
+              <button
+                type="button"
+                onClick={() => onFollow(goal)}
+                className="-my-3 inline-flex min-h-11 items-center rounded-full px-2 text-[11px] font-black uppercase tracking-wide text-[var(--engine-accent)] transition hover:brightness-110 sm:my-0 sm:min-h-0"
+              >
+                {t("community.follow")}
+              </button>
+            )
+          )}
+        </div>
 
         <PostMenu items={menuItems} label={t("community.postOptions")} />
       </header>

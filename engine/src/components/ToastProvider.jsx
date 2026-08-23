@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Trophy, X } from "lucide-react";
 
 /**
  * Toast único e estilizado do Engine — substitui os `flash()` locais espalhados
@@ -8,7 +8,12 @@ import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
  *   toast("Salvo!");                 // sucesso (padrão)
  *   toast("Falhou", "error");        // erro
  *   toast("Dica", { tone: "info", duration: 4000 });
+ *   toast("Conquista desbloqueada — 10K curtidas", { tone: "achievement", icon: Heart });
  * Empilha vários, some sozinho e segue os tokens (light + dark).
+ *
+ * O tom "achievement" é o único que aceita `icon` (um componente lucide-react):
+ * a conquista específica define o próprio ícone (o selo que ela desbloqueou),
+ * em vez do ícone genérico dos outros tons. Sem `icon`, cai no Trophy padrão.
  */
 const ToastContext = createContext(() => {});
 
@@ -26,6 +31,11 @@ const toneStyles = {
     iconClass: "text-[var(--engine-accent)]",
   },
   info: { icon: Info, bar: "bg-sky-500", iconClass: "text-sky-500" },
+  achievement: {
+    icon: Trophy,
+    bar: "bg-[var(--engine-accent)]",
+    iconClass: "text-[var(--engine-accent)]",
+  },
 };
 
 export function ToastProvider({ children }) {
@@ -47,7 +57,7 @@ export function ToastProvider({ children }) {
       const tone = config.tone || "success";
       const duration = config.duration || 2600;
       const id = ++idSeq;
-      setToasts((list) => [...list.slice(-3), { id, message, tone }]);
+      setToasts((list) => [...list.slice(-3), { id, message, tone, icon: config.icon }]);
       timers.current[id] = setTimeout(() => dismiss(id), duration);
     },
     [dismiss],
@@ -59,7 +69,7 @@ export function ToastProvider({ children }) {
       <div className="pointer-events-none fixed inset-x-4 top-4 z-[210] flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end">
         {toasts.map((item) => {
           const style = toneStyles[item.tone] || toneStyles.success;
-          const Icon = style.icon;
+          const Icon = item.icon || style.icon;
           return (
             <div
               key={item.id}
