@@ -24,6 +24,11 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { auth, firestore } from "./firebase";
+import {
+  grantAchievement,
+  syncLikeAchievements,
+  syncOwnMilestones,
+} from "./achievements";
 import { inferLocation } from "./locations";
 import { normalizeOwnershipInputs, LIFE_SITUATION_TYPES } from "./ownership";
 import { normalizeExpense, normalizeExpenses } from "./expenses";
@@ -125,6 +130,11 @@ let currentUserId = null;
  * ela curte ou descurte, para o coração não esperar o servidor.
  */
 let myLikedGoalIds = new Set();
+
+// Os marcos da própria garagem são conferidos quando ela muda. Esta bandeira
+// garante mais uma conferida por sessão, para quem já tinha carro antes de as
+// conquistas existirem receber o selo sem precisar salvar nada de novo.
+let marcosDaGaragemConferidos = false;
 
 const refreshMyLikedGoals = async (userId) => {
   if (!userId) {
@@ -965,6 +975,14 @@ export const engineDB = {
       // guardava os carros salvos NESTE aparelho, e qualquer falha de leitura
       // fazia os outros sumirem da garagem — como se tivessem sido apagados.
       await setLocalCars(cars).catch(() => {});
+
+      // Uma conferida por sessão, sem bloquear: quem já tinha carro antes de as
+      // conquistas existirem ganha o selo sem precisar salvar nada de novo.
+      if (!marcosDaGaragemConferidos) {
+        marcosDaGaragemConferidos = true;
+        this.sincronizarMarcosDaGaragem(cars).catch(() => {});
+      }
+
       return cars;
     } catch (error) {
       warnFirestoreFallback("getCars", error);
@@ -1829,6 +1847,62 @@ export const engineDB = {
    * escreve no documento de curtida alheio. Marco de conquista se decide por
    * este, nunca pelo outro.
    */
+  /**
+   * Confere os degraus de curtida do dono do post e concede o que faltar.
+   *
+   * Roda no cliente de QUEM CURTIU — é escrita no perfil de outra pessoa, e a
+   * regra do Firestore é a defesa: lista fechada de ids e corpo de um campo só.
+   * Falha aqui nunca derruba a curtida: o selo é consequência, não o ato.
+   */
+  /**
+   * Confere os marcos que dependem só da garagem da pessoa.
+   *
+   * Recebe os carros que o chamador já tem em mãos, para não ler de novo. Passa
+   * fatos, não carros: quem sabe o que é tipo de carro e aporte total é aqui, e
+   * o serviço de conquistas fica sem essa responsabilidade.
+   *
+   * Devolve os marcos que ESTA chamada concedeu, para a tela comemorar. Não
+   * gera notificação: a pessoa está olhando.
+   */
+  async sincronizarMarcosDaGaragem(cars = []) {
+    if (!currentUserId || !cars.length) return [];
+    try {
+      return await syncOwnMilestones(currentUserId, {
+        temMeta: cars.some((car) => car.type !== CAR_TYPE_OWNED),
+        temProprio: cars.some((car) => car.type === CAR_TYPE_OWNED),
+        temConquistado: cars.some(
+          (car) => Number(car.targetValue) > 0 && Number(car.savedValue) >= Number(car.targetValue),
+        ),
+      });
+    } catch (error) {
+      warnFirestoreFallback("sincronizarMarcosDaGaragem", error);
+      return [];
+    }
+  },
+
+  async concederDegrausDeCurtida(ownerId, goalTitle) {
+    if (!ownerId) return;
+    try {
+      const total = await this.countLikesReceived(ownerId);
+      const novos = await syncLikeAchievements(ownerId, total);
+      for (const id of novos) {
+        // Quem recebeu o selo pode estar offline: por isso vira notificação, e
+        // não um aviso na tela de quem curtiu.
+        await this.notifyUser(ownerId, {
+          type: "achievement",
+          achievementId: id,
+          goalTitle: goalTitle || "",
+          targetPath: "/settings",
+          notificationTitle: "Conquista desbloqueada",
+          notificationBody: "Você desbloqueou uma conquista no Engine.",
+          text: "Você desbloqueou uma conquista.",
+        });
+      }
+    } catch (error) {
+      warnFirestoreFallback("concederDegrausDeCurtida", error);
+    }
+  },
+
   async countPostLikes(goalId) {
     if (!goalId) return 0;
     try {
@@ -1953,6 +2027,25 @@ export const engineDB = {
           createdAt: serverTimestamp(),
         }),
       ]);
+
+      // Mesma forma do degrau de curtida: quem segue é quem detecta.
+      try {
+        const total = (await getCountFromServer(followersCollection(targetUserId)))
+          .data()
+          .count;
+        if (total >= 1000 && (await grantAchievement(targetUserId, "followers_1000"))) {
+          await this.notifyUser(targetUserId, {
+            type: "achievement",
+            achievementId: "followers_1000",
+            targetPath: "/settings",
+            notificationTitle: "Conquista desbloqueada",
+            notificationBody: "Mil pessoas seguem sua garagem.",
+            text: "Você alcançou 1.000 seguidores.",
+          });
+        }
+      } catch (error) {
+        warnFirestoreFallback("marco de seguidores", error);
+      }
     } else {
       await Promise.all([
         deleteDoc(followerRef),
@@ -2217,6 +2310,11 @@ export const engineDB = {
       });
       await updateDoc(goalRef, { likesCount: increment(1), updatedAt: serverTimestamp() });
       myLikedGoalIds.add(goalId);
+
+      // Sem Cloud Function, quem detecta o marco é quem acabou de curtir. O
+      // total vem da subcoleção, não do `likesCount` do post: aquele é vitrine
+      // e a regra só prende o passo em 1, então dava pra empurrar até o selo.
+      await this.concederDegrausDeCurtida(goalData?.ownerId, goalData?.title);
     } else if (!liked && jaCurtiu) {
       await deleteDoc(likeRef);
       await updateDoc(goalRef, { likesCount: increment(-1), updatedAt: serverTimestamp() });

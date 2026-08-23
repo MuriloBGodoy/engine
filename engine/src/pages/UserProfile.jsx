@@ -15,6 +15,7 @@ import { engineDB } from "../services/db";
 import { auth } from "../services/firebase";
 import { EditProfileModal } from "../components/EditProfileModal";
 import { AchievementsTab } from "../components/achievements/AchievementsTab";
+import { listAchievements } from "../services/achievements";
 
 // Banner will be solid color gradient - no default image
 const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-accent)]/70";
@@ -81,6 +82,8 @@ export function UserProfile({ settings = {}, user = null }) {
   const [profile, setProfile] = useState(null);
   const [userGoals, setUserGoals] = useState([]);
   const [followers, setFollowers] = useState([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState(() => new Set());
+  const [likesReceived, setLikesReceived] = useState(0);
   const [following, setFollowing] = useState([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
@@ -130,10 +133,17 @@ export function UserProfile({ settings = {}, user = null }) {
             engineDB.getUserGoals(userProfile.userId),
             engineDB.getUserFollowers(userProfile.userId),
             engineDB.getUserFollowing(userProfile.userId),
-          ]).then(([goals, followers, following]) => {
+            listAchievements(userProfile.userId),
+            // Conta os documentos de curtida, não soma `goal.likes`: o número
+            // que fica no post é vitrine e pode ser empurrado de um em um pela
+            // regra. O degrau se decide pela contagem da subcoleção.
+            engineDB.countLikesReceived(userProfile.userId),
+          ]).then(([goals, followers, following, conquistas, curtidas]) => {
             setUserGoals(goals || []);
             setFollowers(followers || []);
             setFollowing(following || []);
+            setUnlockedAchievements(conquistas || new Set());
+            setLikesReceived(curtidas || 0);
           });
 
           // Check if current user follows this profile
@@ -468,14 +478,9 @@ export function UserProfile({ settings = {}, user = null }) {
           )}
 
           {activeTab === "achievements" && (
-            // TODO: ligar em achievements.js — `unlocked` deve vir de
-            // `listAchievements(profile.userId)` e `likesReceived` da soma de
-            // curtidas recebidas (contagem por documento, não `goal.likes`,
-            // ver nota em `syncLikeAchievements`). `followersCount` já é real
-            // (mesmo `followers.length` usado no cabeçalho do perfil).
             <AchievementsTab
-              unlocked={new Set(["first_goal"])}
-              likesReceived={11}
+              unlocked={unlockedAchievements}
+              likesReceived={likesReceived}
               followersCount={followers.length}
             />
           )}

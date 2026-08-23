@@ -100,5 +100,32 @@ check("post com 1.500 mostra o de 1k", postBadgeTier(1500) === 1000);
 check("post com 12.400 mostra o de 10k, não o de 1k", postBadgeTier(12400) === 10000);
 check("post no topo mostra o de 1M", postBadgeTier(2000000) === 1000000);
 
+// --- os fios estão ligados?
+//
+// A trava contra o defeito mais provável desta feature: o sistema inteiro
+// existir, com teste e tudo, e NADA chamá-lo. Foi assim que a coleção `events`
+// passou meses parecendo pronta. Aqui não se testa comportamento — se testa que
+// o gatilho existe no lugar onde a conquista tem que acontecer.
+const db = fs.readFileSync(path.join(ROOT, "src/services/db.js"), "utf8");
+const perfil = fs.readFileSync(path.join(ROOT, "src/pages/UserProfile.jsx"), "utf8");
+
+// Procura a CHAMADA (`this.x(`), nunca o nome solto: a definição do método
+// contém o nome também, então `db.includes("x(")` continuava verdadeiro com a
+// chamada apagada. As duas primeiras travas nasceram assim e passaram verdes na
+// mutação — o método existia, ninguém invocava, e o teste dizia que estava tudo
+// certo.
+const ligacoes = [
+  ["curtir concede degrau ao dono do post", db, "await this.concederDegrausDeCurtida("],
+  ["o degrau usa a contagem da subcoleção, não o likesCount", db, "await this.countLikesReceived("],
+  ["seguir confere o marco de mil", db, 'grantAchievement(targetUserId, "followers_1000")'],
+  ["a garagem concede os marcos próprios", db, "this.sincronizarMarcosDaGaragem(cars)"],
+  ["o perfil lê as conquistas de verdade", perfil, "listAchievements(userProfile.userId)"],
+  ["o perfil conta as curtidas recebidas", perfil, "engineDB.countLikesReceived("],
+];
+for (const [nome, fonte, trecho] of ligacoes) {
+  check(nome, fonte.includes(trecho), `não achei: ${trecho}`);
+}
+check("não sobrou TODO de ligação no perfil", !/TODO:\s*ligar/i.test(perfil));
+
 console.log(falhas === 0 ? "\ntudo verde\n" : `\n${falhas} falha(s)\n`);
 process.exit(falhas === 0 ? 0 : 1);
