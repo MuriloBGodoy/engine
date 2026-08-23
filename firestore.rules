@@ -37,6 +37,51 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
+    // Conquistas: um documento por marco, com o id sendo o próprio marco.
+    //
+    // Quem detecta o cruzamento é o cliente de quem praticou a ação — o Firebase
+    // está no plano Spark, então não há Cloud Function pra fazer isso do lado do
+    // servidor. Ou seja: é escrita no perfil de OUTRA pessoa, e a regra é a
+    // única defesa. Ela faz três coisas:
+    //
+    //   1. `create` apenas, nunca `update` — conquista não muda, ela acontece.
+    //      Como o Firestore nega `create` em documento existente, dois cliques
+    //      simultâneos cruzando o mesmo marco não duplicam: o segundo falha
+    //      sozinho, sem transação e sem notificação repetida.
+    //   2. lista FECHADA de ids. Sem isso, campo livre viraria selo inventado.
+    //   3. `unlockedAt` é a única coisa no corpo, então não dá pra pendurar
+    //      dado arbitrário no perfil alheio usando a conquista como carona.
+    //
+    // Apagar é do dono: conquista precisa ser revogável sem reconstruir nada,
+    // porque ela não guarda estado incremental — só "aconteceu". É a rede de
+    // segurança contra fraude descoberta depois, e sai de graça neste desenho.
+    match /users/{userId}/achievements/{achievementId} {
+      function marcoValido() {
+        return achievementId in [
+          "first_goal",
+          "first_conquest",
+          "owned_car",
+          "followers_1000",
+          "likes_1000",
+          "likes_10000",
+          "likes_50000",
+          "likes_100000",
+          "likes_500000",
+          "likes_1000000"
+        ];
+      }
+
+      // Conquista é vitrine: aparece no perfil público de quem visita.
+      allow read: if true;
+
+      allow create: if signedIn()
+        && marcoValido()
+        && request.resource.data.keys().hasOnly(["unlockedAt"]);
+
+      allow update: if false;
+      allow delete: if isOwner(userId) || isServiceAdmin();
+    }
+
     match /users/{userId}/notifications/{notificationId} {
       allow read, update, delete: if isOwner(userId);
       allow create: if signedIn();

@@ -13,6 +13,7 @@
     "check:fipe-parser": "node scripts/check-fipe-parser.mjs",
     "check:mobile": "node scripts/check-mobile-contract.mjs",
     "check:events-i18n": "node scripts/check-events-i18n.mjs",
+    "check:achievements": "node scripts/check-achievements.mjs",
     "icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {

@@ -201,6 +201,39 @@ await t("nem zera o contador alheio", () =>
 await t("contador não abre porta pro resto do post", () =>
   assertFails(updateDoc(doc(outro, "communityGoals/g2"), { likesCount: 11, title: "Invadido" })));
 
+console.log("\nconquista (um documento por marco, id = o marco)\n");
+
+await t("visitante LÊ conquista (é vitrine no perfil público)", () =>
+  assertSucceeds(getDocs(collection(visitante, "users/dono/achievements"))));
+await t("visitante deslogado NÃO cria", () =>
+  assertFails(setDoc(doc(visitante, "users/dono/achievements/first_goal"), { unlockedAt: 1 })));
+
+// O caso que só existe por não haver Cloud Function: quem curtiu é quem detecta
+// o marco, então cria a conquista no perfil de OUTRA pessoa. Isso é permitido —
+// a defesa é a lista fechada e o corpo de um campo só.
+await t("logado cria conquista no perfil de outro (é assim que funciona sem Function)", () =>
+  assertSucceeds(setDoc(doc(outro, "users/dono/achievements/likes_1000"), { unlockedAt: 1 })));
+await t("marco fora da lista fechada é negado", () =>
+  assertFails(setDoc(doc(outro, "users/dono/achievements/likes_9999999"), { unlockedAt: 1 })));
+await t("selo inventado é negado", () =>
+  assertFails(setDoc(doc(outro, "users/dono/achievements/rei_do_engine"), { unlockedAt: 1 })));
+await t("não dá pra pendurar campo extra no perfil alheio", () =>
+  assertFails(setDoc(doc(outro, "users/dono/achievements/likes_10000"),
+    { unlockedAt: 1, spam: "compre aqui" })));
+
+// Dedup sem transação: o Firestore nega create em documento que já existe, então
+// duas detecções simultâneas do mesmo marco não viram duas notificações.
+await t("o mesmo marco não é criado duas vezes", () =>
+  assertFails(setDoc(doc(dono, "users/dono/achievements/likes_1000"), { unlockedAt: 2 })));
+await t("conquista não tem update — ela aconteceu ou não", () =>
+  assertFails(updateDoc(doc(dono, "users/dono/achievements/likes_1000"), { unlockedAt: 3 })));
+
+await t("o dono revoga a própria conquista", () =>
+  assertSucceeds(deleteDoc(doc(dono, "users/dono/achievements/likes_1000"))));
+await semear("users/dono/achievements/first_goal", { unlockedAt: 1 });
+await t("estranho NÃO apaga conquista alheia", () =>
+  assertFails(deleteDoc(doc(outro, "users/dono/achievements/first_goal"))));
+
 await env.cleanup();
 console.log(`\n${pass} passaram, ${fail} falharam\n`);
 process.exit(fail === 0 ? 0 : 1);
