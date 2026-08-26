@@ -127,5 +127,30 @@ for (const [nome, fonte, trecho] of ligacoes) {
 }
 check("não sobrou TODO de ligação no perfil", !/TODO:\s*ligar/i.test(perfil));
 
+// O andaime que sobreviveu ao commit: a aba nasceu recebendo
+// `unlocked={new Set(["first_goal"])} likesReceived={11}` enquanto a camada de
+// dados não existia, e assim TODO perfil mostrava o mesmo selo e o mesmo 11 —
+// que era o total de curtidas do banco inteiro, de ninguém. Passou verde em
+// tudo, porque a tela estava certa e o número era plausível.
+check(
+  "a aba não recebe conquista escrita à mão",
+  !/unlocked=\{new Set\(/.test(perfil),
+  "props de exemplo voltaram ao lugar do dado real",
+);
+check(
+  "a aba não recebe contagem de curtida escrita à mão",
+  !/likesReceived=\{\d/.test(perfil),
+  "props de exemplo voltaram ao lugar do dado real",
+);
+
+// Trocar de perfil tem que apagar o anterior. Sem isto, quem vem de um perfil
+// com selo vê o selo dele num perfil sem nenhum — e como o dado que chega é
+// vazio, ele não sobrescreve nada e o engano fica na tela.
+check(
+  "trocar de perfil zera as conquistas do anterior",
+  perfil.includes("setUnlockedAchievements(new Set())"),
+  "não achei o reset ao trocar de perfil",
+);
+
 console.log(falhas === 0 ? "\ntudo verde\n" : `\n${falhas} falha(s)\n`);
 process.exit(falhas === 0 ? 0 : 1);

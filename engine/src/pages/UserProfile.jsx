@@ -99,69 +99,95 @@ export function UserProfile({ settings = {}, user = null }) {
   const activeTabRef = useRef(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        // Pular de perfil em perfil pelas listas não pode deixar o visitante
-        // parado na aba Seguidores do anterior.
-        setActiveTab("posts");
-        const cleanUsername = identifier?.replace(/^@/, "").toLowerCase().trim() || "";
+    const cleanUsername = identifier?.replace(/^@/, "").toLowerCase().trim() || "";
+    if (!cleanUsername) {
+      navigate("/community");
+      return undefined;
+    }
 
-        if (!cleanUsername) {
-          navigate("/community");
-          return;
-        }
+    // `vivo` corta as respostas que chegam depois da saída da tela. A limpeza
+    // do efeito precisa ser devolvida AQUI: antes ela estava dentro de uma
+    // função async, então quem recebia o `return` era a Promise e não o React —
+    // a inscrição nunca era cancelada e cada perfil visitado deixava mais uma
+    // viva, escrevendo o dado da pessoa anterior por cima do atual a cada
+    // atualização de qualquer perfil.
+    let vivo = true;
+    let carregadoPara = null;
 
-        // Subscribe to public profiles to find the user
-        const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
-          setPublicProfiles(profiles || {});
-          const userProfile = Object.values(profiles || {}).find(
-            (p) => (p.username || "").replace(/^@/, "").toLowerCase() === cleanUsername
-          );
+    const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
+      if (!vivo) return;
+      setPublicProfiles(profiles || {});
+      const userProfile = Object.values(profiles || {}).find(
+        (p) => (p.username || "").replace(/^@/, "").toLowerCase() === cleanUsername
+      );
 
-          if (!userProfile) {
-            navigate("/community");
-            return;
-          }
+      if (!userProfile) {
+        navigate("/community");
+        return;
+      }
 
-          setProfile(userProfile);
+      setProfile(userProfile);
+      setLoading(false);
 
-          // O perfil é a vitrine pública: mesmo no próprio perfil mostramos só
-          // as metas publicadas na comunidade, nunca a garagem inteira — quem
-          // quiser guardar um carro só pra si simplesmente não publica.
-          Promise.all([
-            engineDB.getUserGoals(userProfile.userId),
-            engineDB.getUserFollowers(userProfile.userId),
-            engineDB.getUserFollowing(userProfile.userId),
-            listAchievements(userProfile.userId),
-            // Conta os documentos de curtida, não soma `goal.likes`: o número
-            // que fica no post é vitrine e pode ser empurrado de um em um pela
-            // regra. O degrau se decide pela contagem da subcoleção.
-            engineDB.countLikesReceived(userProfile.userId),
-          ]).then(([goals, followers, following, conquistas, curtidas]) => {
-            setUserGoals(goals || []);
-            setFollowers(followers || []);
-            setFollowing(following || []);
-            setUnlockedAchievements(conquistas || new Set());
-            setLikesReceived(curtidas || 0);
-          });
+      // A inscrição é viva: dispara a cada mudança em QUALQUER perfil público.
+      // Só o retrato (nome, foto, bio) precisa acompanhar; metas, seguidores e
+      // conquistas se buscam uma vez por pessoa.
+      if (carregadoPara === userProfile.userId) return;
+      carregadoPara = userProfile.userId;
 
-          // Check if current user follows this profile
-          if (currentUserId && currentUserId !== userProfile.userId) {
-            engineDB.getUserFollowing(currentUserId).then((currentFollowing) => {
-              setIsFollowing((currentFollowing || []).includes(userProfile.userId));
-            });
-          }
+      // Trocar de pessoa apaga o que era da anterior. Sem isto, o visitante vê
+      // os selos e a contagem de quem ele acabou de visitar — e num perfil sem
+      // conquista nenhuma esse engano não passa, porque o dado que chega é
+      // vazio e não sobrescreve nada na tela.
+      //
+      // Pular de perfil em perfil pelas listas também não pode deixar o
+      // visitante parado na aba Seguidores do anterior.
+      setActiveTab("posts");
+      setUserGoals([]);
+      setFollowers([]);
+      setFollowing([]);
+      setUnlockedAchievements(new Set());
+      setLikesReceived(0);
+      setIsFollowing(false);
 
-          setLoading(false);
+      // O perfil é a vitrine pública: mesmo no próprio perfil mostramos só
+      // as metas publicadas na comunidade, nunca a garagem inteira — quem
+      // quiser guardar um carro só pra si simplesmente não publica.
+      Promise.all([
+        engineDB.getUserGoals(userProfile.userId),
+        engineDB.getUserFollowers(userProfile.userId),
+        engineDB.getUserFollowing(userProfile.userId),
+        listAchievements(userProfile.userId),
+        // Conta os documentos de curtida, não soma `goal.likes`: o número
+        // que fica no post é vitrine e pode ser empurrado de um em um pela
+        // regra. O degrau se decide pela contagem da subcoleção.
+        engineDB.countLikesReceived(userProfile.userId),
+      ])
+        .then(([goals, followersList, followingList, conquistas, curtidas]) => {
+          if (!vivo) return;
+          setUserGoals(goals || []);
+          setFollowers(followersList || []);
+          setFollowing(followingList || []);
+          setUnlockedAchievements(conquistas || new Set());
+          setLikesReceived(curtidas || 0);
+        })
+        .catch((error) => {
+          console.error("Error loading user profile:", error);
         });
 
-        return () => unsubscribe?.();
-      } catch (error) {
-        console.error("Error loading user profile:", error);
-        setLoading(false);
+      // Check if current user follows this profile
+      if (currentUserId && currentUserId !== userProfile.userId) {
+        engineDB.getUserFollowing(currentUserId).then((currentFollowing) => {
+          if (!vivo) return;
+          setIsFollowing((currentFollowing || []).includes(userProfile.userId));
+        });
       }
-    })();
+    });
+
+    return () => {
+      vivo = false;
+      unsubscribe?.();
+    };
   }, [identifier, currentUserId, navigate]);
 
   const handleFollow = async () => {
