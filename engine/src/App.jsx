@@ -6,6 +6,7 @@ import { auth } from "./services/firebase";
 import { CAR_TYPE_OWNED, engineDB } from "./services/db";
 import { useThemeMode } from "./hooks/useThemeMode";
 import { captureError, identifyUser, resetUser, trackPageView } from "./services/observability";
+import { AchievementAnnouncer } from "./components/achievements/AchievementAnnouncer";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { ContributionModal } from "./components/ContributionModal";
@@ -576,6 +577,10 @@ function AppLayout({
           onSave={(specs) => onSaveSpecs(specsCar, specs)}
         />
       )}
+
+      {/* Conquista e concedida no fundo, de tres telas diferentes. O aviso mora
+          aqui em cima para nao depender de qual delas estava aberta. */}
+      <AchievementAnnouncer userId={user?.uid} />
     </div>
   );
 }

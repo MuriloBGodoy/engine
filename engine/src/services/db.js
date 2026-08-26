@@ -1894,7 +1894,11 @@ export const engineDB = {
           goalTitle: goalTitle || "",
           targetPath: "/settings",
           notificationTitle: "Conquista desbloqueada",
-          notificationBody: "Você desbloqueou uma conquista no Engine.",
+          // Diz QUAL, e não "uma conquista": o aviso genérico obriga a abrir o
+          // perfil pra descobrir o que aconteceu.
+          notificationBody: `Sua garagem passou de ${new Intl.NumberFormat("pt-BR").format(
+            Number(id.replace("likes_", "")),
+          )} curtidas.`,
           text: "Você desbloqueou uma conquista.",
         });
       }

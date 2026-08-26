@@ -51,6 +51,35 @@ export {
 const achievementsRef = (userId) =>
   collection(firestore, "users", userId, ACHIEVEMENTS_SUBCOLLECTION);
 
+// --- quem avisa a tela -------------------------------------------------------
+//
+// A conquista é concedida no fundo, em três caminhos diferentes (curtir, seguir,
+// abrir a garagem), e nenhum deles sabe desenhar nada. Em vez de cada um chamar
+// a tela, quem concede anuncia e quem estiver montado escuta.
+//
+// O filtro que importa mora aqui: só anuncia quando a conquista é de QUEM ESTÁ
+// COM O APP ABERTO. Conceder é rotineiramente escrita no perfil de outra pessoa
+// — quem curtiu concede ao dono do post — e comemorar na tela de quem curtiu
+// seria comemorar a conquista alheia. Para essa pessoa o aviso é a notificação,
+// que chega mesmo com o app fechado.
+const ouvintes = new Set();
+
+export const subscribeAchievementUnlocked = (ouvinte) => {
+  ouvintes.add(ouvinte);
+  return () => ouvintes.delete(ouvinte);
+};
+
+const anunciar = (userId, achievementId) => {
+  if (userId !== auth.currentUser?.uid) return;
+  for (const ouvinte of ouvintes) {
+    try {
+      ouvinte(achievementId);
+    } catch {
+      // Um ouvinte quebrado não pode derrubar a concessão nem os outros.
+    }
+  }
+};
+
 /** Ids já conquistados por alguém. Leitura pública, como o perfil. */
 export const listAchievements = async (userId) => {
   if (!userId) return new Set();
@@ -78,6 +107,7 @@ export const grantAchievement = async (userId, achievementId) => {
     // `create` puro: sem merge, para o Firestore negar quando já existe. Com
     // merge isto viraria update e a dedup sumiria.
     await setDoc(alvo, { unlockedAt: serverTimestamp() });
+    anunciar(userId, achievementId);
     return true;
   } catch {
     return false;

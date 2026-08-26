@@ -108,6 +108,8 @@ check("post no topo mostra o de 1M", postBadgeTier(2000000) === 1000000);
 // o gatilho existe no lugar onde a conquista tem que acontecer.
 const db = fs.readFileSync(path.join(ROOT, "src/services/db.js"), "utf8");
 const perfil = fs.readFileSync(path.join(ROOT, "src/pages/UserProfile.jsx"), "utf8");
+const app = fs.readFileSync(path.join(ROOT, "src/App.jsx"), "utf8");
+const servico = fs.readFileSync(path.join(ROOT, "src/services/achievements.js"), "utf8");
 
 // Procura a CHAMADA (`this.x(`), nunca o nome solto: a definição do método
 // contém o nome também, então `db.includes("x(")` continuava verdadeiro com a
@@ -146,6 +148,18 @@ check(
 // Trocar de perfil tem que apagar o anterior. Sem isto, quem vem de um perfil
 // com selo vê o selo dele num perfil sem nenhum — e como o dado que chega é
 // vazio, ele não sobrescreve nada e o engano fica na tela.
+// Mesmo defeito de sempre, um andar acima: o aviso existir e nada monta-lo.
+check(
+  "quem concede anuncia",
+  servico.includes("anunciar(userId, achievementId);"),
+  "grantAchievement nao avisa a tela",
+);
+check(
+  "o anunciante esta montado no App",
+  /<AchievementAnnouncer\b/.test(app),
+  "o componente existe e ninguem renderiza",
+);
+
 check(
   "trocar de perfil zera as conquistas do anterior",
   perfil.includes("setUnlockedAchievements(new Set())"),

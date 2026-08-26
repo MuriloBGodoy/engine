@@ -5,6 +5,7 @@ import {
   MessageCircle,
   RotateCcw,
   Send,
+  Trophy,
   Star,
   UserPlus,
   XCircle,
@@ -34,6 +35,7 @@ export const notificationStyles = {
   service_changes_requested: { icon: RotateCcw, iconClass: "text-sky-500" },
   service_rejected: { icon: XCircle, iconClass: "text-red-500" },
   message: { icon: Send, iconClass: "text-[var(--engine-accent)]" },
+  achievement: { icon: Trophy, iconClass: "text-[var(--engine-accent)]" },
 };
 
 export const defaultNotificationStyle = {
