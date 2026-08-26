@@ -35,7 +35,8 @@ import {
   assertFails,
 } from "@firebase/rules-unit-testing";
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, collectionGroup, query, where,
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, collection, collectionGroup,
+  query, where, serverTimestamp, Timestamp,
 } from "firebase/firestore";
 import fs from "node:fs";
 import path from "node:path";
@@ -233,6 +234,48 @@ await t("o dono revoga a própria conquista", () =>
 await semear("users/dono/achievements/first_goal", { unlockedAt: 1 });
 await t("estranho NÃO apaga conquista alheia", () =>
   assertFails(deleteDoc(doc(outro, "users/dono/achievements/first_goal"))));
+
+
+console.log("\nnotificacao\n");
+
+// Notificar e escrita na caixa de OUTRA pessoa: quem avisa e quem agiu, do
+// cliente dele. Antes bastava estar logado, e o corpo era livre.
+const caixaDoDono = collection(outro, "users/dono/notifications");
+const aviso = (extra = {}) => ({
+  type: "like",
+  actorId: "outro",
+  recipientId: "dono",
+  read: false,
+  createdAt: serverTimestamp(),
+  text: "curtiu sua meta",
+  ...extra,
+});
+
+await t("quem agiu avisa quem recebeu", () =>
+  assertSucceeds(addDoc(caixaDoDono, aviso())));
+await t("nao da pra assinar em nome de outra pessoa", () =>
+  assertFails(addDoc(caixaDoDono, aviso({ actorId: "dono" }))));
+await t("nao da pra entregar dizendo que era pra outro", () =>
+  assertFails(addDoc(caixaDoDono, aviso({ recipientId: "terceiro" }))));
+await t("aviso nao chega ja lido (sumiria da contagem)", () =>
+  assertFails(addDoc(caixaDoDono, aviso({ read: true }))));
+await t("tipo inventado e negado", () =>
+  assertFails(addDoc(caixaDoDono, aviso({ type: "promocao_imperdivel" }))));
+await t("data no futuro grudaria o aviso no topo", () =>
+  assertFails(addDoc(caixaDoDono, aviso({
+    createdAt: Timestamp.fromDate(new Date("2030-01-01")) }))));
+await t("texto de 500+ caracteres e negado", () =>
+  assertFails(addDoc(caixaDoDono, aviso({ text: "x".repeat(600) }))));
+
+await t("estranho NAO le a caixa alheia", () =>
+  assertFails(getDocs(collection(outro, "users/dono/notifications"))));
+await t("o dono le a propria caixa", () =>
+  assertSucceeds(getDocs(collection(dono, "users/dono/notifications"))));
+await semear("users/dono/notifications/n1", { type: "like", read: false });
+await t("o dono marca a propria como lida", () =>
+  assertSucceeds(updateDoc(doc(dono, "users/dono/notifications/n1"), { read: true })));
+await t("estranho NAO mexe na notificacao alheia", () =>
+  assertFails(updateDoc(doc(outro, "users/dono/notifications/n1"), { read: true })));
 
 await env.cleanup();
 console.log(`\n${pass} passaram, ${fail} falharam\n`);

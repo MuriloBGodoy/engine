@@ -83,8 +83,33 @@ service cloud.firestore {
     }
 
     match /users/{userId}/notifications/{notificationId} {
+      // Aviso e escrita alheia por natureza: quem notifica e quem agiu, do
+      // cliente dele, porque o plano Spark nao tem Cloud Function pra fazer
+      // isso do lado do servidor. `signedIn()` sozinho deixava qualquer conta
+      // escrever qualquer coisa na caixa de qualquer pessoa: texto livre,
+      // remetente forjado, ja marcado como lido, com data no futuro pra ficar
+      // grudado no topo. Todos os sete pontos que notificam no app passam pelo
+      // mesmo `notifyUser`, entao a regra pode exigir o formato que ele produz.
+      function notificacaoHonesta() {
+        return request.resource.data.type in [
+                 "follow", "like", "comment", "rating", "achievement",
+                 "message",
+                 "service_approved", "service_changes_requested", "service_rejected"
+               ]
+               // Nao da pra assinar em nome de outro.
+               && request.resource.data.actorId == request.auth.uid
+               // Nem entregar num endereco e dizer que era de outro.
+               && request.resource.data.recipientId == userId
+               // Nasce por ler; ninguem chega lido nem some da contagem.
+               && request.resource.data.read == false
+               // Sem data escolhida a dedo: futuro fixaria o aviso no topo.
+               && request.resource.data.createdAt == request.time
+               && (!("text" in request.resource.data)
+                   || request.resource.data.text.size() < 500);
+      }
+
       allow read, update, delete: if isOwner(userId);
-      allow create: if signedIn();
+      allow create: if signedIn() && notificacaoHonesta();
     }
 
     match /usernames/{username} {
