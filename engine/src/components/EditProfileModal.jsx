@@ -4,9 +4,12 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, firestore, storage } from '../services/firebase';
 import { countries, getStates } from '../services/locations';
+import { AVATAR, BANNER, reduzirImagem } from '../services/imagens';
+import { useToast } from './ToastProvider';
 
 export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {} }) {
   const user = auth.currentUser;
+  const showToast = useToast();
 
   const [formData, setFormData] = useState({
     displayName: profileSettings?.displayName || profileSettings?.profile?.displayName || user?.displayName || '',
@@ -145,26 +148,27 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleFileInput = (field, file) => {
+  // A foto e reduzida ANTES de virar preview, e o preview e exatamente o que
+  // sera gravado — assim o que a pessoa ve e o que vai para o banco. Antes
+  // guardava-se o arquivo original em base64: no celular, 3 a 8 MB de camera,
+  // que estouram o documento do Firestore e o `photoURL` do Auth. Falhava no
+  // `console.error`, sem nada na tela, e a foto simplesmente nao mudava.
+  const handleFileInput = async (field, file) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      console.error('Apenas imagens são permitidas');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      console.error('Arquivo não pode exceder 5MB');
+      showToast('Escolha um arquivo de imagem.', { tone: 'warning' });
       return;
     }
 
     setFiles(prev => ({ ...prev, [field]: file }));
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(prev => ({ ...prev, [field]: e.target.result }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const reduzida = await reduzirImagem(file, field === 'avatar' ? AVATAR : BANNER);
+      setPreview(prev => ({ ...prev, [field]: reduzida }));
+    } catch {
+      showToast('Nao consegui usar essa imagem. Tente outra foto.', { tone: 'warning' });
+    }
   };
 
   const handleAvatarClick = () => {
@@ -227,9 +231,13 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
       //   bannerURL = await uploadFile(files.banner, `users/${user.uid}/banner-${Date.now()}`);
       // }
 
+      // O `photoURL` do Auth so aceita URL curta; um data URI de foto passa do
+      // limite e derruba o salvamento inteiro, inclusive os campos de texto.
+      // Enquanto a foto mora no Firestore, o Auth fica so com o nome.
+      const urlParaAuth = /^https?:\/\//.test(photoURL || '') ? photoURL : null;
       await updateProfile(user, {
         displayName: formData.displayName,
-        photoURL: photoURL,
+        ...(urlParaAuth ? { photoURL: urlParaAuth } : {}),
       });
 
       const profileRef = doc(firestore, 'publicProfiles', user.uid);
@@ -253,11 +261,18 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
         onSave(updateData);
       }
 
-      console.log('Perfil atualizado com sucesso!');
+      showToast('Perfil atualizado.');
       onClose();
     } catch (err) {
       console.error('Save error:', err);
-      console.error(err.message || 'Erro ao salvar perfil');
+      // Erro que so ia pro console: a pessoa apertava Salvar, nada acontecia e
+      // o modal ficava aberto sem dizer por que.
+      showToast(
+        err?.code === 'permission-denied'
+          ? 'Sem permissao para salvar este perfil.'
+          : 'Nao consegui salvar o perfil. Tente de novo.',
+        { tone: 'warning' },
+      );
     } finally {
       setLoading(false);
     }

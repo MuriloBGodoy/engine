@@ -91,7 +91,14 @@ export function CarCard({
     "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
 
   return (
-    <div className="engine-card engine-card-hover group relative flex h-[560px] flex-col overflow-hidden">
+    // A altura fixa de 560px vinha da grade de tres colunas do desktop, onde
+    // servia pra alinhar os cards. No celular a grade tem UMA coluna: nao ha
+    // nada pra alinhar, e a altura fixa so faz mal dos dois lados — o card de
+    // meta com nome longo passa de 577px e perde 17px dentro do
+    // `overflow-hidden`, enquanto o de carro proprio deixa 57px de vazio. A
+    // partir de `md`, onde as colunas aparecem, ela vira piso e nao teto: os
+    // cards se alinham e ainda assim crescem quando o conteudo precisa.
+    <div className="engine-card engine-card-hover group relative flex flex-col overflow-hidden md:min-h-[560px]">
       <div className="relative w-full overflow-hidden bg-gradient-to-br from-[var(--engine-surface-2)] via-[var(--engine-surface-2)]/50 to-[var(--engine-surface)] flex items-center justify-center aspect-video">
         <img
           src={car.image}
