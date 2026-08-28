@@ -352,6 +352,25 @@ const assertCarFitsDocument = (car) => {
 };
 
 /** Meta é o carro que a pessoa quer; owned é o que ela já tem na garagem. */
+/**
+ * Leitura que falhou e NAO tem cache pra mostrar no lugar.
+ *
+ * Existe porque `catch { return [] }` e indistinguivel de "voce nao tem nada".
+ * A garagem do Murilo (1,9 MB de foto em base64 dentro dos documentos) estourou
+ * o timeout num aparelho sem cache e a tela disse "adicione seu primeiro
+ * carro" para quem tinha sete. Cache com conteudo continua sendo resposta
+ * legitima — modo offline. Cache vazio depois de falha e erro, e erro tem que
+ * aparecer.
+ */
+export class FalhaDeLeitura extends Error {
+  constructor(oQue, causa) {
+    super(`Nao foi possivel carregar ${oQue}.`);
+    this.name = "FalhaDeLeitura";
+    this.oQue = oQue;
+    this.cause = causa;
+  }
+}
+
 export const CAR_TYPE_GOAL = "goal";
 export const CAR_TYPE_OWNED = "owned";
 
@@ -986,7 +1005,13 @@ export const engineDB = {
       return cars;
     } catch (error) {
       warnFirestoreFallback("getCars", error);
-      return getLocalCars();
+      const cache = await getLocalCars();
+      // Cache com carro dentro e modo offline: mostrar o que se tem e melhor
+      // que travar. Cache VAZIO nao e "voce nao tem carro" — e leitura que
+      // falhou, e devolver [] aqui foi exatamente o que fez a garagem parecer
+      // apagada num aparelho onde ela nunca tinha sido lida.
+      if (cache.length > 0) return cache;
+      throw new FalhaDeLeitura("a garagem", error);
     }
   },
 

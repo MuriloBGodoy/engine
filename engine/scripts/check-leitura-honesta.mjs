@@ -1,0 +1,122 @@
+/**
+ * Trava contra a mentira mais cara deste projeto: FALHA DESENHADA COMO VAZIO.
+ *
+ *   npm run check:leitura
+ *
+ * Já aconteceu quatro vezes:
+ *
+ *   - Eventos: a coleção não tinha regra, caía no deny padrão, e a tela dizia
+ *     "Nenhum evento encontrado". A feature nunca funcionou em produção e
+ *     ninguém percebeu, porque ausência e proibição desenham a mesma coisa.
+ *   - Garagem: `getCars` fazia `catch { return getLocalCars() }`. Num aparelho
+ *     sem cache — conta nova, navegador novo, troca de conta — a leitura
+ *     falhava e a tela dizia "adicione seu primeiro carro" para o dono de sete
+ *     carros. Em 27/08/2026 isso foi relatado como perda de dados; nada tinha
+ *     sido apagado.
+ *   - Mensagens: `subscribeConversations` e `subscribeMessages` faziam
+ *     `callback([])` no erro. Duas conversas com 19 mensagens intactas no banco
+ *     viraram uma caixa de entrada vazia.
+ *   - Conquistas: um `new Set(["first_goal"])` escrito à mão mostrava conquista
+ *     de terceiro no perfil de qualquer pessoa.
+ *
+ * A regra que as quatro violam é a mesma: quando a leitura não aconteceu, a
+ * tela não pode afirmar que não há nada. Ou mostra cache de verdade, ou diz
+ * que falhou. Nunca inventa o vazio.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+
+let failures = 0;
+const check = (name, ok, detail = "") => {
+  if (ok) {
+    console.log(`  ok   ${name}`);
+  } else {
+    failures += 1;
+    console.log(`  FALHA ${name}${detail ? `\n         ${detail}` : ""}`);
+  }
+};
+
+const db = read("src/services/db.js");
+const chat = read("src/services/chat.js");
+const garagem = read("src/pages/Garagem.jsx");
+const mensagens = read("src/pages/Messages.jsx");
+const app = read("src/App.jsx");
+
+// 1. O tipo de erro precisa existir e ser exportado: é o que separa "falhou"
+//    de "está vazio" em todo o resto da cadeia.
+check(
+  "db.js exporta FalhaDeLeitura",
+  /export class FalhaDeLeitura extends Error/.test(db),
+);
+
+// 2. O catch do getCars não pode voltar a devolver lista.
+const catchGetCars = db.slice(
+  db.indexOf("async getCars()"),
+  db.indexOf("async getCars()") + 2000,
+);
+check(
+  "getCars lanca quando a leitura falha e o cache esta vazio",
+  /if \(cache\.length > 0\) return cache;/.test(catchGetCars) &&
+    /throw new FalhaDeLeitura/.test(catchGetCars),
+  "sem isso, leitura falhada volta a virar garagem vazia",
+);
+check(
+  "getCars nao devolve getLocalCars() direto no catch",
+  !/warnFirestoreFallback\("getCars", error\);\s*return getLocalCars\(\);/.test(db),
+);
+
+// 3. chat.js: erro tem de chegar em quem desenha.
+const errosDeChat = chat.match(/callback\(\[\], error\)/g) || [];
+check(
+  "chat.js entrega o erro junto da lista vazia (2 assinaturas)",
+  errosDeChat.length === 2,
+  `achei ${errosDeChat.length}`,
+);
+check(
+  "nenhum handler de erro do chat faz callback([]) mudo",
+  !/console\.warn\("\[chat\][^)]*\);\s*callback\(\[\]\);/.test(chat),
+);
+
+// 4. As telas precisam ter o galho do erro, separado do galho do vazio.
+check(
+  "a Garagem desenha o erro de leitura, com botao",
+  /loadError/.test(garagem) &&
+    /cars\.length === 0 && loadError/.test(garagem) &&
+    /cars\.length === 0 && !loadError/.test(garagem) &&
+    /garage\.retry/.test(garagem),
+  "erro e vazio nao podem cair no mesmo bloco",
+);
+check(
+  "Mensagens separa 'falhou' de 'nao tem conversa'",
+  /chatError/.test(mensagens) &&
+    /&& chatError/.test(mensagens) &&
+    /&& !chatError/.test(mensagens),
+);
+
+// 5. O App tem de ligar os dois e oferecer o retry — sem isso a tela de erro
+//    existe no arquivo e nunca aparece.
+check(
+  "o App passa loadError e onRetry para a Garagem",
+  /loadError=\{carsError\}/.test(app) && /onRetry=\{recarregarCarros\}/.test(app),
+);
+check(
+  "as preferencias nao caem junto com a garagem (allSettled)",
+  /Promise\.allSettled\(\[\s*engineDB\.getCars\(\)/.test(app),
+  "com Promise.all, garagem falhando levava tema, idioma e regiao junto",
+);
+
+// 6. Os textos existem nos tres idiomas com bloco proprio.
+const i18n = read("src/services/i18n.js");
+for (const chave of ["loadFailedTitle", "loadFailedBody", "retry", "loadFailed", "loadFailedHint"]) {
+  const n = (i18n.match(new RegExp(`^\\s+${chave}:`, "gm")) || []).length;
+  check(`i18n tem ${chave} nos 3 idiomas`, n >= 3, `achei ${n}`);
+}
+
+console.log(
+  failures === 0 ? "\ntudo verde\n" : `\n${failures} trava(s) quebrada(s)\n`,
+);
+process.exit(failures === 0 ? 0 : 1);

@@ -63,6 +63,9 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [dbLoading, setDbLoading] = useState(true);
   const [cars, setCars] = useState([]);
+  // Leitura da garagem que falhou sem cache pra mostrar. Sem isso, a tela
+  // dizia "adicione seu primeiro carro" para quem tem sete.
+  const [carsError, setCarsError] = useState(null);
   const [settings, setSettings] = useState(engineDB.getDefaultSettings());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [carToEdit, setCarToEdit] = useState(null);
@@ -117,12 +120,23 @@ function App() {
         }
 
         await engineDB.migrateLegacyData(userId);
-        const [savedCars, savedSettings] = await Promise.all([
+        // `allSettled` de proposito: a garagem falhar nao pode levar junto as
+        // preferencias (tema, idioma, regiao), e o erro dela tem endereco
+        // proprio na tela em vez de virar garagem vazia.
+        const [resultadoCarros, resultadoAjustes] = await Promise.allSettled([
           engineDB.getCars(),
           engineDB.getSettings(),
         ]);
         if (cancelado) return;
-        setCars(savedCars);
+        if (resultadoCarros.status === "fulfilled") {
+          setCars(resultadoCarros.value);
+          setCarsError(null);
+        } else {
+          setCarsError(resultadoCarros.reason);
+          captureError(resultadoCarros.reason, { action: "getCars" });
+        }
+        if (resultadoAjustes.status === "rejected") throw resultadoAjustes.reason;
+        const savedSettings = resultadoAjustes.value;
         setSettings(savedSettings);
         // O perfil público só era escrito ao salvar os ajustes — quem nunca
         // entrou lá aparecia como "Usuário Engine" para os outros.
@@ -146,6 +160,27 @@ function App() {
     };
   }, [i18n, userId]);
 
+  /**
+   * Re-leitura da garagem depois de uma escrita, e o botao de tentar de novo.
+   *
+   * A escrita ja deu certo quando isto roda. Se a re-leitura falhar, o certo e
+   * avisar e MANTER na tela o que ja se tem — nunca esvaziar a garagem por
+   * causa dela. Devolve null quando falhou, pra quem chamou nao tentar ler
+   * uma lista que nao veio.
+   */
+  const recarregarCarros = async () => {
+    try {
+      const atualizados = await engineDB.getCars();
+      setCars(atualizados);
+      setCarsError(null);
+      return atualizados;
+    } catch (error) {
+      setCarsError(error);
+      captureError(error, { action: "recarregarCarros" });
+      return null;
+    }
+  };
+
   const handleOpenModal = (car = null) => {
     setCarToEdit(car);
     setIsModalOpen(true);
@@ -159,8 +194,7 @@ function App() {
   const saveCarAction = async (carData) => {
     try {
       await engineDB.saveCar(carData);
-      const updatedCars = await engineDB.getCars();
-      setCars(updatedCars);
+      await recarregarCarros();
       handleCloseModal();
       return true;
     } catch (error) {
@@ -184,9 +218,8 @@ function App() {
     try {
       const updated = { ...car, specs };
       await engineDB.saveCar(updated);
-      const updatedCars = await engineDB.getCars();
-      setCars(updatedCars);
-      setSpecsCar(updatedCars.find((item) => item.id === car.id) || updated);
+      const updatedCars = await recarregarCarros();
+      setSpecsCar(updatedCars?.find((item) => item.id === car.id) || updated);
       return true;
     } catch (error) {
       captureError(error, { action: "saveSpecs", carId: car?.id });
@@ -197,8 +230,7 @@ function App() {
   const saveOwnershipAction = async (car, ownershipInputs) => {
     try {
       await engineDB.saveCar({ ...car, ownership: ownershipInputs });
-      const updatedCars = await engineDB.getCars();
-      setCars(updatedCars);
+      await recarregarCarros();
       return true;
     } catch (error) {
       console.error(error);
@@ -271,8 +303,10 @@ function App() {
     if (!ok) return;
 
     await engineDB.deleteCar(car.id);
-    const updatedCars = await engineDB.getCars();
-    setCars(updatedCars);
+    // Se a re-leitura falhar, o carro ja foi apagado no banco: tira da tela
+    // pelo id em vez de deixar um fantasma clicavel.
+    const atualizados = await recarregarCarros();
+    if (!atualizados) setCars((atual) => atual.filter((item) => item.id !== car.id));
   };
 
   if (authLoading) {
@@ -348,6 +382,8 @@ function App() {
                   onOpenSpecs={setSpecsCar}
                   defaultSort={settings.preferences.defaultGarageSort}
                   hideValues={settings.privacy.lockSensitiveValues}
+                  loadError={carsError}
+                  onRetry={recarregarCarros}
                 />
               </RequireAuth>
             }

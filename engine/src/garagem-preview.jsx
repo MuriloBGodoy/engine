@@ -17,7 +17,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { CarCard } from "./components/CarCard";
-import { CAR_TYPE_OWNED } from "./services/db";
+import { Garagem } from "./pages/Garagem";
+import { CAR_TYPE_OWNED, FalhaDeLeitura } from "./services/db";
 import "./index.css";
 import "./services/i18n";
 
@@ -70,6 +71,33 @@ const CARROS = [
   },
 ];
 
+/**
+ * O estado de erro da Garagem, que so aparece quando a leitura falha e nao ha
+ * cache. Fica no banco de prova porque e justamente o estado que ninguem ve
+ * ate o dia em que ele importa — e no dia em que importou, ele nao existia:
+ * a tela dizia "adicione seu primeiro carro" para quem tinha sete.
+ */
+function ProvaDeErro() {
+  return (
+    <div className="min-h-screen bg-[var(--engine-bg)] font-sans text-[var(--engine-text)]">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
+        <Garagem
+          cars={[]}
+          loadError={new FalhaDeLeitura("a garagem", new Error("timeout"))}
+          onRetry={() => {}}
+          onOpenModal={() => {}}
+          onOpenDelete={() => {}}
+          onOpenOwnership={() => {}}
+          onAddContribution={() => {}}
+          onAddExpense={() => {}}
+          onMarkAchieved={() => {}}
+          onOpenSpecs={() => {}}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function Prova() {
   // Sem largura artificial: quem varia e o VIEWPORT, medido com emulacao de
   // dispositivo. Forcar a largura de um div nao liga as media queries — as
@@ -111,6 +139,6 @@ export function Prova() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Prova />
+    {QUERY.get("erro") === "1" ? <ProvaDeErro /> : <Prova />}
   </React.StrictMode>,
 );

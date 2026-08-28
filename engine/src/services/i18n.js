@@ -538,6 +538,10 @@ const resources = {
         empty: "A garagem está vazia.",
         sectionGoals: "Minhas metas",
         sectionOwned: "Meus carros",
+        loadFailedTitle: "Não consegui carregar a sua garagem",
+        loadFailedBody:
+          "Os seus carros continuam salvos. Foi a leitura que falhou, provavelmente por conexão. Tente de novo.",
+        retry: "Tentar de novo",
       },
       car: {
         progress: "Progresso",
@@ -952,6 +956,9 @@ const resources = {
         searchPlaceholder: "Buscar pessoas ou conversas",
         empty: "Nenhuma conversa por aqui",
         emptyHint: "Busque alguém da comunidade e mande a primeira mensagem.",
+        loadFailed: "Não consegui carregar as suas conversas",
+        loadFailedHint:
+          "As suas mensagens continuam salvas. Foi a leitura que falhou. Confira a conexão e recarregue a página.",
         noResults: "Ninguém encontrado",
         noResultsHint: "Confira o nome ou o @ e tente de novo.",
         people: "Pessoas",
@@ -1793,6 +1800,10 @@ const resources = {
         empty: "Your garage is empty.",
         sectionGoals: "My goals",
         sectionOwned: "My cars",
+        loadFailedTitle: "Couldn't load your garage",
+        loadFailedBody:
+          "Your cars are still saved. The read failed, most likely a connection issue. Try again.",
+        retry: "Try again",
       },
       car: {
         progress: "Progress",
@@ -2198,6 +2209,9 @@ const resources = {
         searchPlaceholder: "Search people or chats",
         empty: "No chats yet",
         emptyHint: "Search for someone in the community and send the first message.",
+        loadFailed: "Couldn't load your conversations",
+        loadFailedHint:
+          "Your messages are still saved. The read failed. Check your connection and reload the page.",
         noResults: "Nobody found",
         noResultsHint: "Double-check the name or the @ and try again.",
         people: "People",
@@ -3040,6 +3054,10 @@ const resources = {
         empty: "Tu garaje está vacío.",
         sectionGoals: "Mis metas",
         sectionOwned: "Mis autos",
+        loadFailedTitle: "No pude cargar tu garaje",
+        loadFailedBody:
+          "Tus autos siguen guardados. Falló la lectura, probablemente por conexión. Intenta de nuevo.",
+        retry: "Intentar de nuevo",
       },
       car: {
         progress: "Progreso",
@@ -3446,6 +3464,9 @@ const resources = {
         searchPlaceholder: "Buscar personas o chats",
         empty: "Todavía no hay chats",
         emptyHint: "Busca a alguien de la comunidad y envía el primer mensaje.",
+        loadFailed: "No pude cargar tus conversaciones",
+        loadFailedHint:
+          "Tus mensajes siguen guardados. Falló la lectura. Revisa la conexión y recarga la página.",
         noResults: "No se encontró a nadie",
         noResultsHint: "Revisa el nombre o el @ e inténtalo de nuevo.",
         people: "Personas",

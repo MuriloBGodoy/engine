@@ -1,4 +1,4 @@
-import { Plus, Target } from "lucide-react";
+import { CloudOff, Plus, RefreshCw, Target } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CarCard } from "../components/CarCard";
 import { CAR_TYPE_OWNED } from "../services/db";
@@ -37,6 +37,8 @@ export function Garagem({
   onOpenSpecs,
   defaultSort = "progress-desc",
   hideValues = false,
+  loadError = null,
+  onRetry,
 }) {
   const { t } = useTranslation();
   const sortedCars = sortCars(cars, defaultSort);
@@ -87,7 +89,29 @@ export function Garagem({
           </div>
         ))}
 
-        {cars.length === 0 && (
+        {/* Leitura que falhou NAO e garagem vazia. Enquanto isso aqui dizia
+            "adicione seu primeiro carro" para quem tem sete, nao havia como
+            saber se o carro tinha sumido ou se o app e que nao tinha
+            conseguido ler. Erro tem cara de erro e tem botao. */}
+        {cars.length === 0 && loadError && (
+          <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-[var(--engine-accent)]/40 bg-[var(--engine-accent-soft)] p-8 text-center sm:p-16">
+            <CloudOff className="mb-4 text-[var(--engine-accent)]" size={40} />
+            <p className="font-bold text-[var(--engine-text)]">
+              {t("garage.loadFailedTitle")}
+            </p>
+            <p className="mt-2 max-w-md text-sm font-medium text-[var(--engine-text-muted)]">
+              {t("garage.loadFailedBody")}
+            </p>
+            {onRetry && (
+              <Button className="mt-5" onClick={onRetry}>
+                <RefreshCw size={16} />
+                {t("garage.retry")}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {cars.length === 0 && !loadError && (
           <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--engine-border)] bg-[var(--engine-surface)] p-8 text-center sm:p-16">
             <Target className="mb-4 text-[var(--engine-accent)]" size={40} />
             <p className="font-semibold text-[var(--engine-text-muted)]">

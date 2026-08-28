@@ -111,6 +111,14 @@ export const attachmentFromGoal = (goal = {}) => {
   };
 };
 
+/**
+ * Lista de conversas.
+ *
+ * O callback recebe `(conversas, erro)`. O segundo argumento existe porque
+ * `callback([])` no catch e indistinguivel de "voce nao tem conversa": uma
+ * permissao negada, um token expirando na troca de conta ou a rede caindo
+ * desenhavam exatamente a mesma tela de quem nunca conversou com ninguem.
+ */
 export const subscribeConversations = (userId, callback) => {
   if (!userId) {
     callback([]);
@@ -135,11 +143,12 @@ export const subscribeConversations = (userId, callback) => {
     },
     (error) => {
       console.warn("[chat] subscribeConversations", error);
-      callback([]);
+      callback([], error);
     },
   );
 };
 
+/** Mensagens de uma conversa. Mesmo contrato: `(mensagens, erro)`. */
 export const subscribeMessages = (conversationId, callback) => {
   if (!conversationId) {
     callback([]);
@@ -162,7 +171,7 @@ export const subscribeMessages = (conversationId, callback) => {
     },
     (error) => {
       console.warn("[chat] subscribeMessages", error);
-      callback([]);
+      callback([], error);
     },
   );
 };

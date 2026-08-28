@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   ChevronRight,
+  CloudOff,
   MessageCircle,
   Search,
   Send,
@@ -60,6 +61,8 @@ export function Messages({ user, settings }) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   const [conversations, setConversations] = useState([]);
+  // Erro de leitura da lista. Sem isto, falha virava "nenhuma conversa".
+  const [chatError, setChatError] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [messages, setMessages] = useState([]);
   const [search, setSearch] = useState("");
@@ -79,7 +82,10 @@ export function Messages({ user, settings }) {
 
   useEffect(() => {
     if (!userId) return undefined;
-    return subscribeConversations(userId, setConversations);
+    return subscribeConversations(userId, (lista, erro) => {
+      setConversations(lista);
+      setChatError(erro || null);
+    });
   }, [userId]);
 
   useEffect(() => engineDB.subscribePublicProfiles(setProfiles), []);
@@ -338,7 +344,24 @@ export function Messages({ user, settings }) {
                 </div>
               )}
 
-              {!filteredConversations.length && !suggestions.length && (
+              {/* Leitura que falhou nao e caixa vazia: sem esta divisao, uma
+                  permissao negada e uma vida sem conversa desenhavam a mesma
+                  tela, e nao havia como saber que as mensagens ainda existiam. */}
+              {!filteredConversations.length && !suggestions.length && chatError && (
+                <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--engine-accent)]/40 bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]">
+                    <CloudOff size={20} />
+                  </div>
+                  <p className="mt-4 text-sm font-bold text-[var(--engine-text)]">
+                    {t("messages.loadFailed")}
+                  </p>
+                  <p className="mt-2 max-w-xs text-xs font-medium leading-5 text-[var(--engine-text-muted)]">
+                    {t("messages.loadFailedHint")}
+                  </p>
+                </div>
+              )}
+
+              {!filteredConversations.length && !suggestions.length && !chatError && (
                 <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--engine-border)] text-[var(--engine-text-subtle)]">
                     <MessageCircle size={20} />
