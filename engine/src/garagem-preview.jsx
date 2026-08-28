@@ -6,6 +6,11 @@
  * grade de três colunas do desktop, sobrava numa tela de 390 e cortava o que
  * não coubesse, porque o card também é `overflow-hidden`.
  *
+ * Foi aqui que as quatro variantes do redesenho foram medidas lado a lado
+ * (551px → 341px por card no celular) antes de a escolhida virar o CarCard.
+ * As referências e os prints dessa comparação estão em
+ * `ui designs/2026-08-25-card-carro-mobile/`.
+ *
  * Não entra no build: o Vite só empacota o index.html. Vive no `npm run dev`,
  * em /garagem-preview.html.
  */
@@ -18,6 +23,13 @@ import "./services/i18n";
 
 const QUERY = new URLSearchParams(window.location.search);
 if (QUERY.get("dark") === "1") document.documentElement.classList.add("dark");
+
+const TEMA_ALTERNADO = (() => {
+  const q = new URLSearchParams(QUERY);
+  if (q.get("dark") === "1") q.delete("dark");
+  else q.set("dark", "1");
+  return q;
+})();
 
 const FOTO =
   "data:image/svg+xml;utf8," +
@@ -66,9 +78,17 @@ export function Prova() {
   return (
     <div className="min-h-screen bg-[var(--engine-bg)] font-sans text-[var(--engine-text)]">
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
-        <p className="mb-4 text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
-          Card de carro — ?dark=1 para o tema escuro
-        </p>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
+            Card de carro
+          </p>
+          <a
+            href={`?${TEMA_ALTERNADO}`}
+            className="rounded-full border border-[var(--engine-border)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-[var(--engine-text-muted)]"
+          >
+            {QUERY.get("dark") === "1" ? "Claro" : "Escuro"}
+          </a>
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {CARROS.map(({ rotulo, car }) => (
             <div key={car.id} data-prova={rotulo}>

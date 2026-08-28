@@ -95,6 +95,29 @@ check(
   (i18n.match(/^\s+events: "(Eventos|Events)",$/gm) || []).length >= 3,
 );
 
+// 6. O card da Garagem carregava `h-[560px]` fixo, herdado da grade de tres
+//    colunas do desktop. Numa tela de 390 a grade tem UMA coluna: a altura
+//    fixa nao alinhava nada e o `overflow-hidden` comia o que passava dela.
+//    Altura fixa de bloco (3 digitos pra cima) so pode existir atras de um
+//    breakpoint; os 3px do ponto separador da ficha nao sao layout.
+const carCard = read("src/components/CarCard.jsx");
+const alturaCrua = carCard.match(/(?:^|[\s"`])(h-\[\d{3,}px\])/m);
+check(
+  "o card de carro nao tem altura fixa sem breakpoint",
+  alturaCrua === null,
+  alturaCrua ? `achei ${alturaCrua[1]} valendo tambem no celular` : "",
+);
+
+// 7. A Garagem vive atras do login, entao o card so e mensuravel pelo banco
+//    de prova. Se o preview parar de importar o CarCard de verdade, a
+//    proxima medicao mede outra coisa — que foi como o `h-[560px]` durou.
+check(
+  "o banco de prova usa o CarCard de producao",
+  read("src/garagem-preview.jsx").includes(
+    'import { CarCard } from "./components/CarCard"',
+  ),
+);
+
 console.log(
   failures === 0
     ? "\ntudo verde\n"

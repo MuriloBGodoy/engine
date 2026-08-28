@@ -16,31 +16,152 @@ import { forecastCompletion } from "../services/forecast";
 import { expenseInsights } from "../services/expenses";
 import { CAR_TYPE_OWNED } from "../services/db";
 
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
+
 /**
- * O bloco de identidade, clicavel ou nao.
- *
- * Sem `onOpenSpecs` ele continua sendo o texto de sempre — importa porque o
- * CarCard tambem aparece em tela onde a ficha nao faz sentido, e um botao que
- * nao leva a lugar nenhum e pior que nenhum botao.
- *
- * O `stopPropagation` nao e detalhe: na Garagem o card INTEIRO ja abre a edicao
- * do carro. Sem ele, tocar na identidade abriria os dois.
+ * Barra de progresso em UMA linha: rotulo, porcentagem e o que falta dividem a
+ * mesma faixa em vez de virarem tres blocos empilhados. O mesmo conteudo
+ * ocupava tres linhas e ~100px na versao anterior do card.
  */
-function SpecTrigger({ onOpenSpecs, car, label, children }) {
-  if (!onOpenSpecs) return <div className="min-w-0">{children}</div>;
+function ProgressStrip({ car, t, percentage, money, hideValues }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-muted)]">
+          {t("car.remaining")}{" "}
+          <span className="tabular-nums text-[var(--engine-accent)]">
+            {percentage}%
+          </span>
+        </span>
+        <span className="text-base font-extrabold tabular-nums text-[var(--engine-text)]">
+          {hideValues ? "R$ --" : money(car.targetValue - car.savedValue)}
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
+        <div
+          className="h-full rounded-full bg-[var(--engine-accent)] transition-all duration-700"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * As duas acoes do rodape lado a lado. Sao acoes de peso diferente — a da
+ * esquerda e a do dia a dia (aporte ou gasto), a da direita e o simulador — e
+ * empilhadas custavam ~100px de altura. Lado a lado custam 44.
+ *
+ * Meta batida e o unico caso em que uma acao toma a largura inteira: ali nao
+ * ha rotina a alimentar, ha uma conquista a declarar.
+ */
+function CardActions({
+  car,
+  t,
+  i18n,
+  isOwned,
+  reachedGoal,
+  ownershipTotal,
+  forecast,
+  spending,
+  money,
+  hideValues,
+  onAddContribution,
+  onAddExpense,
+  onOpenOwnership,
+  onMarkAchieved,
+}) {
+  if (reachedGoal && onMarkAchieved) {
+    return (
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          onMarkAchieved(car);
+        }}
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-3 text-[11px] font-black uppercase tracking-wider text-white transition hover:brightness-95"
+      >
+        <Trophy size={14} />
+        {t("car.markAchieved")}
+      </button>
+    );
+  }
+
+  const primary = isOwned
+    ? onAddExpense && {
+        run: () => onAddExpense(car),
+        Icon: Receipt,
+        label: t("expenses.cardAction"),
+        value:
+          spending?.monthlyAverage &&
+          (hideValues
+            ? "R$ --"
+            : t("expenses.perMonth", {
+                value: money(spending.monthlyAverage, true),
+              })),
+      }
+    : onAddContribution && {
+        run: () => onAddContribution(car),
+        Icon: PiggyBank,
+        label: t("contribution.cardAction"),
+        value:
+          forecast &&
+          forecast.date.toLocaleDateString(i18n.language, {
+            month: "short",
+            year: "numeric",
+          }),
+      };
+
+  if (!primary && !onOpenOwnership) return null;
 
   return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpenSpecs(car);
-      }}
-      className="group/specs -mx-2 -mt-1 block w-[calc(100%+1rem)] min-w-0 rounded-xl px-2 py-1 text-left transition-colors hover:bg-[var(--engine-surface-2)]"
-    >
-      {children}
-    </button>
+    <div className="flex gap-2">
+      {primary && (
+        <button
+          onClick={(event) => {
+            event.stopPropagation();
+            primary.run();
+          }}
+          className="flex min-h-11 flex-1 items-center gap-2 overflow-hidden rounded-xl border border-[var(--engine-accent)]/30 bg-[var(--engine-accent-soft)] px-3 text-left transition-colors hover:border-[var(--engine-accent)]"
+        >
+          <primary.Icon size={15} className="shrink-0 text-[var(--engine-accent)]" />
+          <span className="min-w-0">
+            <span className="block truncate text-[10px] font-bold uppercase text-[var(--engine-accent)]">
+              {primary.label}
+            </span>
+            {primary.value && (
+              <span className="block truncate text-[11px] font-semibold tabular-nums text-[var(--engine-text-muted)]">
+                {primary.value}
+              </span>
+            )}
+          </span>
+        </button>
+      )}
+      {onOpenOwnership && (
+        <button
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenOwnership(car);
+          }}
+          title={t("ownership.cardMonthly")}
+          className="flex min-h-11 flex-1 items-center gap-2 overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 text-left transition-colors hover:border-[var(--engine-accent)]"
+        >
+          <Calculator size={15} className="shrink-0 text-[var(--engine-accent)]" />
+          <span className="min-w-0">
+            <span className="block truncate text-[10px] font-bold uppercase text-[var(--engine-text-muted)]">
+              {t("ownership.cardMonthly")}
+            </span>
+            <span className="block truncate text-[11px] font-extrabold tabular-nums text-[var(--engine-text)]">
+              {ownershipTotal === null
+                ? t("ownership.cardSimulate")
+                : hideValues
+                  ? "R$ --"
+                  : money(ownershipTotal, true)}
+            </span>
+          </span>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -87,233 +208,144 @@ export function CarCard({
     100,
   ).toFixed(1);
 
-  const fallbackImage =
-    "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
+  const money = (value, short) =>
+    new Intl.NumberFormat(i18n.language, {
+      style: "currency",
+      currency: "BRL",
+      ...(short ? { maximumFractionDigits: 0 } : {}),
+    }).format(value);
+
+  // A identidade do carro vive DENTRO da foto, no degrade que ja existia e nao
+  // fazia nada. Antes ela era um bloco proprio abaixo da imagem; aqui divide o
+  // espaco com ela e custa zero de altura. E o que derrubou o card de 551px
+  // para ~365px no celular sem encolher a foto: a Garagem continua vitrine.
+  const identity = (
+    <>
+      <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">
+        {car.brand?.toUpperCase()} · {car.year}
+      </span>
+      {/* Duas linhas, nao truncado: a ficha e o lugar onde o nome completo da
+          versao cabe, mas "Onix Hatch LT 1.0 12V Flex 5p M..." na vitrine ainda
+          seria a pessoa nao reconhecendo o proprio carro. */}
+      <span className="mt-0.5 line-clamp-2 block font-display text-lg font-extrabold italic leading-tight tracking-tight text-white sm:text-xl">
+        {car.model}
+      </span>
+      {specs.length > 0 && (
+        <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-semibold text-white/70">
+          {specs.map((token, index) => (
+            <span key={token} className="flex items-center gap-1.5">
+              {index > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="h-[3px] w-[3px] rounded-full bg-white/40"
+                />
+              )}
+              {token}
+            </span>
+          ))}
+        </span>
+      )}
+    </>
+  );
 
   return (
-    // A altura fixa de 560px vinha da grade de tres colunas do desktop, onde
-    // servia pra alinhar os cards. No celular a grade tem UMA coluna: nao ha
-    // nada pra alinhar, e a altura fixa so faz mal dos dois lados — o card de
-    // meta com nome longo passa de 577px e perde 17px dentro do
-    // `overflow-hidden`, enquanto o de carro proprio deixa 57px de vazio. A
-    // partir de `md`, onde as colunas aparecem, ela vira piso e nao teto: os
-    // cards se alinham e ainda assim crescem quando o conteudo precisa.
-    <div className="engine-card engine-card-hover group relative flex flex-col overflow-hidden md:min-h-[560px]">
-      <div className="relative w-full overflow-hidden bg-gradient-to-br from-[var(--engine-surface-2)] via-[var(--engine-surface-2)]/50 to-[var(--engine-surface)] flex items-center justify-center aspect-video">
+    // Nada de altura magica. A de 560px vinha da grade de tres colunas do
+    // desktop, onde servia pra alinhar os cards — no celular, que tem UMA
+    // coluna, ela nao alinhava nada e o `overflow-hidden` comia o que passasse
+    // dela. Com o card mais baixo ela virou o problema oposto: 300px de vazio
+    // no desktop. `h-full` resolve os dois: item de grade ja estica ate a
+    // altura da linha, entao os cards de uma mesma linha se igualam sozinhos e
+    // no celular cada um tem a altura do proprio conteudo.
+    <div className="engine-card engine-card-hover group relative flex h-full flex-col overflow-hidden">
+      <div className="relative aspect-16/10 w-full overflow-hidden bg-linear-to-br from-[var(--engine-surface-2)] via-[var(--engine-surface-2)]/50 to-[var(--engine-surface)] md:aspect-video">
         <img
           src={car.image}
           alt={car.model}
           loading="lazy"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = fallbackImage;
-            e.target.classList.add("opacity-60");
+          onError={(event) => {
+            event.target.onerror = null;
+            event.target.src = FALLBACK_IMAGE;
+            event.target.classList.add("opacity-60");
           }}
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+        {/* Sem o degrade a identidade branca some numa foto clara. */}
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/85 via-black/25 to-transparent" />
         <button
           onClick={onDelete}
-          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg bg-black/45 text-white opacity-0 backdrop-blur-sm transition hover:bg-[var(--engine-accent)] focus-visible:opacity-100 group-hover:opacity-100 max-lg:opacity-100 lg:h-9 lg:w-9"
           title={t("common.delete")}
+          aria-label={t("common.delete")}
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg bg-black/45 text-white backdrop-blur-sm transition hover:bg-[var(--engine-accent)] focus-visible:opacity-100 max-lg:opacity-100 lg:h-9 lg:w-9 lg:opacity-0 lg:group-hover:opacity-100"
         >
           <Trash2 size={16} />
         </button>
+
+        {/* A identidade E o botao da ficha tecnica — decisao do Murilo, contra
+            o terceiro botao no rodape. Sem `onOpenSpecs` ela volta a ser texto:
+            o card tambem aparece em tela onde a ficha nao faz sentido, e um
+            botao que nao leva a lugar nenhum e pior que nenhum botao.
+
+            O `stopPropagation` nao e detalhe: na Garagem o card INTEIRO ja abre
+            a edicao do carro. Sem ele, tocar na identidade abriria os dois. */}
+        {onOpenSpecs ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenSpecs(car);
+            }}
+            aria-label={t("specSheet.cardAction")}
+            className="absolute inset-x-0 bottom-0 flex items-end gap-2 p-3 text-left sm:p-4"
+          >
+            <span className="min-w-0 flex-1">{identity}</span>
+            <ChevronRight
+              size={18}
+              aria-hidden="true"
+              className="mb-1 shrink-0 text-white/75 transition group-hover:translate-x-0.5 group-hover:text-white"
+            />
+          </button>
+        ) : (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 min-w-0 p-3 sm:p-4">
+            {identity}
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
-        {/* O bloco de identidade E o botao da ficha tecnica — decisao do
-            Murilo, contra o terceiro botao no rodape. Tres acoes de mesmo peso
-            transformavam o card numa lista de botoes; aqui a ficha usa o espaco
-            morto que o `justify-between` ja deixava no meio, e o alvo de toque
-            fica onde a pessoa ja olha para saber que carro e este.
+      <div className="flex flex-1 flex-col justify-end gap-3 p-3 sm:p-4">
+        {/* Carro que a pessoa ja tem nao tem progresso a exibir: no lugar da
+            barra entra o selo de garagem. O ano, que antes vinha ao lado dele,
+            agora esta na identidade sobre a foto. */}
+        {isOwned ? (
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--engine-accent-soft)] px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
+            <Key size={11} />
+            {t("car.owned")}
+          </span>
+        ) : (
+          <ProgressStrip
+            car={car}
+            t={t}
+            percentage={percentage}
+            money={money}
+            hideValues={hideValues}
+          />
+        )}
 
-            De quebra resolve o truncamento: como a ficha passa a ser o lugar
-            onde o nome completo da versao cabe, o modelo pode quebrar em duas
-            linhas em vez de virar "ONIX HATCH LT 1.0 12V Flex 5p M...". */}
-        <SpecTrigger onOpenSpecs={onOpenSpecs} car={car} label={t("specSheet.cardAction")}>
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--engine-accent)]">
-                {car.brand?.toUpperCase()}
-              </p>
-              <h3
-                className={`mt-1 text-xl font-extrabold italic leading-tight tracking-tight text-[var(--engine-text)] ${
-                  onOpenSpecs ? "line-clamp-2" : "truncate"
-                }`}
-              >
-                {car.model}
-              </h3>
-              <p className="mt-1 truncate text-xs font-medium text-[var(--engine-text-muted)]">
-                {car.year}
-              </p>
-            </div>
-            {onOpenSpecs && (
-              <ChevronRight
-                size={16}
-                aria-hidden="true"
-                className="mt-1 shrink-0 text-[var(--engine-text-muted)] transition group-hover/specs:translate-x-0.5 group-hover/specs:text-[var(--engine-accent)]"
-              />
-            )}
-          </div>
-
-          {specs.length > 0 && (
-            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-semibold text-[var(--engine-text-muted)]">
-              {specs.map((token, index) => (
-                <span key={token} className="flex items-center gap-1.5">
-                  {index > 0 && (
-                    <span
-                      aria-hidden="true"
-                      className="h-[3px] w-[3px] rounded-full bg-[var(--engine-border-strong)]"
-                    />
-                  )}
-                  {token}
-                </span>
-              ))}
-            </p>
-          )}
-        </SpecTrigger>
-
-        <div className="space-y-3 pt-2">
-          {/* Carro que a pessoa já tem não tem progresso a exibir: no lugar da
-              barra entra o selo de garagem. */}
-          {isOwned ? (
-            <div className="flex items-center justify-between border-t border-[var(--engine-border)] pt-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--engine-accent-soft)] px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--engine-accent)]">
-                <Key size={11} />
-                {t("car.owned")}
-              </span>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-muted)]">
-                {car.year}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
-                <span className="text-[var(--engine-text-subtle)]">
-                  {t("car.progress")}
-                </span>
-                <span className="tabular-nums text-[var(--engine-accent)]">
-                  {percentage}%
-                </span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
-                <div
-                  className="h-full rounded-full bg-[var(--engine-accent)] transition-all duration-700"
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
-
-              {reachedGoal ? (
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMarkAchieved?.(car);
-                  }}
-                  disabled={!onMarkAchieved}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--engine-accent)] bg-[var(--engine-accent)] px-3.5 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition hover:brightness-95 disabled:opacity-60"
-                >
-                  <Trophy size={14} />
-                  {t("car.markAchieved")}
-                </button>
-              ) : (
-                <div className="flex items-end justify-between border-t border-[var(--engine-border)] pt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
-                    {t("car.remaining")}
-                  </p>
-                  <p className="text-lg font-extrabold tabular-nums text-[var(--engine-text)]">
-                    {hideValues
-                      ? "R$ --"
-                      : new Intl.NumberFormat(i18n.language, {
-                          style: "currency",
-                          currency: "BRL",
-                        }).format(car.targetValue - car.savedValue)}
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-
-          {!isOwned && !reachedGoal && onAddContribution && (
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                onAddContribution(car);
-              }}
-              className="flex w-full items-center justify-between rounded-xl border border-[var(--engine-accent)]/30 bg-[var(--engine-accent-soft)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
-            >
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-accent)]">
-                <PiggyBank size={14} />
-                {t("contribution.cardAction")}
-              </span>
-              {forecast && (
-                <span className="text-[11px] font-bold tabular-nums text-[var(--engine-text-muted)]">
-                  {forecast.date.toLocaleDateString(i18n.language, {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* O carro que já é seu não tem meta a alimentar — tem conta a pagar.
-              No lugar do aporte entra o gasto, e o número à direita é o que
-              esse carro está custando por mês de verdade. */}
-          {isOwned && onAddExpense && (
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                onAddExpense(car);
-              }}
-              className="flex w-full items-center justify-between rounded-xl border border-[var(--engine-accent)]/30 bg-[var(--engine-accent-soft)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
-            >
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-accent)]">
-                <Receipt size={14} />
-                {t("expenses.cardAction")}
-              </span>
-              {spending?.monthlyAverage && (
-                <span className="text-[11px] font-bold tabular-nums text-[var(--engine-text-muted)]">
-                  {hideValues
-                    ? "R$ --"
-                    : t("expenses.perMonth", {
-                        value: new Intl.NumberFormat(i18n.language, {
-                          style: "currency",
-                          currency: "BRL",
-                          maximumFractionDigits: 0,
-                        }).format(spending.monthlyAverage),
-                      })}
-                </span>
-              )}
-            </button>
-          )}
-
-          {onOpenOwnership && (
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenOwnership(car);
-              }}
-              className="flex w-full items-center justify-between rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--engine-accent)]"
-            >
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
-                <Calculator size={14} className="text-[var(--engine-accent)]" />
-                {t("ownership.cardMonthly")}
-              </span>
-              <span className="text-sm font-extrabold tabular-nums text-[var(--engine-text)]">
-                {ownershipTotal === null
-                  ? t("ownership.cardSimulate")
-                  : hideValues
-                    ? "R$ --"
-                    : new Intl.NumberFormat(i18n.language, {
-                        style: "currency",
-                        currency: "BRL",
-                        maximumFractionDigits: 0,
-                      }).format(ownershipTotal)}
-              </span>
-            </button>
-          )}
-        </div>
+        <CardActions
+          car={car}
+          t={t}
+          i18n={i18n}
+          isOwned={isOwned}
+          reachedGoal={reachedGoal}
+          ownershipTotal={ownershipTotal}
+          forecast={forecast}
+          spending={spending}
+          money={money}
+          hideValues={hideValues}
+          onAddContribution={onAddContribution}
+          onAddExpense={onAddExpense}
+          onOpenOwnership={onOpenOwnership}
+          onMarkAchieved={onMarkAchieved}
+        />
       </div>
     </div>
   );
