@@ -39,6 +39,7 @@ export function Garagem({
   hideValues = false,
   loadError = null,
   onRetry,
+  accountEmail = "",
 }) {
   const { t } = useTranslation();
   const sortedCars = sortCars(cars, defaultSort);
@@ -117,6 +118,24 @@ export function Garagem({
             <p className="font-semibold text-[var(--engine-text-muted)]">
               {t("garage.empty")}
             </p>
+            {/*
+              Garagem vazia de verdade nao prova que a pessoa nao tem carro:
+              prova que ESTA conta nao tem. Em 28/08/2026 o dono de sete carros
+              passou dois dias achando que tinha perdido tudo porque entrou com
+              o outro Google dele; os carros estavam intactos na outra conta.
+              Vazio sem identidade e um beco sem saida — com o e-mail na tela,
+              a pessoa se localiza sozinha.
+            */}
+            {accountEmail && (
+              <>
+                <p className="mt-3 text-sm font-bold text-[var(--engine-text)]">
+                  {t("garage.emptyAccount", { account: accountEmail })}
+                </p>
+                <p className="mt-1 max-w-sm text-xs font-medium text-[var(--engine-text-subtle)]">
+                  {t("garage.emptyAccountHint")}
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>

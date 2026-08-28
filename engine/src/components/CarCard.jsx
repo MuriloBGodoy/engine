@@ -91,7 +91,8 @@ function CardActions({
     ? onAddExpense && {
         run: () => onAddExpense(car),
         Icon: Receipt,
-        label: t("expenses.cardAction"),
+        label: t("expenses.cardActionShort"),
+        title: t("expenses.cardAction"),
         value:
           spending?.monthlyAverage &&
           (hideValues
@@ -103,7 +104,8 @@ function CardActions({
     : onAddContribution && {
         run: () => onAddContribution(car),
         Icon: PiggyBank,
-        label: t("contribution.cardAction"),
+        label: t("contribution.cardActionShort"),
+        title: t("contribution.cardAction"),
         value:
           forecast &&
           forecast.date.toLocaleDateString(i18n.language, {
@@ -122,6 +124,10 @@ function CardActions({
             event.stopPropagation();
             primary.run();
           }}
+          // A coluna de 1280px COM a sidebar da ~294px ao card, e "REGISTRAR
+          // APORTE" nao cabe em metade disso: virava "REGISTRAR A...". O
+          // rotulo curto cabe; o longo continua acessivel no title.
+          title={primary.title}
           className="flex min-h-11 flex-1 items-center gap-2 overflow-hidden rounded-xl border border-[var(--engine-accent)]/30 bg-[var(--engine-accent-soft)] px-3 text-left transition-colors hover:border-[var(--engine-accent)]"
         >
           <primary.Icon size={15} className="shrink-0 text-[var(--engine-accent)]" />
@@ -149,7 +155,7 @@ function CardActions({
           <Calculator size={15} className="shrink-0 text-[var(--engine-accent)]" />
           <span className="min-w-0">
             <span className="block truncate text-[10px] font-bold uppercase text-[var(--engine-text-muted)]">
-              {t("ownership.cardMonthly")}
+              {t("ownership.cardMonthlyShort")}
             </span>
             <span className="block truncate text-[11px] font-extrabold tabular-nums text-[var(--engine-text)]">
               {ownershipTotal === null

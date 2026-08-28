@@ -384,6 +384,7 @@ function App() {
                   hideValues={settings.privacy.lockSensitiveValues}
                   loadError={carsError}
                   onRetry={recarregarCarros}
+                  accountEmail={user?.email || ""}
                 />
               </RequireAuth>
             }

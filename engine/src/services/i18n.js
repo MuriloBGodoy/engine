@@ -214,6 +214,7 @@ const resources = {
       contribution: {
         title: "Registrar aporte",
         cardAction: "Registrar aporte",
+        cardActionShort: "Aporte",
         amount: "Quanto guardou",
         date: "Quando",
         save: "Registrar",
@@ -226,6 +227,7 @@ const resources = {
       expenses: {
         title: "Gastos do carro",
         cardAction: "Lançar gasto",
+        cardActionShort: "Gasto",
         perMonth: "{{value}}/mês",
         amount: "Quanto foi",
         date: "Quando",
@@ -536,6 +538,9 @@ const resources = {
         subtitle: "Gerencie seus sonhos",
         addCar: "Adicionar carro",
         empty: "A garagem está vazia.",
+        emptyAccount: "Você está na conta {{account}}.",
+        emptyAccountHint:
+          "Se os seus carros estão em outra conta, saia e entre com o e-mail certo.",
         sectionGoals: "Minhas metas",
         sectionOwned: "Meus carros",
         loadFailedTitle: "Não consegui carregar a sua garagem",
@@ -559,6 +564,7 @@ const resources = {
         subtitle:
           "Descubra quanto custa comprar e manter esse carro por mês — e quanto você precisa ganhar.",
         cardMonthly: "Custo real/mês",
+        cardMonthlyShort: "Custo/mês",
         cardSimulate: "Simular",
         sections: {
           location: "Onde o carro vai rodar",
@@ -1479,6 +1485,7 @@ const resources = {
       contribution: {
         title: "Log a deposit",
         cardAction: "Log a deposit",
+        cardActionShort: "Deposit",
         amount: "How much you saved",
         date: "When",
         save: "Log it",
@@ -1491,6 +1498,7 @@ const resources = {
       expenses: {
         title: "Car spending",
         cardAction: "Log an expense",
+        cardActionShort: "Expense",
         perMonth: "{{value}}/mo",
         amount: "How much",
         date: "When",
@@ -1798,6 +1806,9 @@ const resources = {
         subtitle: "Manage your dreams",
         addCar: "Add car",
         empty: "Your garage is empty.",
+        emptyAccount: "You are signed in as {{account}}.",
+        emptyAccountHint:
+          "If your cars are on another account, sign out and sign in with the right e-mail.",
         sectionGoals: "My goals",
         sectionOwned: "My cars",
         loadFailedTitle: "Couldn't load your garage",
@@ -1821,6 +1832,7 @@ const resources = {
         subtitle:
           "See how much it costs to buy and keep this car every month — and how much you need to earn.",
         cardMonthly: "True cost/mo",
+        cardMonthlyShort: "Cost/mo",
         cardSimulate: "Simulate",
         sections: {
           location: "Where the car will run",
@@ -2729,6 +2741,7 @@ const resources = {
       contribution: {
         title: "Registrar aporte",
         cardAction: "Registrar aporte",
+        cardActionShort: "Aporte",
         amount: "Cuánto ahorraste",
         date: "Cuándo",
         save: "Registrar",
@@ -2741,6 +2754,7 @@ const resources = {
       expenses: {
         title: "Gastos del auto",
         cardAction: "Registrar gasto",
+        cardActionShort: "Gasto",
         perMonth: "{{value}}/mes",
         amount: "Cuánto fue",
         date: "Cuándo",
@@ -3052,6 +3066,9 @@ const resources = {
         subtitle: "Gestiona tus sueños",
         addCar: "Agregar auto",
         empty: "Tu garaje está vacío.",
+        emptyAccount: "Estás en la cuenta {{account}}.",
+        emptyAccountHint:
+          "Si tus autos están en otra cuenta, cierra sesión y entra con el correo correcto.",
         sectionGoals: "Mis metas",
         sectionOwned: "Mis autos",
         loadFailedTitle: "No pude cargar tu garaje",
@@ -3075,6 +3092,7 @@ const resources = {
         subtitle:
           "Descubre cuánto cuesta comprar y mantener este auto por mes — y cuánto necesitas ganar.",
         cardMonthly: "Costo real/mes",
+        cardMonthlyShort: "Costo/mes",
         cardSimulate: "Simular",
         sections: {
           location: "Dónde rodará el auto",

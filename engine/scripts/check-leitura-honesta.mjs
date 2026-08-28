@@ -18,6 +18,11 @@
  *     viraram uma caixa de entrada vazia.
  *   - Conquistas: um `new Set(["first_goal"])` escrito à mão mostrava conquista
  *     de terceiro no perfil de qualquer pessoa.
+ *   - Conta trocada: em 28/08/2026 o dono entrou com o outro Google dele. A
+ *     garagem estava legitimamente vazia NAQUELA conta, e a tela dizia só "A
+ *     garagem está vazia" — sem dizer em qual conta. Dois dias procurando um
+ *     bug que não existia; os sete carros estavam intactos na outra conta.
+ *     Vazio de verdade também precisa de endereço.
  *
  * A regra que as quatro violam é a mesma: quando a leitura não aconteceu, a
  * tela não pode afirmar que não há nada. Ou mostra cache de verdade, ou diz
@@ -90,6 +95,26 @@ check(
     /garage\.retry/.test(garagem),
   "erro e vazio nao podem cair no mesmo bloco",
 );
+// 4b. Vazio legitimo tem de dizer DE QUEM esta vazio. Sem o e-mail na tela,
+//     "conta errada" e "perdi tudo" desenham a mesma coisa.
+// Fatia o galho do vazio legitimo: o e-mail tem de aparecer LA DENTRO, e nao
+// so existir como prop em algum lugar do arquivo.
+const galhoVazio = garagem.slice(
+  garagem.indexOf("cars.length === 0 && !loadError"),
+);
+check(
+  "o vazio da Garagem identifica a conta logada",
+  garagem.includes("cars.length === 0 && !loadError") &&
+    /\{accountEmail && \(/.test(galhoVazio) &&
+    /garage\.emptyAccount", \{ account: accountEmail \}/.test(galhoVazio) &&
+    /garage\.emptyAccountHint/.test(galhoVazio),
+  'vazio sem e-mail vira "sumiu tudo"',
+);
+check(
+  "o App passa o e-mail da conta para a Garagem",
+  /accountEmail=\{user\?\.email/.test(app),
+);
+
 check(
   "Mensagens separa 'falhou' de 'nao tem conversa'",
   /chatError/.test(mensagens) &&
@@ -111,7 +136,7 @@ check(
 
 // 6. Os textos existem nos tres idiomas com bloco proprio.
 const i18n = read("src/services/i18n.js");
-for (const chave of ["loadFailedTitle", "loadFailedBody", "retry", "loadFailed", "loadFailedHint"]) {
+for (const chave of ["loadFailedTitle", "loadFailedBody", "retry", "loadFailed", "loadFailedHint", "emptyAccount", "emptyAccountHint"]) {
   const n = (i18n.match(new RegExp(`^\\s+${chave}:`, "gm")) || []).length;
   check(`i18n tem ${chave} nos 3 idiomas`, n >= 3, `achei ${n}`);
 }
