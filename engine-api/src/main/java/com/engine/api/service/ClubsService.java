@@ -49,13 +49,37 @@ public class ClubsService {
     return doc.exists() ? doc.toObject(Club.class) : null;
   }
 
+  /**
+   * Meus clubes.
+   *
+   * A consulta antiga procurava um campo `memberIds` em documentos de
+   * `clubMemberships/` e NUNCA devolveu nada. Duas razoes somadas:
+   * `createClub` e `joinClub` gravam em `clubMemberships/{clubId}/members/
+   * {userId}`, uma SUBCOLECAO — e gravar numa subcolecao nao cria o documento
+   * pai, entao a colecao `clubMemberships` esta literalmente vazia; e ninguem
+   * nunca escreveu `memberIds` em lugar nenhum do projeto.
+   *
+   * Resultado medido no banco em 02/09/2026: o clube "URDURS" existia em
+   * `clubs/`, a associacao de owner existia na subcolecao, e esta consulta
+   * devolvia 0. O clube era criado e sumia da tela — mais uma leitura que
+   * afirmava "voce nao tem nada" sobre um dado intacto.
+   *
+   * Agora a leitura bate onde a escrita sempre esteve. O `clubId` sai do
+   * proprio documento (o ClubMembership carrega o campo), sem depender do
+   * caminho do pai. Exige o indice de grupo de colecao declarado em
+   * `firestore.indexes.json` (members.userId) — sem ele o Firestore devolve
+   * FAILED_PRECONDITION, que e um erro alto e nao um silencio.
+   */
   public List<Club> getMyClubs(String userId) throws Exception {
-    QuerySnapshot memberships = firestore.collection("clubMemberships")
-        .whereArrayContains("memberIds", userId).get().get();
+    QuerySnapshot memberships = firestore.collectionGroup("members")
+        .whereEqualTo("userId", userId).get().get();
 
     List<Club> clubs = new ArrayList<>();
     for (var doc : memberships.getDocuments()) {
-      String clubId = doc.getId();
+      String clubId = doc.getString("clubId");
+      if (clubId == null) {
+        continue;
+      }
       Club club = getClub(clubId);
       if (club != null) {
         clubs.add(club);
