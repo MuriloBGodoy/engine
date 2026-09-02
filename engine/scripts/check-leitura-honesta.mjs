@@ -3,7 +3,7 @@
  *
  *   npm run check:leitura
  *
- * Já aconteceu quatro vezes:
+ * Já aconteceu cinco vezes, e a sexta foi pega antes de doer:
  *
  *   - Eventos: a coleção não tinha regra, caía no deny padrão, e a tela dizia
  *     "Nenhum evento encontrado". A feature nunca funcionou em produção e
@@ -23,8 +23,13 @@
  *     garagem está vazia" — sem dizer em qual conta. Dois dias procurando um
  *     bug que não existia; os sete carros estavam intactos na outra conta.
  *     Vazio de verdade também precisa de endereço.
+ *   - Migracao que falha: a leitura da migracao era protegida, a ESCRITA nao.
+ *     Um `batch.commit()` recusado subia ate o App, matava o efeito antes do
+ *     `getCars()` e deixava `cars: []` com `carsError: null` — a tela do vazio
+ *     legitimo, que desde 28/08/2026 nomeia a conta. O conserto anterior teria
+ *     virado acusacao: culpar a conta por uma escrita que falhou.
  *
- * A regra que as quatro violam é a mesma: quando a leitura não aconteceu, a
+ * A regra que todas violam é a mesma: quando a leitura não aconteceu, a
  * tela não pode afirmar que não há nada. Ou mostra cache de verdade, ou diz
  * que falhou. Nunca inventa o vazio.
  */
@@ -113,6 +118,27 @@ check(
 check(
   "o App passa o e-mail da conta para a Garagem",
   /accountEmail=\{user\?\.email/.test(app),
+);
+
+// 4c. A migracao e oportunista: se ela estourar, a leitura ainda tem de
+//     acontecer. Senao o vazio legitimo — o que agora nomeia a conta — vira a
+//     tela de uma escrita que falhou, e passa a acusar a conta errada.
+const migracao = db.slice(
+  db.indexOf("async migrateLegacyData(userId)"),
+  db.indexOf("async getCars()"),
+);
+check(
+  "a ESCRITA da migracao esta protegida por try/catch",
+  /await batch\.commit\(\);/.test(migracao) &&
+    /\} catch \(error\) \{\s*warnFirestoreFallback\("migrateLegacyData\/escrita", error\);/.test(
+      migracao,
+    ),
+  "batch.commit() solto aborta o efeito do App antes do getCars()",
+);
+check(
+  "migracao que falha nao impede o App de ler a garagem",
+  /migrateLegacyData\(userId\)\.catch\(/.test(app),
+  "sem o .catch, migracao quebrada = garagem vazia sem erro na tela",
 );
 
 check(

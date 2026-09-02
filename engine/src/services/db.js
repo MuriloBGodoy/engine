@@ -947,25 +947,38 @@ export const engineDB = {
       return;
     }
 
-    if (firestoreCars.empty) {
-      const carsToMigrate = existingCars?.length ? existingCars : legacyCars;
-      if (carsToMigrate?.length) {
-        const batch = writeBatch(firestore);
-        carsToMigrate.map(normalizeCar).forEach((car) => {
-          batch.set(userCarDoc(car.id, userId), serializeForFirestore(car));
-        });
-        await batch.commit();
+    // A migracao e oportunista: subir dado antigo e bom, mas falhar nisso nao
+    // pode custar a leitura da garagem. So a LEITURA estava protegida — a
+    // escrita, nao. Um `batch.commit()` recusado subia ate o App, abortava o
+    // efeito ANTES do `getCars()` e deixava `cars: []` com `carsError: null`:
+    // exatamente a tela do vazio legitimo, que agora diz o nome da conta. Seria
+    // a mentira de sempre com endereco errado — acusar a conta por uma escrita
+    // que falhou. `migratedKey` fica sem marcar de proposito, para tentar de
+    // novo na proxima sessao em vez de desistir do dado antigo para sempre.
+    try {
+      if (firestoreCars.empty) {
+        const carsToMigrate = existingCars?.length ? existingCars : legacyCars;
+        if (carsToMigrate?.length) {
+          const batch = writeBatch(firestore);
+          carsToMigrate.map(normalizeCar).forEach((car) => {
+            batch.set(userCarDoc(car.id, userId), serializeForFirestore(car));
+          });
+          await batch.commit();
+        }
       }
-    }
 
-    if (!firestoreSettings.exists()) {
-      const settingsToMigrate = existingSettings || legacySettings;
-      if (settingsToMigrate) {
-        await setDoc(
-          userSettingsDoc(userId),
-          serializeForFirestore(normalizeSettings(settingsToMigrate)),
-        );
+      if (!firestoreSettings.exists()) {
+        const settingsToMigrate = existingSettings || legacySettings;
+        if (settingsToMigrate) {
+          await setDoc(
+            userSettingsDoc(userId),
+            serializeForFirestore(normalizeSettings(settingsToMigrate)),
+          );
+        }
       }
+    } catch (error) {
+      warnFirestoreFallback("migrateLegacyData/escrita", error);
+      return;
     }
 
     await set(migratedKey, true);

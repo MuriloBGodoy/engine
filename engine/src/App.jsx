@@ -119,7 +119,15 @@ function App() {
           return;
         }
 
-        await engineDB.migrateLegacyData(userId);
+        // A migracao NUNCA pode barrar a leitura. Se estourasse aqui, o catch
+        // la embaixo pegava e o efeito terminava sem chamar `getCars()`: a
+        // garagem ficava vazia com `carsError` nulo, que e a tela do vazio
+        // legitimo — a que agora nomeia a conta. Falhou, seguiu; o erro vai
+        // para o Sentry em vez de ir para a cara da pessoa como "voce nao tem
+        // carro nenhum".
+        await engineDB.migrateLegacyData(userId).catch((error) => {
+          captureError(error, { action: "migrateLegacyData" });
+        });
         // `allSettled` de proposito: a garagem falhar nao pode levar junto as
         // preferencias (tema, idioma, regiao), e o erro dela tem endereco
         // proprio na tela em vez de virar garagem vazia.
