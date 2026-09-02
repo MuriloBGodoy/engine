@@ -2672,10 +2672,6 @@ export function Services({ user, settings }) {
                         </option>
                       ))}
                     </select>
-                    <ChevronRight
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[var(--engine-text-subtle)]"
-                    />
                   </div>
 
                   <div className="relative">
@@ -2699,10 +2695,6 @@ export function Services({ user, settings }) {
                         </option>
                       ))}
                     </select>
-                    <ChevronRight
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[var(--engine-text-subtle)]"
-                    />
                   </div>
 
                   <div className="relative">
@@ -2723,10 +2715,6 @@ export function Services({ user, settings }) {
                         </option>
                       ))}
                     </select>
-                    <ChevronRight
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[var(--engine-text-subtle)]"
-                    />
                   </div>
                 </div>
               </div>
