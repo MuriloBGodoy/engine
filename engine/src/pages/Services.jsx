@@ -632,9 +632,16 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
           onOpen(listing);
         }
       }}
-      className="group flex h-[420px] cursor-pointer flex-col overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] transition hover:-translate-y-0.5 hover:border-[var(--engine-accent)]/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:shadow-none"
+      /* Sem altura travada: a linha da grade ja iguala os cards (o `stretch` do
+         grid), e o `justify-between` la embaixo prende o rodape no fim. Com
+         `h-[420px]` o conteudo nao cabia e o flex cobrava a diferenca da unica
+         parte que podia encolher — a foto. */
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] transition hover:-translate-y-0.5 hover:border-[var(--engine-accent)]/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500/40 dark:shadow-none"
     >
-      <div className="relative h-[160px] overflow-hidden bg-[var(--engine-surface-2)] sm:h-[180px]">
+      {/* `shrink-0`: sem ele a faixa de 160px media 120px num card e 96px no
+          outro, conforme o texto de cada anuncio. Foto de tamanho diferente em
+          cada card e o que fazia a grade parecer torta. */}
+      <div className="relative h-[160px] shrink-0 overflow-hidden bg-[var(--engine-surface-2)] sm:h-[180px]">
         <img
           src={activePhoto}
           alt={listing.title}
@@ -2507,15 +2514,6 @@ export function Services({ user, settings }) {
         <div className="grid gap-6 p-5 sm:gap-8 sm:p-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:p-10">
           <div className="flex flex-col justify-between gap-6 sm:gap-8">
             <div>
-              <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
-                  <Sparkles size={14} />
-                  Engine Services
-                </span>
-                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--engine-text-muted)] sm:text-[10px] sm:tracking-[0.26em]">
-                  {t("services.kicker")}
-                </span>
-              </div>
               <h1 className="max-w-4xl text-2xl font-extrabold uppercase italic leading-tight tracking-tight sm:text-3xl">
                 {t("services.title")}
               </h1>
