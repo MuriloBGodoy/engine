@@ -38,6 +38,7 @@ import { ClubsTab } from "../components/community/ClubsTab";
 import { Events } from "./Events";
 import { engineDB, POST_KIND_POST } from "../services/db";
 import { postBadgeTier } from "../services/achievements";
+import { normalizeFipeBrand } from "../services/fipeVersion";
 import { AchievementBadge } from "../components/achievements/AchievementBadge";
 import { InfoTip } from "../components/InfoTip";
 import { SpecSheetModal } from "../components/specsheet/SpecSheetModal";
@@ -154,6 +155,28 @@ const getVehicleTitle = (goal = {}) => {
   const model = getRankingVehicleLabel(goal);
 
   if (!brand) return model;
+  if (!model || model.toLowerCase() === brand.toLowerCase()) return brand;
+  return `${brand} ${model}`;
+};
+
+/**
+ * Nome curto para o feed: `GM - Chevrolet Corsa Sedan 1.8 MPFI FlexPower 8V 4p`
+ * vira `Chevrolet Corsa Sedan`.
+ *
+ * A string da FIPE é a VERSÃO, e versão é assunto da ficha técnica — que é
+ * justamente o que este botão abre. No card ela não cabia: truncava no meio e
+ * comia o ano, que é a parte que ajuda a reconhecer o carro. Some a sigla
+ * redundante da marca (`GM - `, `VW - `) e corta na cilindrada, que é onde a
+ * designação do modelo acaba e começa a do motor. Sem cilindrada escrita, não
+ * corta nada — chutar onde a versão começa seria pior que o nome comprido.
+ */
+const VERSION_START = /\s\d+[.,]\d.*$/;
+
+const getVehicleTitleShort = (goal = {}) => {
+  const brand = normalizeFipeBrand(goal.brand);
+  const model = getRankingVehicleLabel(goal).replace(VERSION_START, "").trim();
+
+  if (!brand) return model || getVehicleTitle(goal);
   if (!model || model.toLowerCase() === brand.toLowerCase()) return brand;
   return `${brand} ${model}`;
 };
@@ -847,7 +870,7 @@ export function GoalCard({
           >
             <span className="min-w-0 truncate">
               <span className="font-bold italic text-[var(--engine-text)]">
-                {getVehicleTitle(goal)}
+                {isModal ? getVehicleTitle(goal) : getVehicleTitleShort(goal)}
               </span>
               {goal.year ? <span>{` · ${goal.year}`}</span> : null}
             </span>
@@ -3160,7 +3183,7 @@ function SidebarRanking({ ranking, t }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-[var(--engine-text)] dark:text-white">
-                {getVehicleTitle(goal)}
+                {getVehicleTitleShort(goal)}
                 {goal.year && (
                   <span className="font-bold text-[var(--engine-text-subtle)]">
                     {` · ${goal.year}`}
@@ -3246,7 +3269,7 @@ function RankingPanel({ ranking, t }) {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-lg font-black italic text-[var(--engine-text)] dark:text-white">
-                  {getVehicleTitle(goal)}
+                  {getVehicleTitleShort(goal)}
                 </p>
                 <p className="text-xs font-bold uppercase tracking-widest text-[var(--engine-text-subtle)]">
                   {goal.author} / {goal.username}
