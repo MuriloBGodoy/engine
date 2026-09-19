@@ -8,6 +8,12 @@ import { trackEvent } from "../services/observability";
  *
  * Aparece rente ao rodapé e sem bloquear a tela: quem está no meio de algo
  * ignora e segue. Fecha por 30 dias quando dispensado.
+ *
+ * Posição (13/09/2026, WebKit num iPhone 13): com `bottom: 12px` fixo ele
+ * cobria 52px da barra de abas e metade da dica de visitante, e no PWA ainda
+ * ficava debaixo da barra de gestos. Aqui ele respeita a área segura; a
+ * classe `engine-install-prompt` deixa o index.css subi-lo acima da barra de
+ * abas quando ela existe e recolher a dica enquanto ele está na tela.
  */
 export function InstallPrompt() {
   const { t } = useTranslation();
@@ -26,7 +32,7 @@ export function InstallPrompt() {
   };
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-[200] mx-auto max-w-md sm:inset-x-auto sm:right-6 sm:bottom-6">
+    <div className="engine-install-prompt fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] z-[200] mx-auto max-w-md sm:bottom-6 sm:left-auto sm:right-6">
       <div className="engine-pop flex items-start gap-3 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-elevated)] p-4 shadow-lg">
         <img
           src="/icons/icon-192.png"
@@ -67,7 +73,8 @@ export function InstallPrompt() {
           type="button"
           onClick={handleDismiss}
           aria-label={t("common.cancel")}
-          className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+          /* 44x44 (HIG); media 32x32. As margens negativas mantêm o X no canto. */
+          className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
         >
           <X size={16} />
         </button>

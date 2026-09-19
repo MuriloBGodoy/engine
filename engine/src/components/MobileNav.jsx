@@ -47,6 +47,14 @@ const getInitials = (name) => {
  *     A rota /events continua existindo e é o que o menu do desktop usa.
  *
  * Se um dia entrar uma área nova, ela tira outra da barra — não vira a sexta.
+ *
+ * Área segura (13/09/2026, WebKit): no PWA a barra de status é translúcida
+ * (`black-translucent` no index.html) e o conteúdo passa por baixo dela — o
+ * header tinha `py-2.5` e ficava atrás do relógio em todo iPhone com notch;
+ * daí o `env(safe-area-inset-top)` no topo. A barra de abas é `fixed`, então
+ * o padding lateral do body não a alcança: em landscape a primeira aba ficava
+ * debaixo do notch; daí os env() laterais. A classe `engine-mobile-nav` é o
+ * gancho que o index.css usa para o convite de instalação subir acima dela.
  */
 export function MobileNav({
   profileSettings = {},
@@ -84,12 +92,11 @@ export function MobileNav({
   const isActivePath = (path) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
-  const settingsActive = location.pathname.startsWith("/settings");
-
   return (
     <>
-      <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/85 px-4 py-2.5 backdrop-blur-xl lg:hidden">
-        <Link to="/" aria-label="Engine" className="flex h-11 items-center">
+      <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--engine-border)] bg-[var(--engine-bg)]/85 px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+        {/* 44px de largura: o logo tem 36 e o link media 36x44 (HIG pede 44). */}
+        <Link to="/" aria-label="Engine" className="-ml-1 flex h-11 w-11 items-center justify-center">
           <Logo markSize={36} collapsed />
         </Link>
 
@@ -163,7 +170,7 @@ export function MobileNav({
         </div>
       </header>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
+      <nav className="engine-mobile-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[var(--engine-border)] bg-[var(--engine-bg)]/95 pb-[max(env(safe-area-inset-bottom),0.35rem)] pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
         {menuItems.map((item) => {
           const active = isActivePath(item.path);
           const Icon = item.icon;

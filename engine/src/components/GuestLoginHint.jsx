@@ -62,8 +62,11 @@ export function GuestLoginHint({ placement = "top" }) {
         role="dialog"
         aria-label={t("guest.hint.title")}
         /* `bottom` acompanha a altura da barra inferior (~3.25rem) mais a área
-           segura do aparelho, para a dica pousar logo acima dela. */
-        className="engine-rise fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-2 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] py-2 pl-3.5 pr-2 shadow-[var(--engine-shadow-md)] lg:hidden"
+           segura do aparelho, para a dica pousar logo acima dela. As laterais
+           também: é `fixed`, então o padding do body não a afasta do notch em
+           landscape. `engine-guest-dock` é o gancho do index.css que a recolhe
+           enquanto o convite de instalação ocupa o mesmo trilho. */
+        className="engine-guest-dock engine-rise fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] z-40 flex items-center gap-2 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] py-2 pl-3.5 pr-1 shadow-[var(--engine-shadow-md)] lg:hidden"
       >
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-bold leading-tight text-[var(--engine-text)]">
@@ -84,7 +87,8 @@ export function GuestLoginHint({ placement = "top" }) {
           type="button"
           onClick={dismiss}
           aria-label={t("guest.hint.close")}
-          className="flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:bg-[var(--engine-surface-2)]"
+          /* 44x44: com w-9 o fechar media 36px de largura (HIG pede 44). */
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-subtle)] transition-colors active:bg-[var(--engine-surface-2)]"
         >
           <X size={16} />
         </button>

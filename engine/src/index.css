@@ -108,12 +108,33 @@ body {
   font-family: var(--font-sans);
   min-height: 100dvh;
   overflow-x: hidden;
+  /* iPhone deitado: com `viewport-fit=cover` o notch e a barra de gestos
+     entram 44px por cada lado, e o conteúdo (px-4 do header, px-6 do main)
+     ficava debaixo deles. Aqui cobre tudo que está no fluxo; o que é
+     `position: fixed` (barra de abas, dica, convite) tem o próprio env(). */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   letter-spacing: -0.011em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Sem flash cinza ao tocar em links/botões no Android */
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Safari iOS ainda interpreta dois toques rápidos como zoom, mesmo com
+   `width=device-width` — curtir duas vezes seguidas dava zoom na tela.
+   `manipulation` mantém rolagem e pinça e tira só o duplo-toque. Em @layer
+   base para uma utilitária `touch-*` do Tailwind ainda mandar onde pedir. */
+@layer base {
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
 }
 
 h1,
@@ -316,9 +337,16 @@ h5 {
     overflow-wrap: break-word;
   }
 
-  /* iOS dá zoom automático em campos com fonte < 16px. Esta regra fica fora
-     de qualquer @layer, então vence as utilitárias do Tailwind (text-sm etc.)
-     e mantém o formulário estável ao focar no celular. */
+}
+
+/* iOS dá zoom automático em campos com fonte < 16px. Esta regra fica fora
+   de qualquer @layer, então vence as utilitárias do Tailwind (text-sm etc.)
+   e mantém o formulário estável ao focar no celular.
+
+   Vale por largura E por ponteiro: só a largura (≤ 640px) deixava de fora o
+   iPad (768px) e o iPhone deitado (750px), que zoomam do mesmo jeito — medido
+   em 13/09/2026: busca e os 3 selects de Serviços em 14px no iPad Mini. */
+@media (max-width: 640px), (pointer: coarse) {
   input,
   select,
   textarea {
@@ -328,7 +356,10 @@ h5 {
 
 .auth-screen {
   display: flex;
+  /* 100vh no iOS é a altura com a barra do Safari recolhida: com ela à vista
+     a tela "centralizada" sobrava pra baixo. dvh acompanha a barra. */
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   align-items: center;
   justify-content: center;
@@ -603,6 +634,16 @@ h5 {
   transform: translateY(-1px);
 }
 
+/* HIG pede 44pt de alvo. "Esqueci minha senha" e "Continuar sem conta"
+   mediam 24px de altura (13/09/2026, iPhone SE). Só no toque, para o desktop
+   manter o ritmo do formulário. */
+@media (pointer: coarse) {
+  .auth-text-button,
+  .auth-switch-copy a {
+    min-height: 44px;
+  }
+}
+
 .auth-submit:disabled,
 .auth-text-button:disabled {
   cursor: not-allowed;
@@ -754,6 +795,13 @@ h5 {
 @media (max-width: 560px) {
   .auth-screen {
     padding: 0;
+  }
+
+  /* No PWA a barra de status é translúcida (`black-translucent`) e o
+     conteúdo passa por baixo dela: sem este env() o logo do herói ficava
+     atrás do relógio em todo iPhone com notch. */
+  .auth-hero {
+    padding-top: calc(22px + env(safe-area-inset-top));
   }
 
   .auth-shell {
@@ -1012,6 +1060,26 @@ h5 {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
 }
 
+/* ===== Rodapé do celular: três peças fixas disputando o mesmo canto =====
+   Barra de abas (z-50), dica de visitante (z-40, pousa acima da barra) e
+   convite de instalação (z-200, `bottom: 12px`). Medido em 13/09/2026 num
+   iPhone 13 na segunda visita: o convite cobria 52px da barra de abas e
+   metade da dica — três camadas empilhadas, nenhuma inteira.
+
+   Regra: onde a barra de abas existe, o convite sobe para o mesmo trilho da
+   dica; e enquanto o convite está na tela, a dica se recolhe (volta sozinha
+   quando ele é fechado, porque `:has` é vivo). Sem `:has` (iOS < 15.4) fica
+   como era. */
+@media (max-width: 1023px) {
+  body:has(.engine-mobile-nav) .engine-install-prompt {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+
+  body:has(.engine-install-prompt) .engine-guest-dock {
+    display: none;
+  }
+}
+
 /* Faixa horizontal rolável (abas/chips) — vale só abaixo de lg; a partir daí
    o elemento volta a obedecer às classes do Tailwind (ex.: lg:block), já que
    CSS sem @layer vence as utilitárias. */
@@ -1229,7 +1297,8 @@ h5 {
 .region-pop {
   position: fixed;
   left: 50%;
-  top: 60px;
+  /* O header cresce com a barra de status no PWA; o painel acompanha. */
+  top: calc(60px + env(safe-area-inset-top));
   transform: translateX(-50%);
   z-index: 999;
   width: calc(100vw - 32px);

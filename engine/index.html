@@ -1,5 +1,11 @@
 <!doctype html>
-<html lang="pt-BR">
+<!-- `class="dark"` já no HTML: o tema padrão é escuro e a classe só chegava
+     depois do React montar, então todo carregamento pintava o fundo claro
+     (#e9ebf0) por um instante antes de escurecer — no PWA, a splash preta
+     abria num flash cinza. Medido em 13/09/2026 no WebKit: primeiro frame com
+     class="" e fundo claro. Quem salvou tema claro continua sendo atendido:
+     useThemeMode tira a classe assim que lê a preferência. -->
+<html lang="pt-BR" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -8,9 +14,38 @@
     <meta name="apple-mobile-web-app-title" content="Engine" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#080808" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f9fafb" media="(prefers-color-scheme: light)" />
+    <!-- `interactive-widget=resizes-content`: Chrome 108+ e Samsung Internet
+         deixaram de encolher o layout quando o teclado abre; sem isto o 100dvh
+         não acompanha e o rodapé fixo dos modais fica debaixo do teclado.
+         Medido pela Mia em 16/09/2026 (Chromium, 360x740). O iOS ignora. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- Uma só cor de status bar, sincronizada pelo script abaixo. Havia duas
+         (uma por `prefers-color-scheme`), mas o tema do Engine é por classe,
+         não pelo sistema: iPhone no modo claro do sistema com o app escuro
+         ganhava barra do Safari em #f9fafb sobre uma tela #08090c. Medido em
+         13/09/2026. A cor lida vem do `background-color` do :root, que é o
+         token — nada cravado aqui. -->
+    <meta name="theme-color" content="#08090c" />
+    <script>
+      (function () {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        var sync = function () {
+          var color = getComputedStyle(document.documentElement).backgroundColor;
+          // Antes do CSS chegar o fundo é transparente; aí a cor anterior fica.
+          if (color && color !== "rgba(0, 0, 0, 0)" && color !== "transparent") {
+            meta.content = color;
+          }
+        };
+        new MutationObserver(sync).observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["class", "data-theme"],
+        });
+        document.addEventListener("DOMContentLoaded", sync);
+        window.addEventListener("load", sync);
+        sync();
+      })();
+    </script>
     <meta
       name="description"
       content="Engine — organize sua garagem, acompanhe metas e conecte-se com a comunidade automotiva."
