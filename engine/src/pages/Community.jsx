@@ -2977,7 +2977,7 @@ export function Community({ cars = [], settings, user }) {
           {/* Eventos Tab — a mesma página de /events, sem o cabeçalho dela: aqui
               quem anuncia onde você está é a barra de abas acima. A rota
               /events continua existindo e é o que o menu do desktop usa. */}
-          {topLevelTab === "eventos" && <Events embedded />}
+          {topLevelTab === "eventos" && <Events embedded user={user} />}
         </div>
 
         {/* Sidebar (only shown for Goals tab) */}

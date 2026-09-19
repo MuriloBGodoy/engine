@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Filter, Loader2 } from "lucide-react";
+import { Plus, Loader2, CalendarCheck } from "lucide-react";
 import { engineEvents } from "../services/events";
 import { EventCard } from "../components/EventCard";
 import { CreateEventForm } from "../components/CreateEventForm";
@@ -19,13 +19,24 @@ const labelClass =
 /**
  * `embedded` — a mesma tela servida como aba de Comunidade (?tab=eventos). Lá a
  * barra de abas já diz onde a pessoa está, então o título e o subtítulo daqui
- * seriam eco; sobra só o botão de criar. A rota /events segue usando a forma
- * completa.
+ * seriam eco. A rota /events segue usando a forma completa.
+ *
+ * O cabeçalho segue o padrão da aba Clubes (pedido do Murilo em 19/09/2026):
+ * sub-abas "Meus eventos · Descobrir" numa linha com o botão compacto de
+ * criar à direita. Antes era um botão largo "Criar Evento" seguido de um
+ * cartão inteiro de filtros, e as duas abas vizinhas falavam línguas
+ * diferentes. Os filtros continuam existindo, mas como uma linha dentro de
+ * Descobrir, que é onde eles fazem sentido.
+ *
+ * Visitante sem login não tem "Meus eventos": a sub-aba some e Descobrir vira
+ * a única, igual ao que ele consegue fazer.
  */
-export function Events({ embedded = false }) {
+export function Events({ embedded = false, user = null }) {
   const { t } = useTranslation();
   const showToast = useToast();
 
+  const signedIn = Boolean(user?.uid);
+  const [subTab, setSubTab] = useState(signedIn ? "mine" : "discover");
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -34,13 +45,19 @@ export function Events({ embedded = false }) {
     state: "all",
   });
 
+  const activeTab = signedIn ? subTab : "discover";
+
   useEffect(() => {
     loadEvents();
-  }, [filters]);
+  }, [filters, activeTab]);
 
   const loadEvents = async () => {
     setLoading(true);
     try {
+      if (activeTab === "mine") {
+        setEvents(await engineEvents.getMyEvents({ limit: 50 }));
+        return;
+      }
       const filterParams = {
         type: filters.type === "all" ? null : filters.type,
         state: filters.state === "all" ? null : filters.state,
@@ -64,41 +81,56 @@ export function Events({ embedded = false }) {
 
   return (
     <div className={embedded ? "space-y-5" : "space-y-8"}>
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          {!embedded && (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--engine-text)] sm:text-4xl">
-                {t("events.title")}
-              </h1>
-              <p className="text-[var(--engine-text-muted)] mt-2">
-                {t("events.subtitle")}
-              </p>
-            </div>
-          )}
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-6 py-3 font-semibold text-white transition hover:opacity-90 ${
-              embedded ? "w-full sm:w-auto" : "whitespace-nowrap"
-            }`}
-          >
-            <Plus size={20} />
-            {t("events.create")}
-          </button>
+      {!embedded && (
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--engine-text)] sm:text-4xl">
+            {t("events.title")}
+          </h1>
+          <p className="text-[var(--engine-text-muted)] mt-2">
+            {t("events.subtitle")}
+          </p>
         </div>
+      )}
+
+      {/* Sub-abas + criar, na mesma linha — o mesmo desenho da aba Clubes. */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-1 gap-1 border-b border-[var(--engine-border)]">
+          {[
+            signedIn && { id: "mine", label: t("events.tabs.mine") },
+            { id: "discover", label: t("events.tabs.discover") },
+          ]
+            .filter(Boolean)
+            .map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSubTab(id)}
+                className={`min-h-11 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === id
+                    ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
+                    : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowCreateForm(true)}
+          aria-label={t("events.create")}
+          className="flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-[var(--engine-accent)] px-4 py-2 font-semibold text-white transition hover:opacity-90"
+        >
+          <Plus size={18} />
+          <span className="hidden sm:inline">{t("events.createShort")}</span>
+        </button>
       </div>
 
-      {/* Filtros */}
-      <div className="engine-card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter size={20} className="text-[var(--engine-accent)]" />
-          <h2 className="font-semibold text-[var(--engine-text)]">{t("events.filters.title")}</h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Tipo de Evento */}
-          <div className="space-y-2">
+      {/* Filtros: só em Descobrir, e como linha, não como cartão. */}
+      {activeTab === "discover" && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
             <label className={labelClass}>{t("events.filters.type")}</label>
             <select
               value={filters.type}
@@ -118,8 +150,7 @@ export function Events({ embedded = false }) {
             </select>
           </div>
 
-          {/* Estado */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className={labelClass}>{t("events.filters.state")}</label>
             <select
               value={filters.state}
@@ -140,13 +171,30 @@ export function Events({ embedded = false }) {
             </select>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Eventos */}
       {loading ? (
         <div className="text-center py-20">
           <Loader2 size={48} className="mx-auto text-[var(--engine-accent)] animate-spin mb-4" />
           <p className="text-[var(--engine-text-muted)]">{t("events.loading")}</p>
+        </div>
+      ) : events.length === 0 && activeTab === "mine" ? (
+        <div className="text-center py-8 rounded-xl bg-[var(--engine-surface)] border border-[var(--engine-border)]">
+          <CalendarCheck size={40} className="mx-auto text-[var(--engine-text-muted)] mb-3" />
+          <p className="text-sm font-semibold text-[var(--engine-text)] mb-2">
+            {t("events.mineEmptyTitle")}
+          </p>
+          <p className="text-xs text-[var(--engine-text-muted)] mb-4">
+            {t("events.mineEmptyCopy")}
+          </p>
+          <button
+            type="button"
+            onClick={() => setSubTab("discover")}
+            className="inline-flex min-h-11 items-center gap-2 px-4 py-2 bg-[var(--engine-accent)] text-white rounded-lg font-semibold hover:opacity-90 transition text-sm"
+          >
+            {t("events.mineDiscover")}
+          </button>
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-20 engine-card p-8">

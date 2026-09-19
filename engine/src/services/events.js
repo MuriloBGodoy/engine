@@ -141,6 +141,49 @@ export const engineEvents = {
     return eventos.map((evento, i) => ({ ...evento, participantCount: contagens[i] }));
   },
 
+  /**
+   * "Meus eventos": os que eu criei e os próximos em que confirmei presença.
+   *
+   * Duas leituras de propósito, nenhuma delas consulta de grupo. A presença
+   * mora em `events/{id}/participants/{uid}`, e uma `collectionGroup` sobre
+   * `participants` não passa pela regra aninhada sem regra própria e índice
+   * de grupo — foi isso que custou um deploy em agosto. Então: os criados vêm
+   * por `createdBy` (campo único, índice automático; a data é filtrada aqui
+   * para não pedir índice composto), e os que vou vêm dos próximos eventos
+   * já listados, conferindo o MEU documento na subcoleção de cada um — leitura
+   * direta, que a regra permite. São no máximo `limit` getDocs em paralelo.
+   */
+  async getMyEvents({ limit: resultLimit = 50 } = {}) {
+    if (!auth.currentUser) return [];
+    const uid = auth.currentUser.uid;
+    const agora = new Date().toISOString();
+
+    const [criadosSnap, proximos] = await Promise.all([
+      getDocs(query(collection(firestore, EVENTS_COLLECTION), where("createdBy", "==", uid))),
+      this.getUpcomingEvents({ limit: resultLimit }),
+    ]);
+
+    const criados = criadosSnap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((e) => String(e.eventDate || "") >= agora);
+
+    const presencas = await Promise.all(
+      proximos.map((e) => getDoc(participantRef(e.id, uid)).then((d) => d.exists()).catch(() => false)),
+    );
+    const vou = proximos.filter((_, i) => presencas[i]);
+
+    const porId = new Map();
+    for (const e of [...criados, ...vou]) porId.set(e.id, { ...porId.get(e.id), ...e });
+
+    const lista = [...porId.values()].sort((a, b) =>
+      String(a.eventDate).localeCompare(String(b.eventDate)),
+    );
+    const contagens = await Promise.all(
+      lista.map((e) => (e.participantCount == null ? contarParticipantes(e.id) : e.participantCount)),
+    );
+    return lista.map((e, i) => ({ ...e, participantCount: contagens[i] }));
+  },
+
   async updateEvent(eventId, updates) {
     if (!auth.currentUser) throw new Error("Usuário não autenticado.");
 

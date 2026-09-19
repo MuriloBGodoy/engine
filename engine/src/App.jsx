@@ -447,7 +447,7 @@ function App() {
           />
           <Route
             path="/events"
-            element={<Events />}
+            element={<Events user={user} />}
           />
           <Route
             path="/events/:eventId"
