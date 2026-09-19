@@ -1,5 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
+import { SubTabsHeader } from "./SubTabsHeader";
 import { useMyClubs, useCreateClub } from "../../services/clubs";
 import { useToast } from "../ToastProvider";
 import { ClubCard } from "../clubs/ClubCard";
@@ -8,6 +10,7 @@ import { ClubDiscoveryTab } from "../clubs/ClubDiscoveryTab";
 import { ClubDetailModal } from "../clubs/ClubDetailModal";
 
 export function ClubsTab({ searchParams, setSearchParams }) {
+  const { t } = useTranslation();
   const showToast = useToast();
   const { clubs, loading, error, fetch } = useMyClubs();
   const { create: createClub, loading: creatingClub } = useCreateClub();
@@ -26,7 +29,7 @@ export function ClubsTab({ searchParams, setSearchParams }) {
   const handleCreateClub = async (clubData) => {
     try {
       const newClub = await createClub(clubData);
-      showToast("Clube criado com sucesso!", "success");
+      showToast(t("clubs.toast.created"), "success");
       setShowCreateModal(false);
       // Reload clubs
       fetch();
@@ -36,7 +39,7 @@ export function ClubsTab({ searchParams, setSearchParams }) {
       params.set("club", newClub.id);
       setSearchParams(params);
     } catch (error) {
-      showToast(error.message || "Erro ao criar clube", "error");
+      showToast(error.message || t("clubs.toast.createError"), "error");
     }
   };
 
@@ -59,36 +62,17 @@ export function ClubsTab({ searchParams, setSearchParams }) {
 
   return (
     <div className="space-y-4">
-      {/* Header with Create Button */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-1 border-b border-[var(--engine-border)] flex-1">
-          {[
-            { id: "my-clubs", label: "Meus Clubes" },
-            { id: "discover", label: "Descobrir" },
-          ].map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setActiveSubTab(id)}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 transition whitespace-nowrap ${
-                activeSubTab === id
-                  ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
-                  : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Create Club Button */}
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--engine-accent)] text-white rounded-xl font-semibold hover:opacity-90 transition whitespace-nowrap shrink-0"
-        >
-          <Plus size={18} />
-          <span className="hidden sm:inline">Criar</span>
-        </button>
-      </div>
+      <SubTabsHeader
+        tabs={[
+          { id: "my-clubs", label: t("clubs.tabs.mine") },
+          { id: "discover", label: t("clubs.tabs.discover") },
+        ]}
+        active={activeSubTab}
+        onChange={setActiveSubTab}
+        createLabel={t("clubs.create")}
+        createShortLabel={t("clubs.createShort")}
+        onCreate={() => setShowCreateModal(true)}
+      />
 
       {/* My Clubs Tab */}
       {activeSubTab === "my-clubs" && (
@@ -101,22 +85,22 @@ export function ClubsTab({ searchParams, setSearchParams }) {
 
           {loading && clubs.length === 0 ? (
             <div className="flex items-center justify-center py-12">
-              <p className="text-[var(--engine-text-muted)]">Carregando clubes...</p>
+              <p className="text-[var(--engine-text-muted)]">{t("clubs.loading")}</p>
             </div>
           ) : clubs.length === 0 ? (
             <div className="text-center py-8 rounded-xl bg-[var(--engine-surface)] border border-[var(--engine-border)]">
               <Plus size={40} className="mx-auto text-[var(--engine-text-muted)] mb-3" />
               <p className="text-sm font-semibold text-[var(--engine-text)] mb-2">
-                Você ainda não está em nenhum clube
+                {t("clubs.emptyTitle")}
               </p>
               <p className="text-xs text-[var(--engine-text-muted)] mb-4">
-                Crie um novo ou descubra clubes existentes
+                {t("clubs.emptyCopy")}
               </p>
               <button
                 onClick={() => setActiveSubTab("discover")}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--engine-accent)] text-white rounded-lg font-semibold hover:opacity-90 transition text-sm"
               >
-                Descobrir Clubes
+                {t("clubs.emptyDiscover")}
               </button>
             </div>
           ) : (

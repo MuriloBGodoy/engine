@@ -381,6 +381,22 @@ const resources = {
           achievements: "Conquistas",
         },
       },
+      clubs: {
+        create: "Criar clube",
+        createShort: "Criar",
+        loading: "Carregando clubes...",
+        emptyTitle: "Você ainda não está em nenhum clube",
+        emptyCopy: "Crie um novo ou descubra clubes existentes",
+        emptyDiscover: "Descobrir clubes",
+        tabs: {
+          mine: "Meus clubes",
+          discover: "Descobrir",
+        },
+        toast: {
+          created: "Clube criado com sucesso!",
+          createError: "Erro ao criar clube",
+        },
+      },
       events: {
         title: "Eventos",
         subtitle: "Encontre e participe de eventos automotivos",
@@ -1724,6 +1740,22 @@ const resources = {
           achievements: "Achievements",
         },
       },
+      clubs: {
+        create: "Create club",
+        createShort: "Create",
+        loading: "Loading clubs...",
+        emptyTitle: "You are not in any club yet",
+        emptyCopy: "Create a new one or discover existing clubs",
+        emptyDiscover: "Discover clubs",
+        tabs: {
+          mine: "My clubs",
+          discover: "Discover",
+        },
+        toast: {
+          created: "Club created!",
+          createError: "Could not create the club",
+        },
+      },
       events: {
         title: "Events",
         subtitle: "Find and join car events near you",
@@ -3055,6 +3087,22 @@ const resources = {
           followers: "Seguidores",
           following: "Siguiendo",
           achievements: "Logros",
+        },
+      },
+      clubs: {
+        create: "Crear club",
+        createShort: "Crear",
+        loading: "Cargando clubes...",
+        emptyTitle: "Todavía no estás en ningún club",
+        emptyCopy: "Crea uno nuevo o descubre clubes existentes",
+        emptyDiscover: "Descubrir clubes",
+        tabs: {
+          mine: "Mis clubes",
+          discover: "Descubrir",
+        },
+        toast: {
+          created: "¡Club creado!",
+          createError: "No se pudo crear el club",
         },
       },
       events: {

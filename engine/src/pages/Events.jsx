@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Loader2, CalendarCheck } from "lucide-react";
+import { SubTabsHeader } from "../components/community/SubTabsHeader";
 import { engineEvents } from "../services/events";
 import { EventCard } from "../components/EventCard";
 import { CreateEventForm } from "../components/CreateEventForm";
@@ -92,40 +93,17 @@ export function Events({ embedded = false, user = null }) {
         </div>
       )}
 
-      {/* Sub-abas + criar, na mesma linha — o mesmo desenho da aba Clubes. */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-1 gap-1 border-b border-[var(--engine-border)]">
-          {[
-            signedIn && { id: "mine", label: t("events.tabs.mine") },
-            { id: "discover", label: t("events.tabs.discover") },
-          ]
-            .filter(Boolean)
-            .map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setSubTab(id)}
-                className={`min-h-11 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold transition ${
-                  activeTab === id
-                    ? "border-[var(--engine-accent)] text-[var(--engine-accent)]"
-                    : "border-transparent text-[var(--engine-text-muted)] hover:text-[var(--engine-text)]"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowCreateForm(true)}
-          aria-label={t("events.create")}
-          className="flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-[var(--engine-accent)] px-4 py-2 font-semibold text-white transition hover:opacity-90"
-        >
-          <Plus size={18} />
-          <span className="hidden sm:inline">{t("events.createShort")}</span>
-        </button>
-      </div>
+      <SubTabsHeader
+        tabs={[
+          signedIn && { id: "mine", label: t("events.tabs.mine") },
+          { id: "discover", label: t("events.tabs.discover") },
+        ].filter(Boolean)}
+        active={activeTab}
+        onChange={setSubTab}
+        createLabel={t("events.create")}
+        createShortLabel={t("events.createShort")}
+        onCreate={() => setShowCreateForm(true)}
+      />
 
       {/* Filtros: só em Descobrir, e como linha, não como cartão. */}
       {activeTab === "discover" && (
