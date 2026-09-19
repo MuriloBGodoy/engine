@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Fuel, Gauge, Loader2, Receipt, Sparkles, Trash2, X } from "lucide-react";
 import { engineDB } from "../services/db";
 import { EXPENSE_CATEGORIES, expenseInsights } from "../services/expenses";
 import { trackEvent } from "../services/observability";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -38,6 +39,10 @@ export function ExpensesModal({ car, onClose, onSaved }) {
   const [lastCategory, setLastCategory] = useState("");
 
   const insights = useMemo(() => expenseInsights(car || {}), [car]);
+
+  // Voltar no Android fecha o modal em vez de sair da garagem.
+  const close = useCallback(() => onClose?.(), [onClose]);
+  useHistoryDismiss(Boolean(car), close);
 
   if (!car) return null;
 
@@ -130,13 +135,19 @@ export function ExpensesModal({ car, onClose, onSaved }) {
             type="button"
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44 (Material pede 48, HIG 44): media 36x36. A margem
+               negativa mantém o X no mesmo lugar visual. */
+            className="-m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={18} />
           </button>
         </header>
 
-        <div className="max-h-[72vh] space-y-5 overflow-y-auto px-5 py-5">
+        {/* O corpo ocupa o que sobra do painel. Era `max-h-[72vh]`: no celular
+            o painel tem 100dvh, então o rolável parava a 72% e deixava ~200px
+            vazios embaixo (medido em 13/09/2026, 360x740), com o formulário
+            escondido dentro da faixa rolável. */}
+        <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-5 px-5 py-5">
           {/* Resumo: só aparece o que os dados sustentam. Média mensal exige 30
               dias de histórico; consumo real exige dois abastecimentos com
               odômetro. Antes disso, mostrar o campo vazio seria pior que não
@@ -336,7 +347,9 @@ export function ExpensesModal({ car, onClose, onSaved }) {
                         onClick={() => remove(entry.id)}
                         disabled={saving}
                         aria-label={t("common.delete")}
-                        className="text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)] disabled:opacity-40"
+                        /* O alvo era o ícone nu, 15x15; 44x44 com margem
+                           negativa para a linha não crescer. */
+                        className="-m-3 flex h-11 w-11 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)] disabled:opacity-40"
                       >
                         <Trash2 size={15} />
                       </button>

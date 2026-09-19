@@ -281,6 +281,7 @@ const resources = {
       },
       common: {
         appName: "Engine",
+        close: "Fechar",
         save: "Salvar",
         saving: "Salvando...",
         cancel: "Cancelar",
@@ -909,6 +910,25 @@ const resources = {
         photoLimit: "Máximo de {{value}} fotos por meta.",
         addPhoto: "Adicionar foto ({{count}} restantes)",
         cover: "Capa",
+      },
+      // Prévia e editor de foto do chat (Mia, 16/09/2026): os textos eram
+      // cravados em português no componente.
+      imagePreview: {
+        title: "Foto",
+        back: "Voltar",
+        close: "Fechar",
+        edit: "Editar foto",
+        editTitle: "Editar foto",
+        captionPlaceholder: "Adicione uma legenda (opcional)",
+        send: "Enviar",
+      },
+      imageEditor: {
+        draw: "Desenhar",
+        text: "Texto",
+        filters: "Filtros",
+        rotate: "Rotacionar",
+        save: "Salvar",
+        close: "Fechar",
       },
       imageCropper: {
         title: "Cortar imagem",
@@ -1552,6 +1572,7 @@ const resources = {
       },
       common: {
         appName: "Engine",
+        close: "Close",
         save: "Save",
         saving: "Saving...",
         cancel: "Cancel",
@@ -2168,6 +2189,23 @@ const resources = {
         photoLimit: "Up to {{value}} photos per goal.",
         addPhoto: "Add photo ({{count}} left)",
         cover: "Cover",
+      },
+      imagePreview: {
+        title: "Photo",
+        back: "Back",
+        close: "Close",
+        edit: "Edit photo",
+        editTitle: "Edit photo",
+        captionPlaceholder: "Add a caption (optional)",
+        send: "Send",
+      },
+      imageEditor: {
+        draw: "Draw",
+        text: "Text",
+        filters: "Filters",
+        rotate: "Rotate",
+        save: "Save",
+        close: "Close",
       },
       imageCropper: {
         title: "Crop image",
@@ -2808,6 +2846,7 @@ const resources = {
       },
       common: {
         appName: "Engine",
+        close: "Cerrar",
         save: "Guardar",
         saving: "Guardando...",
         cancel: "Cancelar",
@@ -3429,6 +3468,23 @@ const resources = {
         photoLimit: "Máximo de {{value}} fotos por meta.",
         addPhoto: "Agregar foto ({{count}} restantes)",
         cover: "Portada",
+      },
+      imagePreview: {
+        title: "Foto",
+        back: "Volver",
+        close: "Cerrar",
+        edit: "Editar foto",
+        editTitle: "Editar foto",
+        captionPlaceholder: "Agrega una leyenda (opcional)",
+        send: "Enviar",
+      },
+      imageEditor: {
+        draw: "Dibujar",
+        text: "Texto",
+        filters: "Filtros",
+        rotate: "Girar",
+        save: "Guardar",
+        close: "Cerrar",
       },
       imageCropper: {
         title: "Recortar imagen",

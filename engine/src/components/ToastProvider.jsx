@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Info, Trophy, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Toast único e estilizado do Engine — substitui os `flash()` locais espalhados
@@ -39,6 +40,7 @@ const toneStyles = {
 };
 
 export function ToastProvider({ children }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState([]);
   const timers = useRef({});
 
@@ -84,7 +86,7 @@ export function ToastProvider({ children }) {
               <button
                 type="button"
                 onClick={() => dismiss(item.id)}
-                aria-label="Fechar"
+                aria-label={t("common.close")}
                 className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)] sm:m-0 sm:h-auto sm:w-auto sm:p-1.5"
               >
                 <X size={15} />

@@ -6,6 +6,7 @@ import { auth } from "../services/firebase";
 import { CAR_TYPE_GOAL, CAR_TYPE_OWNED, MAX_CAR_PHOTOS } from "../services/db";
 import { isFileTooBig, isImageFile, uploadUserPhoto } from "../services/photos";
 import { ImageCropper } from "./ImageCropper";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
@@ -38,6 +39,10 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
   const fileInputRef = useRef(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [fileForCropping, setFileForCropping] = useState(null);
+
+  // Voltar no Android fecha o cadastro em vez de sair da garagem. O cropper
+  // empilha a própria entrada em cima desta: voltar dentro dele fecha só ele.
+  useHistoryDismiss(isOpen, onClose);
 
   const formatDisplayValue = (val) => {
     return new Intl.NumberFormat(i18n.language, {
@@ -300,7 +305,8 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
           <button
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44: media 40x40. */
+            className="-m-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={20} />
           </button>

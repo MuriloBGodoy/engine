@@ -8,6 +8,7 @@ import {
 } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 /**
  * Sistema de confirmação estilizado do Engine — substitui os window.confirm()
@@ -43,6 +44,10 @@ export function ConfirmProvider({ children }) {
       setState({ open: true, ...options });
     });
   }, []);
+
+  // Voltar (gesto/botão do Android) responde "não", como o Esc.
+  const cancel = useCallback(() => settle(false), [settle]);
+  useHistoryDismiss(state.open, cancel);
 
   useEffect(() => {
     if (!state.open) return undefined;

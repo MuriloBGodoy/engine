@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { X, ZoomIn, ZoomOut, RotateCw, RotateCcw, Save } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { useTranslation } from "react-i18next";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
   const { t } = useTranslation();
@@ -135,6 +136,9 @@ export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
     }
   };
 
+  // Voltar no Android fecha o recorte e volta ao cadastro, não à garagem.
+  useHistoryDismiss(isOpen, onClose);
+
   // Initialize image when component mounts with a new file
   useEffect(() => {
     if (!imageFile || !isOpen) return;
@@ -159,7 +163,8 @@ export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
           <button
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44: media 40x40. */
+            className="-m-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={20} />
           </button>
@@ -225,7 +230,8 @@ export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
                       const diff = (deg - rotation) % 360;
                       handleRotate(diff);
                     }}
-                    className={`flex items-center justify-center rounded-lg border py-2.5 text-xs font-bold uppercase transition-colors ${
+                    /* min-h-11: mediam 36px de altura (16/09/2026). */
+                    className={`flex min-h-11 items-center justify-center rounded-lg border py-2.5 text-xs font-bold uppercase transition-colors ${
                       rotation === deg
                         ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
                         : "border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text-subtle)] hover:border-[var(--engine-accent)]"
@@ -241,7 +247,7 @@ export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
             <button
               type="button"
               onClick={handleReset}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-2.5 text-sm font-semibold text-[var(--engine-text)] transition-colors hover:border-[var(--engine-border-strong)] hover:bg-[var(--engine-surface)]"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-2.5 text-sm font-semibold text-[var(--engine-text)] transition-colors hover:border-[var(--engine-border-strong)] hover:bg-[var(--engine-surface)]"
             >
               <RotateCcw size={16} />
               {t("imageCropper.reset") || "Redefinir"}

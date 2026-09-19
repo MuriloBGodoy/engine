@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, MapPin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRegion } from "../hooks/RegionProvider";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 import { regionShortLabel } from "../services/region";
 import { countries, getStates } from "../services/locations";
 
@@ -17,6 +18,10 @@ export function RegionPicker({ compact = false, className = "" }) {
   const { region, setRegion } = useRegion();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+
+  // Voltar no Android fecha o popover, como o toque fora e o Esc.
+  const close = useCallback(() => setOpen(false), []);
+  useHistoryDismiss(open, close);
 
   useEffect(() => {
     if (!open) return undefined;

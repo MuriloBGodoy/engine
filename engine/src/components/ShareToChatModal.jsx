@@ -13,6 +13,7 @@ import {
 } from "../services/chat";
 import { ChatAvatar } from "./ChatAvatar";
 import { useToast } from "./ToastProvider";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 const matches = (person, term) =>
   `${person.author || ""} ${person.username || ""}`.toLowerCase().includes(term);
@@ -32,6 +33,9 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
   const [sendingTo, setSendingTo] = useState("");
 
   const userId = user?.uid || "";
+
+  // Voltar no Android fecha a folha em vez de sair do post.
+  useHistoryDismiss(open && Boolean(goal), onClose);
 
   useEffect(() => {
     if (!open || !userId) return undefined;
@@ -135,7 +139,8 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
             type="button"
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44: media 40x40. */
+            className="-m-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={20} />
           </button>
@@ -177,7 +182,9 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
                   type="button"
                   onClick={() => handleSend(person)}
                   disabled={sent || sendingTo === person.userId}
-                  className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[10px] font-black uppercase tracking-widest transition ${
+                  /* 44px de altura: media 36. Sem `sm:h-9` porque Fold (673px)
+                     e tablet passam do breakpoint e continuam sendo toque. */
+                  className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[10px] font-black uppercase tracking-widest transition ${
                     sent
                       ? "bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
                       : "bg-[var(--engine-accent)] text-white hover:brightness-95 disabled:opacity-50"

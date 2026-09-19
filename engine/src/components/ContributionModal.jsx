@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2, PiggyBank, Trash2, TrendingUp, X } from "lucide-react";
 import { engineDB } from "../services/db";
 import { forecastCompletion } from "../services/forecast";
 import { trackEvent } from "../services/observability";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -20,6 +21,10 @@ export function ContributionModal({ car, onClose, onSaved }) {
   const [date, setDate] = useState(today());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Voltar no Android fecha o modal em vez de sair da garagem.
+  const close = useCallback(() => onClose?.(), [onClose]);
+  useHistoryDismiss(Boolean(car), close);
 
   if (!car) return null;
 
@@ -92,13 +97,17 @@ export function ContributionModal({ car, onClose, onSaved }) {
             type="button"
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44 (Material pede 48, HIG 44): media 36x36. A margem
+               negativa mantém o X no mesmo lugar visual. */
+            className="-m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={18} />
           </button>
         </header>
 
-        <div className="max-h-[70vh] space-y-5 overflow-y-auto px-5 py-5">
+        {/* `engine-modal-body` em vez de `max-h-[70vh]`: no celular o painel
+            é a tela inteira e o rolável parava a 70% dela (13/09/2026). */}
+        <div className="engine-modal-body engine-scroll engine-safe-bottom space-y-5 px-5 py-5">
           {forecast && (
             <div className="rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-4">
               <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--engine-text-muted)]">
@@ -185,7 +194,9 @@ export function ContributionModal({ car, onClose, onSaved }) {
                         onClick={() => remove(entry.id)}
                         disabled={saving}
                         aria-label={t("common.delete")}
-                        className="text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)] disabled:opacity-40"
+                        /* O alvo era o ícone nu, 15x15; 44x44 com margem
+                           negativa para a linha não crescer. */
+                        className="-m-3 flex h-11 w-11 items-center justify-center rounded-lg text-[var(--engine-text-subtle)] transition hover:text-[var(--engine-accent)] disabled:opacity-40"
                       >
                         <Trash2 size={15} />
                       </button>

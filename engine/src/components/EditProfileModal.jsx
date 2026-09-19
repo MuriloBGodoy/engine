@@ -6,6 +6,7 @@ import { auth, firestore, storage } from '../services/firebase';
 import { countries, getStates } from '../services/locations';
 import { AVATAR, BANNER, reduzirImagem } from '../services/imagens';
 import { useToast } from './ToastProvider';
+import { useHistoryDismiss } from '../hooks/useHistoryDismiss';
 
 export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {} }) {
   const user = auth.currentUser;
@@ -282,6 +283,9 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
     onClose();
   };
 
+  // Voltar no Android fecha o modal em vez de sair do perfil.
+  useHistoryDismiss(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -294,7 +298,8 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
           <h1 className="text-lg font-semibold text-[var(--engine-text)]">Editar Perfil</h1>
           <button
             onClick={handleCancel}
-            className="flex items-center justify-center w-8 h-8 rounded-full text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] transition"
+            /* 44x44: media 32x32 (13/09/2026). */
+            className="flex items-center justify-center w-11 h-11 -m-1.5 rounded-full text-[var(--engine-text-muted)] hover:bg-[var(--engine-surface-2)] transition"
             aria-label="Fechar"
           >
             ×

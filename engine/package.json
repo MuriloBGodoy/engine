@@ -13,6 +13,7 @@
     "check:fipe-parser": "node scripts/check-fipe-parser.mjs",
     "check:mobile": "node scripts/check-mobile-contract.mjs",
     "check:ios": "node scripts/check-ios-contract.mjs",
+    "check:android": "node scripts/check-android-contract.mjs",
     "check:leitura": "node scripts/check-leitura-honesta.mjs",
     "check:events-i18n": "node scripts/check-events-i18n.mjs",
     "check:achievements": "node scripts/check-achievements.mjs",

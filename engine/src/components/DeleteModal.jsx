@@ -1,8 +1,11 @@
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 export function DeleteModal({ isOpen, onClose, onConfirm, carName, message }) {
   const { t } = useTranslation();
+  // Voltar no Android fecha a confirmação (mantém o carro), não sai da tela.
+  useHistoryDismiss(isOpen, onClose);
   if (!isOpen) return null;
 
   return (

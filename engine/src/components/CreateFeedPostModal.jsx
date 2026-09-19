@@ -5,6 +5,7 @@ import { auth } from "../services/firebase";
 import { engineDB } from "../services/db";
 import { isFileTooBig, isImageFile, uploadUserPhoto } from "../services/photos";
 import { trackEvent } from "../services/observability";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 const MAX_PHOTOS = 3;
 const MAX_TEXT = 1000;
@@ -28,6 +29,9 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+
+  // Voltar no Android fecha o compositor em vez de sair da comunidade.
+  useHistoryDismiss(open, onClose);
 
   if (!open) return null;
 
@@ -100,13 +104,19 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
             type="button"
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44: media 36x36; a margem negativa segura o X no lugar. */
+            className="-m-1 flex h-11 w-11 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={18} />
           </button>
         </header>
 
-        <form onSubmit={submit} className="max-h-[70vh] space-y-4 overflow-y-auto px-5 py-5">
+        {/* `engine-modal-body` em vez de `max-h-[70vh]`: no celular o painel
+            é a tela inteira e o formulário parava a 70% dela (13/09/2026). */}
+        <form
+          onSubmit={submit}
+          className="engine-modal-body engine-scroll engine-safe-bottom space-y-4 px-5 py-5"
+        >
           <textarea
             value={text}
             onChange={(event) => setText(event.target.value.slice(0, MAX_TEXT))}
@@ -128,13 +138,17 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
                   className="relative overflow-hidden rounded-xl border border-[var(--engine-border)]"
                 >
                   <img src={photo} alt="" className="h-24 w-full object-cover" />
+                  {/* Alvo de 44x44 com o círculo visual de 28px dentro: o
+                      botão media 28x28 (13/09/2026). */}
                   <button
                     type="button"
                     onClick={() => setPhotos((current) => current.filter((item) => item !== photo))}
                     aria-label={t("common.delete")}
-                    className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-[var(--engine-accent)]"
+                    className="group absolute right-0 top-0 flex h-11 w-11 items-center justify-center"
                   >
-                    <Trash2 size={13} />
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white transition group-hover:bg-[var(--engine-accent)]">
+                      <Trash2 size={13} />
+                    </span>
                   </button>
                 </div>
               ))}

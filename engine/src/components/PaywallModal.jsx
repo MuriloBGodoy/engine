@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Check, Loader2, Sparkles, X } from "lucide-react";
 import { startSubscription } from "../services/subscription";
 import { trackEvent } from "../services/observability";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 /**
  * Convite para assinar o Premium.
@@ -18,6 +19,9 @@ export function PaywallModal({ open, onClose, country }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Voltar no Android fecha o convite em vez de sair da tela.
+  useHistoryDismiss(open, onClose);
 
   if (!open) return null;
 
@@ -64,7 +68,9 @@ export function PaywallModal({ open, onClose, country }) {
             type="button"
             onClick={onClose}
             aria-label={t("common.cancel")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+            /* 44x44 (Material pede 48, HIG 44): media 36x36. A margem
+               negativa mantém o X no mesmo lugar visual. */
+            className="-m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
           >
             <X size={18} />
           </button>

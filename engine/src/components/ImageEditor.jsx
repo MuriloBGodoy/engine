@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Pen, Type, Palette, RotateCw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const FILTERS = [
   { name: "Original", css: "none" },
@@ -10,7 +11,16 @@ const FILTERS = [
   { name: "Grayscale", css: "grayscale(1)" },
 ];
 
+/**
+ * Editor de foto do chat (desenho, texto, filtros, rotação) sobre um canvas.
+ *
+ * Entrada por pointer events, não por mouse (16/09/2026): com onMouseDown/
+ * Move/Up o dedo não desenhava nada no Android — o toque vira só um clique
+ * emulado no fim, sem movimento — e arrastar rolava a página. `touch-none`
+ * no canvas enquanto uma ferramenta está ativa entrega o gesto ao desenho.
+ */
 export function ImageEditor({ imageUrl, onClose, onSave }) {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const [tool, setTool] = useState(null);
   const [brushSize, setBrushSize] = useState(5);
@@ -163,8 +173,16 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
     }
   }, [elements, filter, rotation, tool, textInput, textX, textY, textSize, fontFamily, fontWeight, fontStyle, textColor, shadowColor, textShadow, strokeColor, textStroke, draggingTextId]);
 
-  const handleMouseDown = (e) => {
+  const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
+    // Segura o ponteiro: o traço continua mesmo se o dedo sair do canvas.
+    if (canvas.setPointerCapture && e.pointerId !== undefined) {
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // Ponteiro já liberado (toque cancelado pelo sistema); segue sem captura.
+      }
+    }
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -193,7 +211,7 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
     }
   };
 
-  const handleMouseMove = (e) => {
+  const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -288,7 +306,7 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
     }
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     const canvas = canvasRef.current;
     if (stateRef.current.tool === "draw" && currentLine.length > 0) {
       setElements((prev) => [
@@ -391,44 +409,48 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
           <div className="flex gap-1">
             <button
               onClick={() => setTool(tool === "draw" ? null : "draw")}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition ${
                 tool === "draw"
                   ? "bg-[var(--engine-accent)] text-white"
                   : "bg-white/10 text-white hover:bg-white/20"
               }`}
-              title="Desenhar"
+              title={t("imageEditor.draw")}
+              aria-label={t("imageEditor.draw")}
             >
               <Pen size={18} />
             </button>
 
             <button
               onClick={() => setTool(tool === "text" ? null : "text")}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition ${
                 tool === "text"
                   ? "bg-[var(--engine-accent)] text-white"
                   : "bg-white/10 text-white hover:bg-white/20"
               }`}
-              title="Texto"
+              title={t("imageEditor.text")}
+              aria-label={t("imageEditor.text")}
             >
               <Type size={18} />
             </button>
 
             <button
               onClick={() => setTool(tool === "filters" ? null : "filters")}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition ${
                 tool === "filters"
                   ? "bg-[var(--engine-accent)] text-white"
                   : "bg-white/10 text-white hover:bg-white/20"
               }`}
-              title="Filtros"
+              title={t("imageEditor.filters")}
+              aria-label={t("imageEditor.filters")}
             >
               <Palette size={18} />
             </button>
 
             <button
               onClick={() => setRotation((rotation + 90) % 360)}
-              className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"
-              title="Rotacionar"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"
+              title={t("imageEditor.rotate")}
+              aria-label={t("imageEditor.rotate")}
             >
               <RotateCw size={18} />
             </button>
@@ -437,14 +459,15 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
           <div className="flex gap-2">
             <button
               onClick={exportImage}
-              className="rounded-lg bg-[var(--engine-accent)] px-4 py-2 text-xs font-bold text-white transition hover:brightness-95"
+              className="min-h-11 rounded-lg bg-[var(--engine-accent)] px-4 py-2 text-xs font-bold text-white transition hover:brightness-95"
             >
-              Salvar
+              {t("imageEditor.save")}
             </button>
             <button
               onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"
-              title="Fechar"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"
+              title={t("imageEditor.close")}
+              aria-label={t("imageEditor.close")}
             >
               <X size={18} />
             </button>
@@ -457,13 +480,14 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
         <div className="flex min-h-full items-center justify-center p-4">
           <canvas
             ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onTouchEnd={handleTouchEnd}
-            className="cursor-crosshair rounded-lg bg-white"
-            style={{ maxWidth: "100%", maxHeight: "100%" }}
+            className={`max-h-full max-w-full cursor-crosshair rounded-lg bg-white ${
+              tool ? "touch-none" : ""
+            }`}
           />
         </div>
       </div>

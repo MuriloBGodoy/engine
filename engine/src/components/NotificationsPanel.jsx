@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, CheckCheck, ChevronRight, X } from "lucide-react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 import {
   defaultNotificationStyle,
   formatNotificationTime,
@@ -32,6 +33,9 @@ export function NotificationsPanel({
   const isSheet = useMediaQuery("(max-width: 639px)");
   const [dragOffset, setDragOffset] = useState(0);
   const dragStart = useRef(null);
+
+  // Quarta saída, a que o Android espera: o gesto de voltar fecha a folha.
+  useHistoryDismiss(open, onClose);
 
   // Esc fecha e a página de trás para de rolar enquanto o painel está aberto.
   useEffect(() => {
@@ -116,7 +120,7 @@ export function NotificationsPanel({
                   onClick={onMarkAllRead}
                   title={t("notifications.markAllRead")}
                   aria-label={t("notifications.markAllRead")}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-accent)]"
                 >
                   <CheckCheck size={19} />
                 </button>
@@ -126,7 +130,8 @@ export function NotificationsPanel({
                 onClick={onClose}
                 title={t("notifications.close")}
                 aria-label={t("notifications.close")}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
+                /* 44x44 nos dois botões do cabeçalho: mediam 40x40. */
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)]"
               >
                 <X size={20} />
               </button>
