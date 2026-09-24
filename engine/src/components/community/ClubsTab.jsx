@@ -1,143 +1,145 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { SubTabsHeader } from "./SubTabsHeader";
-import { useMyClubs, useCreateClub } from "../../services/clubs";
 import { useToast } from "../ToastProvider";
 import { ClubCard } from "../clubs/ClubCard";
 import { ClubCreateModal } from "../clubs/ClubCreateModal";
 import { ClubDiscoveryTab } from "../clubs/ClubDiscoveryTab";
 import { ClubDetailModal } from "../clubs/ClubDetailModal";
+import { useMyClubs, useCreateClub, clubErrorMessage } from "../clubs/clubsDataSource";
 
-export function ClubsTab({ searchParams, setSearchParams }) {
+/**
+ * A aba Clubes da Comunidade: "meus clubes" e "descobrir".
+ *
+ * O cabeçalho vem do `SubTabsHeader`, compartilhado com Eventos — a linha de
+ * sub-abas nasceu duplicada nas duas features e divergia no detalhe.
+ */
+export function ClubsTab({ searchParams, setSearchParams, user = null }) {
   const { t } = useTranslation();
   const showToast = useToast();
   const { clubs, loading, error, fetch } = useMyClubs();
   const { create: createClub, loading: creatingClub } = useCreateClub();
 
-  const [activeSubTab, setActiveSubTab] = useState("my-clubs");
+  const signedIn = Boolean(user?.uid);
+  const [activeSubTab, setActiveSubTab] = useState(signedIn ? "my-clubs" : "discover");
+  const visibleSubTab = signedIn ? activeSubTab : "discover";
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // Get club ID from URL params for modal
   const selectedClubId = searchParams.get("club");
 
-  // Fetch my clubs on mount
   useEffect(() => {
     fetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCreateClub = async (clubData) => {
-    try {
-      const newClub = await createClub(clubData);
-      showToast(t("clubs.toast.created"), "success");
-      setShowCreateModal(false);
-      // Reload clubs
-      fetch();
-      // Open the new club's detail
-      const params = new URLSearchParams(searchParams);
-      params.set("tab", "clubes");
-      params.set("club", newClub.id);
-      setSearchParams(params);
-    } catch (error) {
-      showToast(error.message || t("clubs.toast.createError"), "error");
-    }
-  };
-
-  const handleClubSelect = (clubId) => {
+  const openClub = (clubId) => {
     const params = new URLSearchParams(searchParams);
     params.set("tab", "clubes");
     params.set("club", clubId);
     setSearchParams(params);
   };
 
-  const handleCloseDetail = () => {
+  const closeClub = () => {
     const params = new URLSearchParams(searchParams);
     params.delete("club");
     setSearchParams(params);
   };
 
-  const handleClubCardClick = (clubId) => {
-    handleClubSelect(clubId);
+  const handleCreateClub = async (clubData) => {
+    try {
+      const newClub = await createClub(clubData);
+      showToast(t("clubs.toast.created"), "success");
+      setShowCreateModal(false);
+      fetch();
+      if (newClub?.id) openClub(newClub.id);
+    } catch (error_) {
+      showToast(clubErrorMessage(error_, t), "error");
+    }
   };
 
   return (
     <div className="space-y-4">
       <SubTabsHeader
-        tabs={[
-          { id: "my-clubs", label: t("clubs.tabs.mine") },
+/* Visitante não tem "meus clubes": a sub-aba sai e Descobrir vira a única,
+     igual ao que foi feito em Eventos (b61049f). Sem isto quem chega sem
+     login cai numa aba vazia que nunca vai encher. */
+  tabs={[
+          signedIn && { id: "my-clubs", label: t("clubs.tabs.mine") },
           { id: "discover", label: t("clubs.tabs.discover") },
-        ]}
-        active={activeSubTab}
+        ].filter(Boolean)}
+        active={visibleSubTab}
         onChange={setActiveSubTab}
         createLabel={t("clubs.create")}
         createShortLabel={t("clubs.createShort")}
         onCreate={() => setShowCreateModal(true)}
       />
 
-      {/* My Clubs Tab */}
-      {activeSubTab === "my-clubs" && (
+      {visibleSubTab === "my-clubs" ? (
         <div className="space-y-4">
-          {error && (
-            <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
+          {error ? (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+              {error}
+            </p>
+          ) : null}
 
-          {loading && clubs.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <p className="text-[var(--engine-text-muted)]">{t("clubs.loading")}</p>
+          {loading && !clubs.length ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-[var(--engine-text-muted)]">
+              <Loader2 size={18} className="animate-spin" />
+              {t("clubs.loading")}
             </div>
-          ) : clubs.length === 0 ? (
-            <div className="text-center py-8 rounded-xl bg-[var(--engine-surface)] border border-[var(--engine-border)]">
-              <Plus size={40} className="mx-auto text-[var(--engine-text-muted)] mb-3" />
-              <p className="text-sm font-semibold text-[var(--engine-text)] mb-2">
+          ) : !clubs.length ? (
+            <div className="rounded-2xl border border-dashed border-[var(--engine-border-strong)] px-4 py-8 text-center">
+              <p className="text-[14px] font-bold text-[var(--engine-text)]">
                 {t("clubs.emptyTitle")}
               </p>
-              <p className="text-xs text-[var(--engine-text-muted)] mb-4">
+              <p className="mx-auto mt-1 max-w-[42ch] text-[12.5px] text-[var(--engine-text-muted)]">
                 {t("clubs.emptyCopy")}
               </p>
-              <button
-                onClick={() => setActiveSubTab("discover")}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--engine-accent)] text-white rounded-lg font-semibold hover:opacity-90 transition text-sm"
-              >
-                {t("clubs.emptyDiscover")}
-              </button>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("discover")}
+                  className="inline-flex min-h-11 items-center rounded-xl border border-[var(--engine-border-strong)] px-4 text-[13.5px] font-bold text-[var(--engine-text)]"
+                >
+                  {t("clubs.emptyDiscover")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(true)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 text-[13.5px] font-bold text-white"
+                >
+                  <Plus size={16} />
+                  {t("clubs.create")}
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {clubs.map((club) => (
-                <button
-                  key={club.id}
-                  onClick={() => handleClubCardClick(club.id)}
-                  className="text-left hover:opacity-90 transition"
-                >
-                  <ClubCard club={club} isDiscovery={false} />
-                </button>
+                <ClubCard key={club.id} club={club} onOpen={openClub} showRole />
               ))}
             </div>
           )}
         </div>
+      ) : (
+        <ClubDiscoveryTab
+          onSelectClub={openClub}
+          onCreate={() => setShowCreateModal(true)}
+        />
       )}
 
-      {/* Discover Tab */}
-      {activeSubTab === "discover" && (
-        <ClubDiscoveryTab onSelectClub={handleClubCardClick} />
-      )}
-
-      {/* Create Club Modal */}
-      {showCreateModal && (
+      {showCreateModal ? (
         <ClubCreateModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateClub}
           loading={creatingClub}
         />
-      )}
+      ) : null}
 
-      {/* Club Detail Modal */}
-      {selectedClubId && (
-        <ClubDetailModal clubId={selectedClubId} onClose={handleCloseDetail} />
-      )}
+      {selectedClubId ? (
+        <ClubDetailModal clubId={selectedClubId} onClose={closeClub} />
+      ) : null}
     </div>
   );
 }

@@ -20,7 +20,7 @@ const MAX_TEXT = 1000;
  * Três fotos, e não seis como na garagem, porque sem o Storage ligado a imagem
  * vai em base64 dentro do documento e o Firestore corta em 1 MiB.
  */
-export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
+export function CreateFeedPostModal({ open, cars = [], club = null, onClose, onCreated }) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [photos, setPhotos] = useState([]);
@@ -75,7 +75,15 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
 
     try {
       const car = cars.find((item) => String(item.id) === carId) || null;
-      await engineDB.createCommunityPost({ text, images: photos, videoUrl, car });
+      // O carimbo do clube vem do objeto buscado por id, nunca da URL.
+      await engineDB.createCommunityPost({
+        text,
+        images: photos,
+        videoUrl,
+        car,
+        clubId: club?.id || "",
+        clubTag: club?.tag || "",
+      });
       trackEvent("post_publicado", { comFoto: photos.length > 0, comCarro: Boolean(car) });
       reset();
       onCreated?.();
@@ -97,9 +105,19 @@ export function CreateFeedPostModal({ open, cars = [], onClose, onCreated }) {
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-center justify-between gap-3 border-b border-[var(--engine-border)] px-5 py-4">
-          <h2 className="text-base font-black text-[var(--engine-text)]">
-            {t("feedPost.title")}
-          </h2>
+          <div className="min-w-0">
+            <h2 className="text-base font-black text-[var(--engine-text)]">
+              {t("feedPost.title")}
+            </h2>
+            {/* Publicar no mural sem enxergar em qual clube é publicar no
+                escuro: o post sai com a sigla e aparece no feed de todo
+                mundo. */}
+            {club?.tag && (
+              <p className="truncate text-[11px] text-[var(--engine-text-subtle)]">
+                {t("feedPost.toClub", { club: `[${club.tag}] ${club.name || ""}`.trim() })}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}

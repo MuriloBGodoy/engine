@@ -10,10 +10,65 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    // `.get("email", "")` e não `.email`: conta sem e-mail no token (login
+    // social sem e-mail verificado, e todo contexto de teste que não passa
+    // claims) fazia esta função ESTOURAR — "Property email is undefined on
+    // object" — em vez de devolver false. O Firestore trata erro como negação,
+    // então o efeito parecia certo; mas negação por acidente não é regra, é
+    // sorte, e quando `isServiceAdmin()` é o primeiro ramo de um `||` o erro
+    // vira ruído em cima de toda avaliação. Achado pelos testes de clube.
     function isServiceAdmin() {
-      return signedIn() && request.auth.token.email in [
+      return signedIn() && request.auth.token.get("email", "") in [
         "muxdtuber@gmail.com"
       ];
+    }
+
+    // Cargo dentro do clube. Um clube é uma crew: fundador, capitão e membro.
+    // Quem decide o que cada um pode é SEMPRE esta regra, nunca a tela — o
+    // painel do capitão some do React, mas o `fetch` do console não some.
+    //
+    // As três funções fazem no máximo UM `get` cada, e todas passam por
+    // `exists()` antes de ler `.data`: `get()` num documento que não existe
+    // devolve null, e ler `.role` de null é erro de avaliação — que o
+    // Firestore trata como negação, mas negação por acidente não é regra, é
+    // sorte. Com o `exists()` na frente, quem não é membro cai no `false` de
+    // propósito.
+    function isClubMember(clubId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid));
+    }
+
+    function clubRole(clubId) {
+      return get(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function isClubStaff(clubId) {
+      return isClubMember(clubId) && clubRole(clubId) in ["founder", "captain"];
+    }
+
+    function isClubFounder(clubId) {
+      return isClubMember(clubId) && clubRole(clubId) == "founder";
+    }
+
+    // Carimbo de clube em conteúdo de outra feature (evento, post). Conteúdo
+    // sem clube segue a regra antiga — o campo é opcional de propósito, para
+    // não quebrar os eventos e posts que já existem.
+    //
+    // Sem operador ternário aqui de propósito, e não é estilo: com
+    // `exigeCargo ? isClubStaff(...) : isClubMember(...)` o emulador do
+    // Firestore MORRE — `IllegalStateException: ternary operator predicate is
+    // always boolean`, e o cliente fica em retry infinito com
+    // "UNKNOWN: Application error processing RPC" em vez de receber um erro.
+    // Descoberto em 24/09/2026 rodando os testes desta feature. A forma com
+    // `&&`/`||` é equivalente e não acorda o defeito.
+    function clubStampAllowed(clubId, exigeCargo) {
+      return clubId == ""
+        || (exigeCargo && isClubStaff(clubId))
+        || (!exigeCargo && isClubMember(clubId));
+    }
+
+    function clubStampUnchanged() {
+      return request.resource.data.get("clubId", "") == resource.data.get("clubId", "");
     }
 
     // O doc do usuário guarda o plano da assinatura. Faltava regra aqui: sem
@@ -183,8 +238,25 @@ service cloud.firestore {
       // compartilhado vê o feed antes de criar conta. Interagir (curtir,
       // comentar, avaliar) continua exigindo login.
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isGoalOwner() || (signedIn() && onlyInteraction());
+
+      // O mural do clube É esta coleção, carimbada com `clubId` (campo NOVO e
+      // opcional). Não existe coleção de post de clube: post do clube ganha de
+      // graça card, curtida em subcoleção, comentário, denúncia e bloqueio —
+      // e aparece no feed geral com o chip `[TAG]`, que é propaganda do clube.
+      // Carimbar exige ser MEMBRO; sem isso qualquer um plantava post no mural
+      // de qualquer clube.
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && clubStampAllowed(request.resource.data.get("clubId", ""), false);
+
+      // Na interação (curtir/avaliar/comentar) o carimbo não é tocado —
+      // `affectedKeys` já garante isso —, então quem curte não paga `get` de
+      // membro nem precisa ser do clube.
+      allow update: if (isGoalOwner()
+          && (clubStampUnchanged()
+              || clubStampAllowed(request.resource.data.get("clubId", ""), false)))
+        || (signedIn() && onlyInteraction());
+
       allow delete: if isGoalOwner();
 
       // Quem curtiu: um documento por pessoa, com o uid como id.
@@ -227,17 +299,29 @@ service cloud.firestore {
       // O Engine abre sem login e a agenda e parte do convite: evento e publico.
       allow read: if true;
 
+      // `clubId` é campo NOVO e opcional (CLUBES-MODELO.md §4): evento fora de
+      // clube continua como sempre. Com clube, exige CARGO — encontro oficial
+      // da crew é do capitão e do fundador, como no Strava. Custa um `get` por
+      // criação, e só quando o campo vem preenchido.
       allow create: if signedIn()
-        && request.resource.data.createdBy == request.auth.uid;
+        && request.resource.data.createdBy == request.auth.uid
+        && clubStampAllowed(request.resource.data.get("clubId", ""), true);
 
       // So o dono edita o evento. Confirmar presenca NAO passa mais por aqui:
       // virou documento proprio na subcolecao abaixo. Antes o RSVP era escrita
       // no documento de outra pessoa, e como o cancelamento reescrevia o array
       // inteiro nenhuma regra conseguia provar QUEM tinha saido — dava pra
       // apagar a presenca alheia. Agora essa escrita simplesmente nao existe.
+      //
+      // O carimbo de clube é conferido de novo na edição, senão a checagem da
+      // criação seria contornável em duas escritas: cria o evento sem clube e
+      // depois pendura o `[TAG]` de um clube em que você nem entrou. Quando o
+      // carimbo não muda, não custa `get` nenhum.
       allow update: if signedIn()
         && resource.data.createdBy == request.auth.uid
-        && request.resource.data.createdBy == request.auth.uid;
+        && request.resource.data.createdBy == request.auth.uid
+        && (clubStampUnchanged()
+            || clubStampAllowed(request.resource.data.get("clubId", ""), true));
 
       allow delete: if signedIn() && resource.data.createdBy == request.auth.uid;
 
@@ -277,6 +361,220 @@ service cloud.firestore {
     // do documento tem que ser o uid de quem escreve.
     match /{caminho=**}/likes/{likerId} {
       allow read: if true;
+    }
+
+    // CLUBES
+    //
+    // A feature existia e estava MORTA em produção: `services/clubs.js` só
+    // falava com o backend Java (`VITE_API_URL`), e `.env.production` tem a
+    // variável vazia — ou seja, no site publicado toda chamada de clube ia
+    // para `undefined/api/clubs`. O "tem poucos clubes" nunca foi falta de
+    // interesse: era a coleção nunca ter existido. Este bloco é a metade de
+    // segurança do port para o Firestore direto.
+    //
+    // Forma do dado (CLUBES-MODELO.md §7): lista de gente é subcoleção com o
+    // uid no id; "meus clubes" é espelho em `users/{uid}/clubs` e NÃO consulta
+    // de grupo; `memberCount` é número de vitrine com passo preso em ±1, e o
+    // número que aparece em destaque na página do clube vem de agregação.
+    match /clubs/{clubId} {
+      // A sigla é o que faz o clube parecer crew, e ela é única no app inteiro
+      // (registro em `clubTags/{TAG}`, mesmo mecanismo de `usernames/`).
+      function nascimentoHonesto() {
+        let d = request.resource.data;
+        return d.founderId == request.auth.uid
+          && d.tag is string
+          && d.tag.matches('^[A-Z0-9]{2,5}$')
+          && d.memberCount == 1
+          && d.archived == false
+          // Selo de clube oficial do Engine é editorial: só o admin cria.
+          // Sem isto qualquer um nasceria com ★ no card.
+          && (d.official == false || isServiceAdmin());
+      }
+
+      // Fundador edita tudo, MENOS o que é identidade imutável na fase 1:
+      // a sigla (mudar sigla é mudar identidade, e o registro em `clubTags`
+      // ficaria apontando para o nada), o próprio `founderId` (transferência
+      // de fundação é fase 2) e `official`. `memberCount` também não: ele só
+      // anda pelo passo de vitrine abaixo, senão o fundador digitaria 5.000.
+      function editaDoFundador() {
+        let d = request.resource.data;
+        return resource.data.founderId == request.auth.uid
+          && d.founderId == resource.data.founderId
+          && d.tag == resource.data.tag
+          && d.official == resource.data.official
+          && d.memberCount == resource.data.memberCount;
+      }
+
+      // Capitão cuida do recheio, não da identidade.
+      function editaDoCapitao() {
+        return isClubStaff(clubId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["description", "rules", "links", "meetupSchedule", "cover", "updatedAt"]);
+      }
+
+      // Entrar e sair mexem num contador que mora no documento de OUTRA
+      // pessoa — é a mesma classe de escrita alheia do `likesCount`. O passo
+      // fica preso em ±1 e, além disso, amarrado ao efeito real do lote:
+      // só soma quem ficou membro depois da escrita, e só subtrai quem deixou
+      // de ser (ou o capitão que removeu alguém). Sem o `existsAfter` um
+      // estranho somava +1 em clube nenhum dele, um por escrita.
+      function passoDeVitrine() {
+        let antes = resource.data.memberCount;
+        let depois = request.resource.data.memberCount;
+        let meuDoc = /databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid);
+        return signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["memberCount", "updatedAt"])
+          && (
+            (depois == antes + 1 && existsAfter(meuDoc))
+            || (depois == antes - 1 && (!existsAfter(meuDoc) || isClubStaff(clubId)))
+          );
+      }
+
+      // O card do clube é público inclusive para clube fechado: descoberta
+      // precisa dele. `contentVisibility` esconde a LISTA DE MEMBROS e o link
+      // do WhatsApp, não a existência do clube.
+      allow read: if true;
+
+      allow create: if signedIn() && nascimentoHonesto();
+
+      allow update: if isServiceAdmin()
+        || (signedIn() && editaDoFundador())
+        || (signedIn() && editaDoCapitao())
+        || passoDeVitrine();
+
+      // Não existe delete: clube arquiva (`archived: true`). Apagar o
+      // documento deixaria membros, pedidos e a sigla registrada órfãos —
+      // Firestore não faz cascata e o plano Spark não tem Cloud Function.
+      allow delete: if false;
+
+      match /members/{memberId} {
+        // Fundação: o doc do fundador nasce no MESMO lote do clube, então o
+        // clube ainda não existe quando a regra roda. `getAfter` enxerga o
+        // estado pós-lote; `get` aqui devolveria null e o create seria negado
+        // por acidente.
+        function fundacao() {
+          return memberId == request.auth.uid
+            && request.resource.data.role == "founder"
+            && getAfter(/databases/$(database)/documents/clubs/$(clubId)).data.founderId == request.auth.uid;
+        }
+
+        function entradaAberta() {
+          return memberId == request.auth.uid
+            && request.resource.data.role == "member"
+            && exists(/databases/$(database)/documents/clubs/$(clubId))
+            && get(/databases/$(database)/documents/clubs/$(clubId)).data.joinPolicy == "open";
+        }
+
+        // Clube de aprovação: quem cria o doc do membro é o capitão, e só se
+        // existir um pedido. É o que impede um capitão de arrastar gente para
+        // dentro do clube dele sem que a pessoa tenha pedido.
+        function entradaAprovada() {
+          return request.resource.data.role == "member"
+            && isClubStaff(clubId)
+            && exists(/databases/$(database)/documents/clubs/$(clubId)/requests/$(memberId));
+        }
+
+        allow read: if get(/databases/$(database)/documents/clubs/$(clubId)).data.contentVisibility == "public"
+          || isClubMember(clubId);
+
+        allow create: if signedIn()
+          && request.resource.data.uid == memberId
+          && (fundacao() || entradaAberta() || entradaAprovada());
+
+        // Duas escritas cabem aqui e mais nenhuma: a pessoa atualizando o
+        // próprio nome/avatar desnormalizado (mesmo desenho de `followers`), e
+        // o FUNDADOR mudando cargo. Capitão não mexe em cargo — com três
+        // papéis, deixar capitão promover capitão é como não ter papel nenhum.
+        allow update: if signedIn()
+          && request.resource.data.uid == memberId
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["role", "displayName", "username", "avatar", "title"])
+          && (
+            (request.resource.data.role == resource.data.role && memberId == request.auth.uid)
+            || (
+              isClubFounder(clubId)
+              && resource.data.role != "founder"
+              && request.resource.data.role in ["captain", "member"]
+            )
+          );
+
+        // Fundador NÃO sai (regra do Strava: o dono passa o bastão antes).
+        // Sem isso o clube fica sem ninguém que possa editar a identidade.
+        allow delete: if signedIn() && (
+          (memberId == request.auth.uid && resource.data.role != "founder")
+          || (isClubStaff(clubId) && resource.data.role == "member")
+          || (isClubFounder(clubId) && resource.data.role != "founder")
+        );
+      }
+
+      match /requests/{requesterId} {
+        // O pedido é entre quem pediu e a direção do clube. Ninguém mais lê
+        // quem tentou entrar e não foi aceito.
+        allow read: if signedIn() && (requesterId == request.auth.uid || isClubStaff(clubId));
+
+        allow create: if signedIn()
+          && requesterId == request.auth.uid
+          && request.resource.data.uid == requesterId
+          && get(/databases/$(database)/documents/clubs/$(clubId)).data.joinPolicy == "approval";
+
+        // Pedido não muda de ideia: ou some (recusado/aprovado), ou fica.
+        allow update: if false;
+
+        allow delete: if signedIn() && (requesterId == request.auth.uid || isClubStaff(clubId));
+      }
+    }
+
+    // Unicidade da sigla. Vem do registro, não de uma consulta: consulta lê um
+    // instante e duas criações simultâneas passariam as duas. Aqui o segundo
+    // lote bate num documento que já existe, e `update: if false` o derruba.
+    //
+    // O `getAfter` amarra o registro ao clube do MESMO lote: não dá para
+    // reservar uma sigla apontando para clube alheio, nem registrar `ABC`
+    // apontando para um clube cuja sigla é outra.
+    match /clubTags/{tag} {
+      allow read: if signedIn();
+      // `existsAfter` na frente porque `getAfter` de documento que não existe
+      // devolve null, e ler `.founderId` de null é ERRO de avaliação. O
+      // Firestore nega em cima do erro, então o efeito parecia certo — mas
+      // registrar sigla apontando para um clube inexistente tem que ser
+      // negado de propósito, não por acidente.
+      allow create: if signedIn()
+        && request.resource.data.clubId is string
+        && existsAfter(/databases/$(database)/documents/clubs/$(request.resource.data.clubId))
+        && getAfter(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.founderId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.tag == tag;
+      allow update: if false;
+      allow delete: if isServiceAdmin();
+    }
+
+    // Espelho de "meus clubes". Existe para NÃO haver `collectionGroup` em
+    // members: consulta de grupo não passa pela regra aninhada, pediria um
+    // match recursivo de leitura e um índice COLLECTION_GROUP — exatamente a
+    // porta que o override de `members.userId` deixava aberta, e que saiu do
+    // `firestore.indexes.json` junto com este bloco.
+    //
+    // O dono escreve o próprio espelho. A exceção é a aprovação de pedido: o
+    // capitão cria o doc de membro, e sem esta segunda via o aprovado não veria
+    // o clube em "meus clubes" até tropeçar nele. Ela só vale se a pessoa
+    // realmente virou membro no mesmo lote (`existsAfter`), então não dá para
+    // pendurar clube na lista de quem nunca entrou.
+    match /users/{userId}/clubs/{clubId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        || (isClubStaff(clubId)
+            && existsAfter(/databases/$(database)/documents/clubs/$(clubId)/members/$(userId)));
+      allow delete: if isOwner(userId)
+        || (isClubStaff(clubId)
+            && !existsAfter(/databases/$(database)/documents/clubs/$(clubId)/members/$(userId)));
+    }
+
+    // Vitrine editorial ("clube da semana"). Escolha do Murilo na mão, que é o
+    // que ele faria de qualquer jeito nos primeiros meses; automático precisa
+    // de volume que ainda não existe.
+    match /featured/{docId} {
+      allow read: if true;
+      allow write: if isServiceAdmin();
     }
 
     // Denúncias: qualquer pessoa logada abre uma, ninguém além da moderação lê

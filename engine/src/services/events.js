@@ -78,6 +78,21 @@ const normalizeEvent = (event) => ({
     facebookGroup: String(event.communityLinks?.facebookGroup || "").trim(),
   },
 
+  // Encontro de clube. Campos NOVOS e OPCIONAIS: evento fora de clube continua
+  // sendo criado sem eles, e por isso não existe subcoleção `clubs/{id}/events`
+  // — seria uma segunda coleção de evento, com segunda regra e segundo RSVP,
+  // exatamente o erro que o feed evitou ao pôr meta e post na mesma coleção.
+  //
+  // `clubTag` e `clubName` são desnormalizados de propósito: o card do evento
+  // mostra `[CVC] Civic Campinas` sem uma leitura extra por card. Ficam "" em
+  // vez de ausentes porque a aba Encontros consulta por igualdade em `clubId`.
+  //
+  // Quem pode criar evento COM `clubId` é capitão ou fundador, e quem decide
+  // isso é a regra do Firestore (um `get` no doc de membro), não esta função.
+  clubId: String(event.clubId || "").trim(),
+  clubTag: String(event.clubTag || "").trim().toUpperCase().slice(0, 5),
+  clubName: String(event.clubName || "").trim().slice(0, 40),
+
   // Metadata
   createdBy: String(event.createdBy || ""),
   createdAt: event.createdAt || serverTimestamp(),

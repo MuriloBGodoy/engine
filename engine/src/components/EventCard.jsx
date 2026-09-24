@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { eventTypeLabel as typeLabel } from "../services/eventTypes";
+import { ClubTag } from "./clubs/ClubEmblem";
 import {
   MapPin,
   Users,
@@ -11,6 +12,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+// Encontro criado por um clube leva a sigla dele no card: é onde a crew
+// aparece para quem ainda não é membro (CLUBES-CONTRATO §2).
 export function EventCard({ event }) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -58,6 +61,12 @@ export function EventCard({ event }) {
 
       {/* Conteúdo */}
       <div className="p-4">
+        {event.clubTag ? (
+          <p className="mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--engine-text-muted)]">
+            <ClubTag tag={event.clubTag} />
+            <span className="truncate">{event.clubName}</span>
+          </p>
+        ) : null}
         <h3 className="font-semibold text-lg text-[var(--engine-text)] truncate">{event.title}</h3>
         <p className="text-sm text-[var(--engine-text-muted)] mb-3 line-clamp-2">
           {event.description}

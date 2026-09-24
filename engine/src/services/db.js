@@ -587,7 +587,7 @@ const buildPublicProfile = (settings = {}, userId = currentUserId) => {
   };
 };
 
-const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
+const buildCommunityGoal = (goal, userId, settings = {}, note = "", club = null) => {
   const profile = getProfileSnapshot(settings, userId);
 
   return {
@@ -610,6 +610,11 @@ const buildCommunityGoal = (goal, userId, settings = {}, note = "") => {
     targetValue: goal.targetValue,
     // Legenda escrita na hora de publicar — não é mais a bio do perfil.
     note: String(note || "").trim().slice(0, 280),
+    // Carimbo de clube (campos NOVOS e opcionais). Publicar a meta a partir da
+    // página do clube marca o post; publicar da Comunidade deixa "" — e "" em
+    // vez de ausente porque a consulta do mural é igualdade em `clubId`.
+    clubId: String(club?.id || club?.clubId || ""),
+    clubTag: String(club?.tag || club?.clubTag || ""),
     verified: true,
     likesCount: 0,
     comments: [],
@@ -700,7 +705,11 @@ const communityCarPatch = (car) => ({
 export const POST_KIND_GOAL = "goal";
 export const POST_KIND_POST = "post";
 
-const normalizeCommunityGoal = (goal = {}) => {
+// Exportado porque o mural do clube É esta coleção, filtrada por `clubId`: a
+// camada de Clubes precisa entregar ao GoalCard exatamente a mesma forma que o
+// feed entrega. Normalizador duplicado seria um segundo lugar para esquecer de
+// arrumar quando o formato mudar.
+export const normalizeCommunityGoal = (goal = {}) => {
   const ratings = Object.values(goal.ratingsBy || {}).map(Number).filter(Boolean);
   const rating = ratings.length
     ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length
@@ -766,6 +775,11 @@ const normalizeCommunityGoal = (goal = {}) => {
     ownerId: goal.ownerId,
     userId: goal.userId || goal.ownerId,
     carId: goal.carId,
+    // Carimbo do clube. Vem como "" quando não há, porque o card decide
+    // mostrar o chip `[TAG]` por `clubTag` — e `undefined` obrigaria toda
+    // linha da tela a um `?.`.
+    clubId: goal.clubId || "",
+    clubTag: goal.clubTag || "",
     // Projeção por leitor, não a lista inteira: a UI só pergunta
     // `likesBy?.[user.uid]`, então mandar o mapa completo era carregar a lista
     // de todo mundo para responder uma pergunta sobre uma pessoa.
@@ -1689,7 +1703,7 @@ export const engineDB = {
     );
   },
 
-  async shareCommunityGoal(goal, settings, userId = currentUserId, note = "") {
+  async shareCommunityGoal(goal, settings, userId = currentUserId, note = "", club = null) {
     if (!userId) throw new Error("Usuário não identificado.");
 
     // Sem branch de API por dois motivos concretos, os dois verificados no
@@ -1698,7 +1712,7 @@ export const engineDB = {
     //    do perfil — por isso a descrição escrita na hora nunca aparecia;
     //  - ele grava só `image`, sem `images`, então a publicação saía com uma
     //    foto só, em vez da galeria do carro.
-    const payload = buildCommunityGoal(goal, userId, settings, note);
+    const payload = buildCommunityGoal(goal, userId, settings, note, club);
     const goalRef = doc(firestore, COMMUNITY_COLLECTION, payload.id);
     const existing = await getDoc(goalRef);
     const existingData = existing.exists() ? existing.data() : {};
@@ -1728,7 +1742,19 @@ export const engineDB = {
    * que já existem — inclusive a que impede um visitante de editar conteúdo
    * alheio.
    */
-  async createCommunityPost({ text, images = [], videoUrl = "", car = null }) {
+  async createCommunityPost({
+    text,
+    images = [],
+    videoUrl = "",
+    car = null,
+    // Carimbo de clube: campos NOVOS e opcionais. Post do mural de um clube é
+    // um post da Comunidade marcado, não uma coleção paralela — herda card,
+    // curtida em subcoleção, comentário, denúncia e bloqueio, e ainda aparece
+    // no feed geral com o chip `[TAG]`, que é propaganda do clube. A regra do
+    // Firestore exige ser MEMBRO para gravar o carimbo.
+    clubId = "",
+    clubTag = "",
+  }) {
     if (!currentUserId) throw new Error("Entre na sua conta para publicar.");
 
     const content = String(text || "").trim().slice(0, 1000);
@@ -1762,6 +1788,11 @@ export const engineDB = {
       brand: car?.brand || "",
       model: car?.model || "",
       year: car?.year || "",
+      // "" e não ausente: a consulta do mural é igualdade em `clubId`, e campo
+      // que às vezes existe e às vezes não é o tipo de dado que faz uma
+      // consulta devolver menos do que devia sem ninguém notar.
+      clubId: String(clubId || ""),
+      clubTag: String(clubTag || ""),
       likesCount: 0,
       comments: [],
       ratingsBy: {},

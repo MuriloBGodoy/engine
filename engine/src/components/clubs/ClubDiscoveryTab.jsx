@@ -1,202 +1,158 @@
-import { useState, useEffect } from "react";
-import { Search, Filter, Loader2 } from "lucide-react";
-import { useDiscoverClubs, api } from "../../services/clubs";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Search, Loader2, Plus } from "lucide-react";
 import { ClubCard } from "./ClubCard";
-import { useToast } from "../ToastProvider";
+import { useDiscoverClubs } from "./clubsDataSource";
+import { CLUB_STYLE_VALUES, clubStyleLabel } from "../../services/clubStyles";
 
-const CATEGORIES = [
-  { value: "", label: "Todas" },
-  { value: "Classic Cars", label: "Classic Cars" },
-  { value: "Hybrids", label: "Hybrids" },
-  { value: "SUVs", label: "SUVs" },
-  { value: "Racing", label: "Racing" },
-];
+/** Uma seção só aparece quando tem conteúdo — seção vazia não ocupa espaço. */
+function Section({ title, hint, clubs, onOpen, onJoined }) {
+  if (!clubs?.length) return null;
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-[15px] font-extrabold tracking-tight text-[var(--engine-text)]">
+          {title}
+        </h3>
+        {hint ? (
+          <span className="text-[12px] text-[var(--engine-text-muted)]">{hint}</span>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {clubs.map((club) => (
+          <ClubCard key={club.id} club={club} onOpen={onOpen} onJoined={onJoined} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
-const SORT_OPTIONS = [
-  { value: "trending", label: "Trending" },
-  { value: "new", label: "Novo" },
-  { value: "members", label: "Mais Membros" },
-];
-
-export function ClubDiscoveryTab({ onSelectClub = null }) {
-  const showToast = useToast();
-  const { clubs, loading, error, fetch } = useDiscoverClubs();
-
+/**
+ * A descoberta, nas quatro seções do contrato (§3): pro seu carro, em alta,
+ * perto de você, todos.
+ *
+ * O anti-tela-vazia é a regra que vem da região (memória
+ * `engine-regiao-localidade`): quando a soma de tudo dá menos de três clubes,
+ * a tela oferece fundar em vez de mostrar uma grade magra — "muito poucos
+ * clubes" era metade da reclamação original.
+ */
+export function ClubDiscoveryTab({ onSelectClub, onCreate }) {
+  const { t } = useTranslation();
+  const { sections, loading, error, fetch } = useDiscoverClubs();
+  const [style, setStyle] = useState("");
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [sort, setSort] = useState("trending");
-  const [offset, setOffset] = useState(0);
-  const [allClubs, setAllClubs] = useState([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [joining, setJoining] = useState({});
-
-  // Load clubs on filter change
-  useEffect(() => {
-    setOffset(0);
-    loadClubs(0);
-  }, [search, category, sort]);
-
-  const loadClubs = async (newOffset = offset) => {
-    try {
-      await fetch({
-        search: search || undefined,
-        category: category || undefined,
-        sort,
-        limit: 20,
-        offset: newOffset,
-      });
-
-      // The fetch updates the clubs state, but we need to append for "load more"
-      // For now, we'll manage this manually
-      // In production, use React Query for better pagination handling
-    } catch (err) {
-      showToast(err.message || "Erro ao carregar clubes", "error");
-    }
-  };
 
   useEffect(() => {
-    if (offset === 0) {
-      setAllClubs(clubs);
-    } else {
-      setAllClubs((prev) => [...prev, ...clubs]);
-    }
-    setHasMore(clubs.length === 20);
-  }, [clubs, offset]);
+    fetch({ style, search });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [style]);
 
-  const handleLoadMore = () => {
-    const newOffset = offset + 20;
-    setOffset(newOffset);
-    loadClubs(newOffset);
-  };
+  const total = useMemo(
+    () =>
+      ["forYourCar", "trending", "nearby", "all"].reduce(
+        (sum, key) => sum + (sections?.[key]?.length || 0),
+        0,
+      ),
+    [sections],
+  );
 
-  const handleJoinClub = async (clubId) => {
-    setJoining((prev) => ({ ...prev, [clubId]: true }));
-    try {
-      await api.clubs.joinClub(clubId);
-      showToast("Você entrou no clube com sucesso!", "success");
-      // Reload clubs to update UI
-      loadClubs(0);
-    } catch (err) {
-      showToast(err.message || "Erro ao entrar no clube", "error");
-    } finally {
-      setJoining((prev) => ({ ...prev, [clubId]: false }));
-    }
+  const sectionProps = {
+    onOpen: onSelectClub,
+    onJoined: () => fetch({ style, search }),
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search & Filters */}
-      <div className="space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search
-            size={20}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[var(--engine-text-muted)]"
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar clubes..."
-            className="w-full pl-12 pr-4 py-3 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] focus:outline-none focus:border-[var(--engine-accent)] transition"
-          />
-        </div>
+    <div className="space-y-5">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          fetch({ style, search });
+        }}
+        className="relative"
+      >
+        <Search
+          size={17}
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--engine-text-muted)]"
+        />
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={t("clubs.filters.searchPlaceholder")}
+          className="min-h-11 w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] py-2.5 pl-10 pr-3 text-base text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)]"
+        />
+      </form>
 
-        {/* Filter & Sort Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Category Filter */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-[var(--engine-text-muted)] mb-2">
-              Categoria
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] focus:outline-none focus:border-[var(--engine-accent)] transition"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sort */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-[var(--engine-text-muted)] mb-2">
-              Ordenar por
-            </label>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] focus:outline-none focus:border-[var(--engine-accent)] transition"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      {/* Faixa rolável: 17 estilos não cabem numa linha de celular, e quebrar
+          em várias linhas empurraria os clubes para fora da primeira tela. */}
+      <div className="engine-chip-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {["", ...CLUB_STYLE_VALUES].map((value) => (
+          <button
+            key={value || "all"}
+            type="button"
+            onClick={() => setStyle(value)}
+            aria-pressed={style === value}
+            className={`min-h-10 shrink-0 rounded-full border px-3.5 text-[12.5px] font-semibold transition-colors ${
+              style === value
+                ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                : "border-[var(--engine-border-strong)] bg-[var(--engine-surface)] text-[var(--engine-text)] hover:border-[var(--engine-text)]"
+            }`}
+          >
+            {value ? clubStyleLabel(t, value) : t("clubs.filters.allStyles")}
+          </button>
+        ))}
       </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
+      {error ? (
+        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      ) : null}
 
-      {/* Loading State */}
-      {loading && allClubs.length === 0 && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={32} className="animate-spin text-[var(--engine-accent)]" />
+      {loading && !total ? (
+        <div className="flex items-center justify-center gap-2 py-12 text-[var(--engine-text-muted)]">
+          <Loader2 size={18} className="animate-spin" />
+          {t("clubs.loading")}
         </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && allClubs.length === 0 && !error && (
-        <div className="text-center py-12">
-          <Filter size={48} className="mx-auto text-[var(--engine-text-muted)] mb-4" />
-          <p className="text-lg font-semibold text-[var(--engine-text)] mb-2">
-            Nenhum clube encontrado
-          </p>
-          <p className="text-sm text-[var(--engine-text-muted)]">
-            Tente ajustar seus filtros ou criar um novo clube
-          </p>
-        </div>
-      )}
-
-      {/* Clubs Grid */}
-      {allClubs.length > 0 && (
+      ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allClubs.map((club) => (
-              <ClubCard
-                key={club.id}
-                club={club}
-                isDiscovery={true}
-                onJoin={handleJoinClub}
-                joinLoading={joining[club.id]}
-                onClick={onSelectClub}
-              />
-            ))}
-          </div>
+          <Section
+            title={t("clubs.sections.forYourCar")}
+            hint={t("clubs.sections.forYourCarHint")}
+            clubs={sections?.forYourCar}
+            {...sectionProps}
+          />
+          <Section
+            title={t("clubs.sections.trending")}
+            hint={t("clubs.sections.trendingHint")}
+            clubs={sections?.trending}
+            {...sectionProps}
+          />
+          <Section
+            title={t("clubs.sections.nearby")}
+            clubs={sections?.nearby}
+            {...sectionProps}
+          />
+          <Section title={t("clubs.sections.all")} clubs={sections?.all} {...sectionProps} />
 
-          {/* Load More Button */}
-          {hasMore && (
-            <div className="flex justify-center pt-6">
+          {total < 3 ? (
+            <div className="rounded-2xl border border-dashed border-[var(--engine-border-strong)] px-4 py-6 text-center">
+              <p className="text-[14px] font-bold text-[var(--engine-text)]">
+                {total === 0 ? t("clubs.found.none") : t("clubs.found.fewTitle")}
+              </p>
+              <p className="mx-auto mt-1 max-w-[42ch] text-[12.5px] leading-relaxed text-[var(--engine-text-muted)]">
+                {t("clubs.found.fewCopy")}
+              </p>
               <button
-                onClick={handleLoadMore}
-                disabled={loading}
-                className="px-8 py-3 bg-[var(--engine-accent)] text-white rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
+                type="button"
+                onClick={onCreate}
+                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 text-[14px] font-bold text-white transition hover:opacity-90"
               >
-                {loading ? "Carregando..." : "Carregar Mais"}
+                <Plus size={17} />
+                {t("clubs.found.foundFirst")}
               </button>
             </div>
-          )}
+          ) : null}
         </>
       )}
     </div>

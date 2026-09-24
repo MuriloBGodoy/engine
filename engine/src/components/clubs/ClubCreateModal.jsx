@@ -1,325 +1,532 @@
-import { useState } from "react";
-import { X, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { X, Loader2, Check } from "lucide-react";
+import { ClubEmblem, ClubTag } from "./ClubEmblem";
+import { ClubCard } from "./ClubCard";
+import { checkTagAvailable } from "./clubsDataSource";
+import { useHistoryDismiss } from "../../hooks/useHistoryDismiss";
+import { getStates } from "../../services/locations";
+import {
+  CLUB_ICON_PATHS,
+  CLUB_ICON_VALUES,
+  CLUB_NAME_MAX,
+  CLUB_MOTTO_MAX,
+  CLUB_PALETTE,
+  CLUB_SHAPE_VALUES,
+  CLUB_STYLE_VALUES,
+  clubColorLabel,
+  clubColorVars,
+  clubIconLabel,
+  clubShapeLabel,
+  clubStyleLabel,
+  emptyClubDraft,
+  isValidClubTag,
+  normalizeClubTag,
+} from "../../services/clubStyles";
 
-const CATEGORIES = [
-  "Classic Cars",
-  "Hybrids",
-  "SUVs",
-  "Racing",
-];
-
+/**
+ * Fundar um clube, com prévia ao vivo.
+ *
+ * Esta tela é a resposta ao "nem parece personalizável": a prévia à direita
+ * (embaixo, no celular) é o MESMO `ClubCard` da descoberta, e ele muda a cada
+ * tecla. E não mostra só o card — mostra a sigla ao lado do seu nome no feed
+ * e no card de encontro, que é o que faz a sigla valer a pena.
+ *
+ * O emblema é montado por composição; não há upload (Storage desligado).
+ */
 export function ClubCreateModal({ isOpen, onClose, onCreate, loading = false }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    category: "Classic Cars",
-    isPublic: true,
-    tags: [],
-    imageUrl: "",
-  });
-
-  const [tagInput, setTagInput] = useState("");
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(emptyClubDraft);
   const [errors, setErrors] = useState({});
+  const [tagState, setTagState] = useState("idle"); // idle | checking | free | taken
+  const tagTimer = useRef(null);
+
+  useHistoryDismiss(isOpen, onClose);
+
+  const set = (patch) => setDraft((prev) => ({ ...prev, ...patch }));
+  const setEmblem = (patch) =>
+    setDraft((prev) => ({ ...prev, emblem: { ...prev.emblem, ...patch } }));
+  const setColors = (patch) =>
+    setDraft((prev) => ({ ...prev, colors: { ...prev.colors, ...patch } }));
+  const setFocus = (patch) =>
+    setDraft((prev) => ({ ...prev, focus: { ...prev.focus, ...patch } }));
+
+  // A sigla é única no app, então a pergunta vai ao servidor — com respiro,
+  // senão são cinco consultas para escrever "CVC". A checagem mora no
+  // handler, e não num efeito: `react-hooks/set-state-in-effect` é regra da
+  // casa, e digitar já é o evento que deve disparar a pergunta.
+  const handleTagChange = (value) => {
+    const tag = normalizeClubTag(value);
+    set({ tag });
+    clearTimeout(tagTimer.current);
+    if (!isValidClubTag(tag)) {
+      setTagState("idle");
+      return;
+    }
+    setTagState("checking");
+    tagTimer.current = setTimeout(async () => {
+      try {
+        const free = await checkTagAvailable(tag);
+        setTagState(free ? "free" : "taken");
+      } catch {
+        setTagState("idle");
+      }
+    }, 450);
+  };
+
+  // Só a limpeza fica no efeito: um timer pendente depois do modal fechado
+  // chamaria setState num componente desmontado.
+  useEffect(() => () => clearTimeout(tagTimer.current), []);
+
+  const states = useMemo(() => getStates(draft.country), [draft.country]);
+
+  // O clube da prévia é o rascunho com os campos que o card espera. Os
+  // valores de exibição caem em placeholder para a prévia nunca ficar vazia.
+  const previewClub = {
+    id: "preview",
+    ...draft,
+    name: draft.name || t("clubs.form.placeholderName"),
+    tag: draft.tag || t("clubs.form.placeholderTag"),
+    memberCount: 1,
+    myRole: null,
+    nextMeetup: null,
+    official: false,
+  };
 
   if (!isOpen) return null;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+  const toggleStyle = (style) => {
+    const current = draft.focus.styles || [];
+    setFocus({
+      styles: current.includes(style)
+        ? current.filter((item) => item !== style)
+        : [...current, style].slice(0, 3),
+    });
   };
 
-  const handleTogglePublic = () => {
-    setFormData((prev) => ({ ...prev, isPublic: !prev.isPublic }));
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const next = {};
+    if (!draft.name.trim()) next.name = t("clubs.errors.nameRequired");
+    if (!draft.tag) next.tag = t("clubs.errors.tagRequired");
+    else if (!isValidClubTag(draft.tag)) next.tag = t("clubs.errors.tagInvalid");
+    else if (tagState === "taken") next.tag = t("clubs.errors.tagTaken");
+    const hasFocus =
+      draft.focus.styles?.length || draft.focus.brands?.length || draft.focus.models?.length;
+    if (!hasFocus) next.focus = t("clubs.errors.focusRequired");
+    setErrors(next);
+    if (Object.keys(next).length) return;
+
+    await onCreate({
+      ...draft,
+      foundedYear: draft.foundedYear ? Number(draft.foundedYear) : "",
+    });
   };
 
-  const handleAddTag = () => {
-    if (tagInput.trim() && formData.tags.length < 5) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, tagInput.trim()],
-      }));
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // For now, just store the file reference
-      // In a real app, you'd upload to Firebase Storage
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setFormData((prev) => ({
-          ...prev,
-          imageUrl: event.target.result,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name.trim()) {
-      newErrors.name = "Nome é obrigatório";
-    }
-    if (formData.name.length > 120) {
-      newErrors.name = "Nome não pode ter mais de 120 caracteres";
-    }
-    if (formData.description.length > 500) {
-      newErrors.description = "Descrição não pode ter mais de 500 caracteres";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    try {
-      await onCreate(formData);
-      setFormData({
-        name: "",
-        description: "",
-        category: "Classic Cars",
-        isPublic: true,
-        tags: [],
-        imageUrl: "",
-      });
-      onClose();
-    } catch (error) {
-      setErrors({ submit: error.message });
-    }
-  };
+  const fieldClass =
+    "w-full min-h-11 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3.5 py-2.5 text-base text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)]";
+  const labelClass =
+    "ml-0.5 block text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-muted)]";
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--engine-surface)] rounded-xl border border-[var(--engine-border)] max-w-md w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-[var(--engine-surface)] border-b border-[var(--engine-border)] p-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[var(--engine-text)]">
-            Criar Novo Clube
-          </h2>
+    <div className="engine-modal-overlay">
+      <div
+        style={clubColorVars(previewClub)}
+        className="engine-modal-panel engine-pop sm:max-w-5xl"
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6 sm:pb-4 sm:pt-5">
+          <div className="min-w-0">
+            <h2 className="font-display text-[17px] font-extrabold tracking-tight text-[var(--engine-text)] sm:text-xl">
+              {t("clubs.form.title")}
+            </h2>
+            <p className="mt-0.5 text-[12.5px] text-[var(--engine-text-muted)]">
+              {t("clubs.form.subtitle")}
+            </p>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-[var(--engine-text-muted)] hover:text-[var(--engine-text)] transition"
+            aria-label={t("common.cancel")}
+            className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)]"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-semibold text-[var(--engine-text)] mb-2">
-              Nome do Clube *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Ex: Clássicos de São Paulo"
-              maxLength={120}
-              className="w-full px-4 py-2 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] focus:outline-none focus:border-[var(--engine-accent)] transition"
-            />
-            {errors.name && (
-              <p className="text-xs text-red-500 mt-1">{errors.name}</p>
-            )}
-            <p className="text-xs text-[var(--engine-text-subtle)] mt-1">
-              {formData.name.length}/120
-            </p>
-          </div>
+        <form
+          id="engine-club-form"
+          onSubmit={handleSubmit}
+          className="engine-modal-body engine-scroll grid content-start gap-5 px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[1fr_360px] lg:items-start lg:gap-x-7"
+        >
+          <div className="grid content-start gap-3.5">
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className={labelClass} htmlFor="club-name">
+                  {t("clubs.form.name")}
+                </label>
+                <input
+                  id="club-name"
+                  value={draft.name}
+                  maxLength={CLUB_NAME_MAX}
+                  onChange={(event) => set({ name: event.target.value })}
+                  placeholder={t("clubs.form.namePlaceholder")}
+                  className={fieldClass}
+                />
+                <p className="ml-0.5 text-[11.5px] text-[var(--engine-text-muted)]">
+                  {errors.name || t("clubs.form.charsLeft", { count: CLUB_NAME_MAX - draft.name.length })}
+                </p>
+              </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-semibold text-[var(--engine-text)] mb-2">
-              Descrição
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Descreva o propósito do seu clube..."
-              maxLength={500}
-              rows={3}
-              className="w-full px-4 py-2 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] focus:outline-none focus:border-[var(--engine-accent)] transition resize-none"
-            />
-            {errors.description && (
-              <p className="text-xs text-red-500 mt-1">{errors.description}</p>
-            )}
-            <p className="text-xs text-[var(--engine-text-subtle)] mt-1">
-              {formData.description.length}/500
-            </p>
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-sm font-semibold text-[var(--engine-text)] mb-2">
-              Categoria
-            </label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] focus:outline-none focus:border-[var(--engine-accent)] transition"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <label className="block text-sm font-semibold text-[var(--engine-text)] mb-2">
-              Tags (máx 5)
-            </label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddTag();
-                  }
-                }}
-                placeholder="Digite e pressione Enter"
-                className="flex-1 px-4 py-2 rounded-lg border border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text)] placeholder-[var(--engine-text-subtle)] focus:outline-none focus:border-[var(--engine-accent)] transition"
-              />
-              <button
-                type="button"
-                onClick={handleAddTag}
-                disabled={formData.tags.length >= 5}
-                className="px-4 py-2 bg-[var(--engine-accent)] text-white rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
-              >
-                +
-              </button>
+              <div className="space-y-1.5">
+                <label className={labelClass} htmlFor="club-tag">
+                  {t("clubs.form.tag")}
+                </label>
+                <input
+                  id="club-tag"
+                  value={draft.tag}
+                  onChange={(event) => handleTagChange(event.target.value)}
+                  placeholder="CVC"
+                  className={`${fieldClass} font-mono font-extrabold uppercase tracking-[0.14em] ${
+                    errors.tag || tagState === "taken"
+                      ? "border-[var(--engine-accent)]"
+                      : ""
+                  }`}
+                />
+                <p
+                  className={`ml-0.5 text-[11.5px] ${
+                    tagState === "free"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : errors.tag || tagState === "taken"
+                        ? "text-[var(--engine-accent)]"
+                        : "text-[var(--engine-text-muted)]"
+                  }`}
+                >
+                  {tagState === "checking"
+                    ? t("clubs.form.tagChecking")
+                    : tagState === "free"
+                      ? t("clubs.form.tagFree", { tag: draft.tag })
+                      : tagState === "taken"
+                        ? t("clubs.form.tagTaken", { tag: draft.tag })
+                        : errors.tag || t("clubs.form.tagHint")}
+                </p>
+              </div>
             </div>
-            {formData.tags.length > 0 && (
+
+            <div className="space-y-1.5">
+              <label className={labelClass} htmlFor="club-motto">
+                {t("clubs.form.motto")}
+              </label>
+              <input
+                id="club-motto"
+                value={draft.motto}
+                maxLength={CLUB_MOTTO_MAX}
+                onChange={(event) => set({ motto: event.target.value })}
+                placeholder={t("clubs.form.mottoPlaceholder")}
+                className={fieldClass}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className={labelClass}>{t("clubs.form.shape")}</span>
               <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--engine-accent)]/20 text-[var(--engine-accent)] rounded-full text-sm"
+                {CLUB_SHAPE_VALUES.map((shape) => (
+                  <button
+                    key={shape}
+                    type="button"
+                    onClick={() => setEmblem({ shape })}
+                    aria-pressed={draft.emblem.shape === shape}
+                    aria-label={clubShapeLabel(t, shape)}
+                    className={`grid h-14 w-14 place-items-center rounded-xl border transition ${
+                      draft.emblem.shape === shape
+                        ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)]"
+                        : "border-[var(--engine-border)] bg-[var(--engine-surface-2)]"
+                    }`}
                   >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(idx)}
-                      className="hover:opacity-70"
-                    >
-                      <X size={14} />
-                    </button>
-                  </span>
+                    <ClubEmblem club={{ ...previewClub, emblem: { ...draft.emblem, shape } }} size={40} />
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-semibold text-[var(--engine-text)] mb-2">
-              Imagem do Clube
-            </label>
-            {formData.imageUrl ? (
-              <div className="relative">
-                <img
-                  src={formData.imageUrl}
-                  alt="Preview"
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, imageUrl: "" }))}
-                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-lg hover:opacity-90"
-                >
-                  <X size={16} />
-                </button>
+            <div className="space-y-2">
+              <span className={labelClass}>{t("clubs.form.icon")}</span>
+              <div className="grid max-w-[340px] grid-cols-6 gap-2">
+                {CLUB_ICON_VALUES.map((icon) => (
+                  <button
+                    key={icon}
+                    type="button"
+                    onClick={() => setEmblem({ icon })}
+                    aria-pressed={draft.emblem.icon === icon}
+                    aria-label={clubIconLabel(t, icon)}
+                    className={`grid aspect-square place-items-center rounded-xl border transition ${
+                      draft.emblem.icon === icon
+                        ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                        : "border-[var(--engine-border)] bg-[var(--engine-surface-2)] text-[var(--engine-text-muted)]"
+                    }`}
+                  >
+                    {icon === "none" ? (
+                      <span className="text-[10px] font-bold text-[var(--engine-text-muted)]">—</span>
+                    ) : (
+                      // O ícone puro, e não um emblema em miniatura: com a
+                      // forma em volta, os doze símbolos ficavam idênticos a
+                      // 30px e o seletor não selecionava nada de visível.
+                      <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+                        <path d={CLUB_ICON_PATHS[icon]} fill="currentColor" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--engine-border)] rounded-lg cursor-pointer hover:border-[var(--engine-accent)] transition bg-[var(--engine-surface-2)]">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload size={24} className="text-[var(--engine-text-muted)] mb-2" />
-                  <p className="text-sm text-[var(--engine-text-muted)]">
-                    Clique para fazer upload
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
+            </div>
 
-          {/* Public Toggle */}
-          <div className="flex items-center justify-between p-3 bg-[var(--engine-surface-2)] rounded-lg">
-            <label className="text-sm font-semibold text-[var(--engine-text)]">
-              Clube Público
-            </label>
-            <button
-              type="button"
-              onClick={handleTogglePublic}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                formData.isPublic
-                  ? "bg-[var(--engine-accent)]"
-                  : "bg-[var(--engine-border)]"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                  formData.isPublic ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Error Messages */}
-          {errors.submit && (
-            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.submit}
+            <div className="space-y-2">
+              <span className={labelClass}>{t("clubs.form.color")}</span>
+              <div className="flex flex-wrap gap-2">
+                {CLUB_PALETTE.map((color) => (
+                  <button
+                    key={color.id}
+                    type="button"
+                    onClick={() => setColors({ primary: color.id })}
+                    aria-pressed={draft.colors.primary === color.id}
+                    aria-label={clubColorLabel(t, color.id)}
+                    style={{ background: color.hex }}
+                    className={`grid h-11 w-11 place-items-center rounded-xl border-2 transition ${
+                      draft.colors.primary === color.id
+                        ? "border-[var(--engine-text)]"
+                        : "border-transparent"
+                    }`}
+                  >
+                    {draft.colors.primary === color.id ? (
+                      <Check size={16} className="text-white drop-shadow" />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+              <p className="ml-0.5 text-[11.5px] text-[var(--engine-text-muted)]">
+                {t("clubs.form.colorHint")}
               </p>
             </div>
-          )}
 
-          {/* Buttons */}
-          <div className="flex gap-2 pt-4">
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className={labelClass} htmlFor="club-city">
+                  {t("clubs.form.city")}
+                </label>
+                <input
+                  id="club-city"
+                  value={draft.city}
+                  onChange={(event) => set({ city: event.target.value })}
+                  placeholder="Campinas"
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelClass} htmlFor="club-state">
+                  {t("clubs.form.state")}
+                </label>
+                <select
+                  id="club-state"
+                  value={draft.state}
+                  onChange={(event) => set({ state: event.target.value })}
+                  className={fieldClass}
+                >
+                  <option value="">{t("clubs.form.stateAll")}</option>
+                  {states.map((state) => (
+                    <option key={state.code} value={state.code}>
+                      {state.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className={labelClass} htmlFor="club-founded">
+                  {t("clubs.form.foundedYear")}
+                </label>
+                <input
+                  id="club-founded"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={draft.foundedYear}
+                  onChange={(event) =>
+                    set({ foundedYear: event.target.value.replace(/\D/g, "").slice(0, 4) })
+                  }
+                  placeholder="2011"
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className={labelClass}>{t("clubs.form.joinPolicy")}</span>
+                <div className="flex gap-1.5 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] p-1">
+                  {["open", "approval"].map((policy) => (
+                    <button
+                      key={policy}
+                      type="button"
+                      onClick={() => set({ joinPolicy: policy })}
+                      aria-pressed={draft.joinPolicy === policy}
+                      className={`min-h-10 flex-1 rounded-lg px-2 text-[12.5px] font-bold transition ${
+                        draft.joinPolicy === policy
+                          ? "bg-[var(--engine-elevated)] text-[var(--engine-text)] shadow-[var(--engine-shadow-sm)]"
+                          : "text-[var(--engine-text-muted)]"
+                      }`}
+                    >
+                      {t(policy === "open" ? "clubs.form.joinOpen" : "clubs.form.joinApproval")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelClass} htmlFor="club-meetup">
+                {t("clubs.form.meetupSchedule")}
+              </label>
+              <input
+                id="club-meetup"
+                value={draft.meetupSchedule}
+                onChange={(event) => set({ meetupSchedule: event.target.value })}
+                placeholder={t("clubs.form.meetupPlaceholder")}
+                className={fieldClass}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className={labelClass}>{t("clubs.form.focus")}</span>
+              <div className="flex flex-wrap gap-2">
+                {CLUB_STYLE_VALUES.map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    onClick={() => toggleStyle(style)}
+                    aria-pressed={draft.focus.styles?.includes(style)}
+                    className={`min-h-10 rounded-full border px-3.5 text-[12.5px] font-semibold transition ${
+                      draft.focus.styles?.includes(style)
+                        ? "border-[var(--engine-accent)] bg-[var(--engine-accent-soft)] text-[var(--engine-accent)]"
+                        : "border-[var(--engine-border-strong)] text-[var(--engine-text)]"
+                    }`}
+                  >
+                    {clubStyleLabel(t, style)}
+                  </button>
+                ))}
+              </div>
+              <div className="grid gap-3.5 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className={labelClass} htmlFor="club-brand">
+                    {t("clubs.form.brand")}
+                  </label>
+                  <input
+                    id="club-brand"
+                    value={draft.focus.brands?.[0] || ""}
+                    onChange={(event) =>
+                      setFocus({ brands: event.target.value ? [event.target.value] : [] })
+                    }
+                    placeholder={t("clubs.form.brandPlaceholder")}
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelClass} htmlFor="club-model">
+                    {t("clubs.form.model")}
+                  </label>
+                  <input
+                    id="club-model"
+                    value={draft.focus.models?.[0] || ""}
+                    onChange={(event) =>
+                      setFocus({ models: event.target.value ? [event.target.value] : [] })
+                    }
+                    placeholder={t("clubs.form.modelPlaceholder")}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+              <p className="ml-0.5 text-[11.5px] text-[var(--engine-text-muted)]">
+                {errors.focus ? (
+                  <span className="text-[var(--engine-accent)]">{errors.focus}</span>
+                ) : (
+                  t("clubs.form.focusHint")
+                )}
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelClass} htmlFor="club-description">
+                {t("clubs.form.description")}
+              </label>
+              <textarea
+                id="club-description"
+                rows={3}
+                value={draft.description}
+                onChange={(event) => set({ description: event.target.value })}
+                className={`${fieldClass} resize-y`}
+              />
+            </div>
+          </div>
+
+          {/* ------------------------- prévia ao vivo ------------------------- */}
+          <aside className="grid content-start gap-2.5 rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-elevated)] p-3.5 lg:sticky lg:top-0">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--engine-text-muted)]">
+              {t("clubs.form.preview")}
+            </span>
+            <ClubCard club={previewClub} />
+
+            <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--engine-text-muted)]">
+              {t("clubs.form.previewFeed")}
+            </span>
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--engine-border)] bg-[var(--engine-surface-2)] py-1.5 pl-1.5 pr-3 text-[12px] font-semibold">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--engine-border-strong)] text-[10px] font-extrabold text-white">
+                EU
+              </span>
+              {t("clubs.roles.founder")}
+              <ClubTag tag={previewClub.tag} />
+            </div>
+
+            <span className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--engine-text-muted)]">
+              {t("clubs.form.previewEvent")}
+            </span>
+            <div className="flex items-center gap-2.5 rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface)] p-2">
+              <div className="w-11 shrink-0 rounded-lg border border-[color-mix(in_srgb,var(--club)_34%,transparent)] bg-[color-mix(in_srgb,var(--club)_13%,transparent)] py-1 text-center">
+                <span className="block font-display text-[15px] font-extrabold leading-none text-[var(--club-ink)]">
+                  05
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[12.5px] font-bold text-[var(--engine-text)]">
+                  {t("clubs.form.previewEventTitle", { tag: previewClub.tag })}
+                </p>
+                <p className="truncate text-[11px] text-[var(--engine-text-muted)]">
+                  {draft.city || t("clubs.form.previewCity")}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--engine-text-muted)]">
+              {t("clubs.form.previewNote")}
+            </p>
+          </aside>
+        </form>
+
+        <div className="engine-safe-bottom shrink-0 border-t border-[var(--engine-border)] bg-[var(--engine-elevated)] px-4 pt-3 sm:px-6">
+          <div className="flex gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 px-4 rounded-lg border border-[var(--engine-border)] text-[var(--engine-text)] font-semibold hover:bg-[var(--engine-surface-2)] transition"
+              className="min-h-12 flex-1 rounded-xl border border-[var(--engine-border-strong)] px-4 text-[14.5px] font-bold text-[var(--engine-text)] sm:flex-none"
             >
-              Cancelar
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
+              form="engine-club-form"
               disabled={loading}
-              className="flex-1 py-2 px-4 bg-[var(--engine-accent)] text-white rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+              className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--engine-accent)] px-4 text-[14.5px] font-bold text-white transition disabled:opacity-60 sm:flex-none"
             >
-              {loading ? "Criando..." : "Criar Clube"}
+              {loading ? <Loader2 size={17} className="animate-spin" /> : null}
+              {loading ? t("clubs.form.submitting") : t("clubs.form.submit")}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

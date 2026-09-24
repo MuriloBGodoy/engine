@@ -1,86 +1,162 @@
-import { useNavigate } from "react-router-dom";
-import { Users, FileText } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Calendar, Loader2, Star } from "lucide-react";
+import { ClubEmblem } from "./ClubEmblem";
+import { GhostCar } from "./GhostCar";
+import { useClubMembership, clubErrorMessage } from "./clubsDataSource";
+import { useToast } from "../ToastProvider";
+import {
+  clubColorVars,
+  clubFocusChips,
+  clubPlaceLabel,
+} from "../../services/clubStyles";
 
-export function ClubCard({ club, onJoin, isDiscovery = false, joinLoading = false, onClick = null }) {
-  const navigate = useNavigate();
+/**
+ * O card do clube na descoberta e em "meus clubes".
+ *
+ * O card antigo tinha um retângulo cinza de 160px esperando uma foto que
+ * ninguém subia, um selo de categoria de uma lista fixa de quatro em inglês e
+ * duas contagens. Três clubes diferentes saíam idênticos — era esse o "nem
+ * parece personalizável".
+ *
+ * Aqui cada linha é identidade: faixa na cor do clube com a silhueta, emblema
+ * gerado, a sigla que o membro carrega, cidade e ano, dois chips de foco, e o
+ * PRÓXIMO ENCONTRO, que é o único dado que prova que o clube está vivo.
+ */
+export function ClubCard({ club, onOpen, onJoined, showRole = false }) {
+  const { t, i18n } = useTranslation();
+  const showToast = useToast();
+  // O hook de entrada é POR CARD de propósito: com um hook só no pai, o
+  // clubId chegava defasado um render (o `setState` do id e a chamada de
+  // `join()` acontecem no mesmo tique) e a pessoa entrava no clube errado.
+  const { join, loading: joining } = useClubMembership(club?.id);
+  const [pending, setPending] = useState(false);
+  if (!club) return null;
 
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick(club.id);
-    } else if (!isDiscovery) {
-      navigate(`/clubs/${club.id}`);
-    }
-  };
+  const place = clubPlaceLabel(club, t);
+  const focus = clubFocusChips(club, t);
+  const isMember = Boolean(club.myRole);
+  const meetupDate = club.nextMeetup?.eventDate
+    ? new Date(club.nextMeetup.eventDate).toLocaleDateString(i18n.language || "pt-BR", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
+    : "";
 
-  const handleJoinClick = async (e) => {
-    e.stopPropagation();
-    if (onJoin) {
-      await onJoin(club.id);
+  const requested = pending || club.myRequestPending;
+  const joinLabel = requested
+    ? t("clubs.join.pending")
+    : club.joinPolicy === "approval"
+      ? t("clubs.join.approval")
+      : t("clubs.join.open");
+
+  const handleJoin = async () => {
+    try {
+      await join();
+      const approval = club.joinPolicy === "approval";
+      if (approval) setPending(true);
+      showToast(approval ? t("clubs.join.requested") : t("clubs.join.joined"), "success");
+      onJoined?.(club);
+    } catch (error) {
+      showToast(clubErrorMessage(error, t), "error");
     }
   };
 
   return (
     <div
-      onClick={handleCardClick}
-      className={`rounded-xl bg-[var(--engine-surface)] border border-[var(--engine-border)] shadow hover:shadow-lg transition overflow-hidden group ${
-        isDiscovery ? "" : "cursor-pointer"
-      }`}
+      style={clubColorVars(club)}
+      className="flex flex-col overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-[var(--engine-shadow-sm)]"
     >
-      {/* Club Avatar/Image */}
-      <div className="relative h-40 bg-gradient-to-br from-[var(--engine-accent)] to-[var(--engine-border-strong)] overflow-hidden">
-        {club.imageUrl ? (
-          <img
-            src={club.imageUrl}
-            alt={club.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-[var(--engine-surface-2)]" />
-        )}
-        {club.category && (
-          <div className="absolute top-3 right-3 bg-[var(--engine-accent)] text-white px-3 py-1 rounded-lg text-xs font-semibold">
-            {club.category}
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-4">
-        {/* Name */}
-        <h3 className="font-semibold text-lg text-[var(--engine-text)] truncate">
-          {club.name}
-        </h3>
-
-        {/* Description */}
-        <p className="text-sm text-[var(--engine-text-muted)] mb-3 line-clamp-2">
-          {club.description || "Sem descrição"}
-        </p>
-
-        {/* Stats */}
-        <div className="space-y-2 text-sm mb-4">
-          <div className="flex items-center gap-2 text-[var(--engine-text-muted)]">
-            <Users size={16} className="text-[var(--engine-accent)]" />
-            <span>
-              {club.memberCount || 0} membro{club.memberCount !== 1 ? "s" : ""}
+      <button
+        type="button"
+        onClick={() => onOpen?.(club.id)}
+        className="flex-1 text-left"
+      >
+        <div className="relative h-16 bg-[linear-gradient(120deg,var(--club)_0%,var(--club-2)_100%)]">
+          <GhostCar className="absolute -bottom-1.5 -right-2 w-[150px] opacity-30" />
+          <span className="absolute inset-0 bg-[repeating-linear-gradient(115deg,rgba(255,255,255,0.10)_0_2px,transparent_2px_26px)]" />
+          {club.official ? (
+            <span className="absolute left-2.5 top-2 inline-flex items-center gap-1 rounded-full bg-black/35 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
+              <Star size={10} className="fill-current" />
+              {t("clubs.official")}
             </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-[var(--engine-text-muted)]">
-            <FileText size={16} className="text-[var(--engine-accent)]" />
-            <span>
-              {club.postCount || 0} post{club.postCount !== 1 ? "s" : ""}
-            </span>
-          </div>
+          ) : null}
         </div>
 
-        {/* Join Button (Discovery mode) */}
-        {isDiscovery && (
+        <div className="px-3.5 pb-3.5">
+          {/* Só o emblema sobe para dentro da faixa. Subindo o bloco de texto
+              junto, a linha da sigla ficava POR CIMA da faixa colorida — texto
+              na cor do clube sobre a cor do clube, ou seja, invisível. */}
+          <div className="relative flex items-start gap-3 pt-2">
+            <ClubEmblem club={club} size={64} className="-mt-8" />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="rounded-md border border-[color-mix(in_srgb,var(--club)_42%,transparent)] bg-[color-mix(in_srgb,var(--club)_18%,transparent)] px-1.5 py-0.5 font-mono text-[11px] font-extrabold tracking-wide text-[var(--club-ink)]">
+                  [{club.tag}]
+                </span>
+                {showRole && club.myRole ? (
+                  <span className="rounded bg-[var(--engine-surface-2)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--engine-text-muted)]">
+                    {t(`clubs.roles.${club.myRole}`)}
+                  </span>
+                ) : null}
+              </div>
+              <h3 className="mt-0.5 text-[16px] font-extrabold leading-tight tracking-tight text-[var(--engine-text)]">
+                {club.name}
+              </h3>
+              <p className="mt-0.5 text-[12.5px] text-[var(--engine-text-muted)]">
+                {place}
+                {club.foundedYear ? ` · ${t("clubs.since", { year: club.foundedYear })}` : ""}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {focus.map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full bg-[var(--engine-surface-2)] px-2.5 py-1 text-[11.5px] font-semibold text-[var(--engine-text-muted)]"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--engine-border)] pt-2.5 text-[12.5px] text-[var(--engine-text-muted)]">
+            {/* A contagem inteira vem do i18n (plural incluso): quebrar em
+                número + rótulo para pôr o negrito daria uma frase montada
+                que nenhum tradutor consegue reordenar. */}
+            <span className="font-semibold text-[var(--engine-text)]">
+              {t("clubs.stats.members", { count: club.memberCount || 0 })}
+            </span>
+            {meetupDate ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-[color-mix(in_srgb,var(--club)_14%,transparent)] px-2 py-1 font-bold text-[var(--club-ink)]">
+                <Calendar size={13} />
+                {meetupDate}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </button>
+
+      <div className="px-3.5 pb-3.5">
+        {isMember ? (
           <button
-            onClick={handleJoinClick}
-            disabled={joinLoading}
-            className="w-full py-2 px-4 bg-[var(--engine-accent)] text-white rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+            type="button"
+            onClick={() => onOpen?.(club.id)}
+            className="flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--engine-border-strong)] px-4 text-[14px] font-bold text-[var(--engine-text)] transition-colors hover:border-[var(--club)]"
           >
-            {joinLoading ? "Entrando..." : "Entrar"}
+            {t("clubs.join.member")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleJoin}
+            disabled={joining || requested}
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--club)] px-4 text-[14px] font-bold text-[var(--club-on)] transition disabled:opacity-60"
+          >
+            {joining ? <Loader2 size={16} className="animate-spin" /> : null}
+            {joinLabel}
           </button>
         )}
       </div>

@@ -39,6 +39,8 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Events } from "./pages/Events";
+import { ClubsPage } from "./pages/ClubsPage";
+import { ClubDetailPage } from "./pages/ClubDetailPage";
 import { EventDetails } from "./pages/EventDetails";
 import { UserProfile } from "./pages/UserProfile";
 
@@ -417,6 +419,13 @@ function App() {
             path="/community/:identifier"
             element={<UserProfile settings={settings} user={user} />}
           />
+          {/* Clubes tem endereço próprio além da aba da Comunidade: um clube
+              é a coisa que se manda para alguém ("olha o nosso clube"), e um
+              link que só abre a aba certa por parâmetro não sobrevive a ser
+              colado. Aberto a visitante, como o resto da Comunidade — o card
+              é público e quem não está logado vê o convite ao entrar. */}
+          <Route path="/clubs" element={<ClubsPage user={user} />} />
+          <Route path="/clubs/:clubId" element={<ClubDetailPage />} />
           <Route
             path="/messages"
             element={

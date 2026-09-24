@@ -35,6 +35,8 @@ import {
   X,
 } from "lucide-react";
 import { ClubsTab } from "../components/community/ClubsTab";
+import { getClub } from "../services/clubs";
+import { ClubTag } from "../components/clubs/ClubEmblem";
 import { Events } from "./Events";
 import { engineDB, POST_KIND_POST } from "../services/db";
 import { postBadgeTier } from "../services/achievements";
@@ -743,9 +745,14 @@ export function GoalCard({
               <ShieldCheck size={13} className="shrink-0 text-[var(--engine-accent)]" />
             )}
           </div>
-          <p className="truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
-            {goal.username}
-            {goal.city ? ` · ${goal.city}` : ""}
+          <p className="flex items-center gap-1.5 truncate text-[11px] font-medium text-[var(--engine-text-subtle)]">
+            <span className="truncate">
+              {goal.username}
+              {goal.city ? ` · ${goal.city}` : ""}
+            </span>
+            {/* Post publicado a partir de um clube carrega a sigla dele: é
+                assim que a crew aparece no feed geral (CLUBES-CONTRATO §2). */}
+            <ClubTag tag={goal.clubTag} />
           </p>
         </div>
 
@@ -2100,6 +2107,7 @@ export function Community({ cars = [], settings, user }) {
   const hasRail = useMediaQuery("(min-width: 1280px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const topLevelTab = searchParams.get("tab") || "goals";
+  const composeClubId = searchParams.get("compose") ? searchParams.get("club") || "" : "";
   const [activeSubTab, setActiveSubTab] = useState("feed");
   const [query, setQuery] = useState("");
   const [peopleQuery, setPeopleQuery] = useState("");
@@ -2117,6 +2125,21 @@ export function Community({ cars = [], settings, user }) {
   const [publicProfiles, setPublicProfiles] = useState({});
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
+  // Publicar no mural de um clube: a página do clube manda pra cá com
+  // `?club=<id>&compose=1`, e o post nasce carimbado. O clube é buscado
+  // pelo id em vez de vir na URL porque sigla é identidade — vinda de
+  // parâmetro, qualquer um exibiria a sigla alheia no próprio post (a
+  // regra do Firestore barra a gravação, mas só depois de a tela já ter
+  // mentido).
+  const [composeClub, setComposeClub] = useState(null);
+
+  const limparParametrosDeComposicao = () => {
+    const params = new URLSearchParams(searchParams);
+    if (!params.has("compose") && !params.has("club")) return;
+    params.delete("compose");
+    params.delete("club");
+    setSearchParams(params, { replace: true });
+  };
   const [searchOpen, setSearchOpen] = useState(false);
   const [peopleModalOpen, setPeopleModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState({
@@ -2764,6 +2787,30 @@ export function Community({ cars = [], settings, user }) {
   }, [activeSection]);
 
 
+  // Abre o compositor já apontado para o clube quando a pessoa chega da
+  // página dele. Busca o clube pelo id: é uma leitura, e é o que garante que
+  // a sigla exibida seja a de verdade.
+  useEffect(() => {
+    if (!composeClubId || !user?.uid) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const clube = await getClub(composeClubId);
+        if (!vivo || !clube) return;
+        setComposeClub({ id: clube.id, tag: clube.tag, name: clube.name });
+        setPostModalOpen(true);
+      } catch {
+        // Clube sumiu, foi arquivado ou a regra negou: abrir o compositor sem
+        // carimbo seria publicar no feed geral achando que é no mural.
+        limparParametrosDeComposicao();
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composeClubId, user?.uid]);
+
   return (
     <section className="pb-4 sm:pb-8">
       {/* Coluna única centrada + trilho à direita, como as redes que servem
@@ -2971,7 +3018,7 @@ export function Community({ cars = [], settings, user }) {
 
           {/* Clubes Tab */}
           {topLevelTab === "clubes" && (
-            <ClubsTab searchParams={searchParams} setSearchParams={setSearchParams} />
+            <ClubsTab searchParams={searchParams} setSearchParams={setSearchParams} user={user} />
           )}
 
           {/* Eventos Tab — a mesma página de /events, sem o cabeçalho dela: aqui
@@ -3035,7 +3082,17 @@ export function Community({ cars = [], settings, user }) {
       <CreateFeedPostModal
         open={postModalOpen}
         cars={cars}
-        onClose={() => setPostModalOpen(false)}
+        club={composeClub}
+        onClose={() => {
+          setPostModalOpen(false);
+          setComposeClub(null);
+          limparParametrosDeComposicao();
+        }}
+        onCreated={() => {
+          setPostModalOpen(false);
+          setComposeClub(null);
+          limparParametrosDeComposicao();
+        }}
       />
 
       {shareModalOpen && (
