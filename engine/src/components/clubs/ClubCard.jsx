@@ -5,6 +5,7 @@ import { ClubEmblem } from "./ClubEmblem";
 import { GhostCar } from "./GhostCar";
 import { useClubMembership, clubErrorMessage } from "./clubsDataSource";
 import { useToast } from "../ToastProvider";
+import { useIsDark } from "../../hooks/useIsDark";
 import {
   clubColorVars,
   clubFocusChips,
@@ -24,6 +25,9 @@ import {
  * PRÓXIMO ENCONTRO, que é o único dado que prova que o clube está vivo.
  */
 export function ClubCard({ club, onOpen, onJoined, showRole = false }) {
+  // A paleta tem uma tinta por tema; sem passar isDark o componente
+  // usava sempre a do tema claro, e cor escura sumia no fundo escuro.
+  const isDark = useIsDark();
   const { t, i18n } = useTranslation();
   const showToast = useToast();
   // O hook de entrada é POR CARD de propósito: com um hook só no pai, o
@@ -65,7 +69,7 @@ export function ClubCard({ club, onOpen, onJoined, showRole = false }) {
 
   return (
     <div
-      style={clubColorVars(club)}
+      style={clubColorVars(club, isDark)}
       className="flex flex-col overflow-hidden rounded-2xl border border-[var(--engine-border)] bg-[var(--engine-surface)] shadow-[var(--engine-shadow-sm)]"
     >
       <button

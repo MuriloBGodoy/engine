@@ -6,6 +6,7 @@ import { ClubCard } from "./ClubCard";
 import { checkTagAvailable } from "./clubsDataSource";
 import { useHistoryDismiss } from "../../hooks/useHistoryDismiss";
 import { getStates } from "../../services/locations";
+import { useIsDark } from "../../hooks/useIsDark";
 import {
   CLUB_ICON_PATHS,
   CLUB_ICON_VALUES,
@@ -35,6 +36,9 @@ import {
  * O emblema é montado por composição; não há upload (Storage desligado).
  */
 export function ClubCreateModal({ isOpen, onClose, onCreate, loading = false }) {
+  // A paleta tem uma tinta por tema; sem passar isDark o componente
+  // usava sempre a do tema claro, e cor escura sumia no fundo escuro.
+  const isDark = useIsDark();
   const { t } = useTranslation();
   const [draft, setDraft] = useState(emptyClubDraft);
   const [errors, setErrors] = useState({});
@@ -131,7 +135,7 @@ export function ClubCreateModal({ isOpen, onClose, onCreate, loading = false }) 
   return (
     <div className="engine-modal-overlay">
       <div
-        style={clubColorVars(previewClub)}
+        style={clubColorVars(previewClub, isDark)}
         className="engine-modal-panel engine-pop sm:max-w-5xl"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--engine-border)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6 sm:pb-4 sm:pt-5">

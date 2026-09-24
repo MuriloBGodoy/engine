@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useIsDark } from "../../hooks/useIsDark";
 import {
   CLUB_ICON_PATHS,
   DEFAULT_CLUB_ICON,
@@ -22,11 +23,14 @@ import {
 
 
 export function ClubEmblem({ club, size = 64, className = "" }) {
+  // A paleta tem uma tinta por tema; sem passar isDark o componente
+  // usava sempre a do tema claro, e cor escura sumia no fundo escuro.
+  const isDark = useIsDark();
   const gradientId = useId();
   const shape = club?.emblem?.shape || DEFAULT_CLUB_SHAPE;
   const icon = club?.emblem?.icon || DEFAULT_CLUB_ICON;
   const tag = String(club?.tag || "").toUpperCase() || "—";
-  const vars = clubColorVars(club);
+  const vars = clubColorVars(club, isDark);
   const fill = vars["--club"];
   const fill2 = vars["--club-2"];
 

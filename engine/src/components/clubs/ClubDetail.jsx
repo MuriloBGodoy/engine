@@ -17,6 +17,7 @@ import {
 } from "./clubsDataSource";
 import { useToast } from "../ToastProvider";
 import { clubColorVars, clubMatchesCar } from "../../services/clubStyles";
+import { useIsDark } from "../../hooks/useIsDark";
 import { auth } from "../../services/firebase";
 
 /**
@@ -28,6 +29,7 @@ import { auth } from "../../services/firebase";
  * o erro aqui.
  */
 export function ClubDetail({ clubId, onClose }) {
+  const isDark = useIsDark();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const showToast = useToast();
@@ -150,7 +152,7 @@ export function ClubDetail({ clubId, onClose }) {
   }
 
   return (
-    <div style={clubColorVars(club)} className="space-y-4">
+    <div style={clubColorVars(club, isDark)} className="space-y-4">
       <ClubHeader
         club={club}
         memberCount={club.memberCount}
