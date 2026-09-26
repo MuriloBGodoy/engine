@@ -104,7 +104,10 @@ export function Register() {
         userCredential.user.uid,
       ).catch((error) => console.warn("[register] configurações só locais", error));
 
-      navigate("/");
+      // Conta nova vai para a Garagem, cujo estado vazio convida a cadastrar
+      // o primeiro carro — o primeiro passo de tudo no app. A home genérica,
+      // que era o destino, não conduzia a nada.
+      navigate("/garagem");
     } catch (err) {
       await engineDB.releasePendingUsername(username);
       if (err.code === "auth/email-already-in-use") {

@@ -235,11 +235,9 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
       return;
     }
 
-    if (!photos.length) {
-      setError(t("modalCar.photoRequired"));
-      setLoading(false);
-      return;
-    }
+    // Foto é opcional na garagem desde 25/09/2026. Exigir foto antes de
+    // saber "cabe um Pulse?" travava a entrada do funil principal. Onde a foto
+    // importa — publicar o carro na Comunidade — ela continua exigida.
 
     // Códigos FIPE. Só valem se os TRÊS vierem da seleção desta sessão: um
     // código de marca novo com um de modelo antigo aponta para outro veículo.

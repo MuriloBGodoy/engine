@@ -1,12 +1,4 @@
-import {
-  Calculator,
-  ChevronRight,
-  Key,
-  PiggyBank,
-  Receipt,
-  Trash2,
-  Trophy,
-} from "lucide-react";
+import { Calculator, ChevronRight, Key, PiggyBank, Receipt, Trash2, Trophy, CarFront } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveVehicleSpecSheet } from "../services/carSpecSheet";
@@ -273,17 +265,26 @@ export function CarCard({
     // no celular cada um tem a altura do proprio conteudo.
     <div className="engine-card engine-card-hover group relative flex h-full flex-col overflow-hidden">
       <div className="relative aspect-16/10 w-full overflow-hidden bg-linear-to-br from-[var(--engine-surface-2)] via-[var(--engine-surface-2)]/50 to-[var(--engine-surface)] md:aspect-video">
-        <img
-          src={car.image}
-          alt={car.model}
-          loading="lazy"
-          onError={(event) => {
-            event.target.onerror = null;
-            event.target.src = FALLBACK_IMAGE;
-            event.target.classList.add("opacity-60");
-          }}
-          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-        />
+        {/* Sem foto: o degradê do fundo e a silhueta, e não a imagem de
+            banco (que só serve para URL quebrada). Uma foto de outro carro
+            no lugar do "seu Pulse" era pior que nenhuma. */}
+        {car.image ? (
+          <img
+            src={car.image}
+            alt={car.model}
+            loading="lazy"
+            onError={(event) => {
+              event.target.onerror = null;
+              event.target.src = FALLBACK_IMAGE;
+              event.target.classList.add("opacity-60");
+            }}
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center pb-10" aria-hidden="true">
+            <CarFront size={56} strokeWidth={1.25} className="text-[var(--engine-text-subtle)] opacity-60" />
+          </div>
+        )}
         {/* Sem o degrade a identidade branca some numa foto clara. */}
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/85 via-black/25 to-transparent" />
         <button

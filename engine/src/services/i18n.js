@@ -1237,6 +1237,8 @@ const resources = {
           "Tem certeza que deseja remover {{carName}}? Você já conquistou {{percentage}}% desse objetivo.",
       },
       dashboard: {
+        emptyGoals: "Nenhuma meta ainda. A corrida mostra quanto falta para cada carro que você quer comprar.",
+        ownedRow: "Já é seu — sem entrada",
         title: "Performance da Garagem",
         subtitle: "Acompanhe a corrida rumo aos seus objetivos.",
         empty: "Nenhum carro na garagem para iniciar a corrida.",
@@ -1309,6 +1311,7 @@ const resources = {
         imageError: "Erro ao processar a imagem.",
       },
       community: {
+        photoNeededToShare: "Adicione uma foto ao carro na Garagem para publicá-lo.",
         kicker: "metas públicas / vídeos / ranking",
         postTitle: "Publicação",
         postMissing: "Publicação não encontrada ou removida.",
@@ -2806,6 +2809,8 @@ const resources = {
           "Are you sure you want to remove {{carName}}? You have already reached {{percentage}}% of this goal.",
       },
       dashboard: {
+        emptyGoals: "No goals yet. The race shows how far you are from each car you want to buy.",
+        ownedRow: "Already yours — no down payment",
         title: "Garage Performance",
         subtitle: "Follow the race toward your goals.",
         empty: "No cars in the garage yet.",
@@ -2878,6 +2883,7 @@ const resources = {
         imageError: "Error processing image.",
       },
       community: {
+        photoNeededToShare: "Add a photo to this car in your Garage to post it.",
         kicker: "public goals / videos / ranking",
         postTitle: "Post",
         postMissing: "Post not found or removed.",
@@ -4377,6 +4383,8 @@ const resources = {
           "¿Seguro que quieres eliminar {{carName}}? Ya alcanzaste el {{percentage}}% de esta meta.",
       },
       dashboard: {
+        emptyGoals: "Todavía no hay metas. La carrera muestra cuánto falta para cada auto que quieres comprar.",
+        ownedRow: "Ya es tuyo — sin entrada",
         title: "Rendimiento del Garaje",
         subtitle: "Sigue la carrera hacia tus objetivos.",
         empty: "Todavía no hay autos en el garaje.",
@@ -4449,6 +4457,7 @@ const resources = {
         imageError: "Error al procesar la imagen.",
       },
       community: {
+        photoNeededToShare: "Agrega una foto al auto en tu Garaje para publicarlo.",
         kicker: "metas públicas / videos / ranking",
         postTitle: "Publicación",
         postMissing: "Publicación no encontrada o eliminada.",

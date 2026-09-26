@@ -1,7 +1,6 @@
 // Passada no CELULAR (390×844), usuário novo do zero: primeira impressão,
 // carro que já tem, lançar gasto, simulador, painel. Capturas de página
 // inteira para olhar, não só para contar erro.
-import path from "node:path";
 import { chromium } from "playwright";
 import { novaSessao, etapa, cadastrar, relatorio, USUARIOS, textoDaPagina, esperarOpcoes, escolherPorTexto, fecharSobreposicoes } from "./e2e-emulator.mjs";
 
@@ -38,15 +37,14 @@ await etapa("Cel: cadastra o carro que já tem", S, async () => {
   await esperarOpcoes(sel.nth(2), 2);
   const ano = await escolherPorTexto(sel.nth(2), /2016|2017|2018/);
   await p.waitForTimeout(2500);
-  await modal.locator('input[type="file"]').setInputFiles(path.resolve("public/icons/icon-512.png"));
-  await p.getByRole("button", { name: /^Salvar$/ }).last().click({ timeout: 10000 });
-  await p.waitForTimeout(2500);
+  // SEM foto, de propósito: desde 25/09/2026 ela é opcional na garagem.
   await foto("03-modal-carro-preenchido");
   await modal.locator('button[type="submit"]').click();
   await p.waitForTimeout(4000);
   await fecharSobreposicoes(p);
   await foto("04-garagem-com-carro");
-  return `Gol ${ano}`;
+  if (!/Gol/i.test(await textoDaPagina(p))) throw new Error("carro sem foto não foi salvo");
+  return `Gol ${ano}, sem foto`;
 });
 
 await etapa("Cel: lança gasto de combustível", S, async () => {

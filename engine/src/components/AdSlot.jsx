@@ -102,6 +102,14 @@ export function AdSlot({ slot = "default", format = "horizontal", user, classNam
   // Premium não vê nada; enquanto carrega o plano, não reserva espaço.
   if (isPremium || loading) return null;
 
+  // Sem AdSense, o convite ao Premium existe para validar o layout em DEV —
+  // é o que diz o cabeçalho deste arquivo. Até 25/09/2026 ele aparecia também
+  // em produção, que não tem AdSense (ROADMAP §7), com o rótulo "ANÚNCIO" e a
+  // promessa "navegue sem anúncios e desbloqueie os Serviços" — sem anúncio
+  // nenhum no app e com os Serviços abertos. Era a primeira coisa que um
+  // usuário novo via depois de se cadastrar.
+  if (!adsenseReady && !import.meta.env.DEV) return null;
+
   return (
     <div className={`w-full ${className}`}>
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--engine-text-subtle)]">

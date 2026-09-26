@@ -142,7 +142,10 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
       <div className="engine-card relative overflow-hidden p-4 sm:p-8">
         {chartData.length === 0 ? (
           <div className="flex h-56 items-center justify-center text-center text-sm font-medium text-[var(--engine-text-subtle)] sm:h-[420px]">
-            {t("dashboard.empty")}
+            {/* A corrida só tem metas (carro próprio ficaria sempre em 100%).
+                Com carro próprio e sem meta, "nenhum carro na garagem" era
+                mentira na mesma tela que listava o carro logo abaixo. */}
+            {cars.length ? t("dashboard.emptyGoals") : t("dashboard.empty")}
           </div>
         ) : isCompact ? (
           <ul className="space-y-4">
@@ -244,6 +247,16 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
                         {money(row.requiredIncome)}
                       </dd>
                     </div>
+                    {/* Entrada é coisa de quem vai comprar. O carro que a pessoa
+                        já tem fica no comparador (comparar o que se tem com o
+                        que se quer é o ponto), mas sem "entrada ideal" nem
+                        "entrada pronta" — que não queriam dizer nada ali. */}
+                    {row.car.type === CAR_TYPE_OWNED ? (
+                      <div className="col-span-2 text-[11px] font-semibold text-[var(--engine-text-subtle)]">
+                        {t("dashboard.ownedRow")}
+                      </div>
+                    ) : (
+                    <>
                     <div>
                       <dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--engine-text-subtle)]">
                         {t("dashboard.colIdealDown")}
@@ -269,6 +282,8 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
                         )}
                       </dd>
                     </div>
+                    </>
+                    )}
                   </dl>
                 </button>
               </li>
@@ -319,6 +334,15 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
                     <td className="py-3 pr-4 text-right font-semibold tabular-nums text-[var(--engine-text-muted)]">
                       {money(row.requiredIncome)}
                     </td>
+                    {row.car.type === CAR_TYPE_OWNED ? (
+                      <td
+                        colSpan={2}
+                        className="py-3 text-right text-[11px] font-semibold text-[var(--engine-text-subtle)]"
+                      >
+                        {t("dashboard.ownedRow")}
+                      </td>
+                    ) : (
+                    <>
                     <td className="py-3 pr-4 text-right font-semibold tabular-nums text-[var(--engine-text-muted)]">
                       {money(row.idealDown)}
                     </td>
@@ -334,6 +358,8 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
                         </span>
                       )}
                     </td>
+                    </>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -1471,14 +1471,22 @@ function ShareModal({
                       placeholder={t("community.captionPlaceholder")}
                       className="engine-scroll w-full resize-none rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-3 py-2.5 text-sm font-medium text-[var(--engine-text)] outline-none transition focus:border-[var(--engine-accent)]"
                     />
+                    {/* Na garagem a foto é opcional; no feed, não: um post de
+                        carro sem foto não diz nada a quem está rolando. */}
+                    {!(goal.images?.length || goal.image) && (
+                      <p className="mt-2 text-[11px] font-semibold text-[var(--engine-accent)]">
+                        {t("community.photoNeededToShare")}
+                      </p>
+                    )}
                     <div className="mt-2 flex items-center gap-2">
                       <button
                         type="button"
+                        disabled={!(goal.images?.length || goal.image)}
                         onClick={() => {
                           onShare(goal, caption);
                           setComposingId("");
                         }}
-                        className="rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95"
+                        className="rounded-full bg-[var(--engine-accent)] px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {shared ? t("common.save") : t("community.publishGoal")}
                       </button>
