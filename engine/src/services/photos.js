@@ -11,6 +11,12 @@ import { storage } from "./firebase";
  * Se o Storage estiver fora do ar, cai para uma versão comprimida em data
  * URL — pequena o suficiente para caber no documento.
  */
+// O Storage só existe no plano Blaze. Enquanto o projeto está no Spark, toda
+// foto tentava o Storage, esperava o CORS recusar e só então caía no
+// fallback — duas requisições falhando e dois erros no console por foto
+// (medido na auditoria de 25/09/2026). Ligar o Blaze = `VITE_STORAGE_ENABLED=true`
+// no Netlify; nada mais muda no código.
+const STORAGE_ENABLED = import.meta.env.VITE_STORAGE_ENABLED === "true";
 const UPLOAD_TIMEOUT_MS = 20000;
 const MAX_FILE_BYTES = 6 * 1024 * 1024;
 // Foto que VAI para o Storage: redimensionada e reencodada para JPEG. O
@@ -94,7 +100,7 @@ export const uploadUserPhoto = async (file, { userId, folder }) => {
   if (!isImageFile(file)) throw new Error("Arquivo não é uma imagem.");
   if (isFileTooBig(file)) throw new Error("Imagem maior que 6 MB.");
 
-  if (userId) {
+  if (userId && STORAGE_ENABLED) {
     const safeName = file.name
       .replace(/\.[^.]+$/, "")
       .replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -105,26 +111,14 @@ export const uploadUserPhoto = async (file, { userId, folder }) => {
       let contentType = file.type;
       const isSmallJpeg = file.type === "image/jpeg" && file.size < 500 * 1024;
 
-      const startTime = performance.now();
-      console.log("[photos] Iniciando upload:", {
-        file: safeName,
-        size: `${(file.size / 1024).toFixed(1)}KB`,
-        type: file.type,
-        skipRecompress: isSmallJpeg,
-      });
-
       if (!isSmallJpeg) {
         try {
-          const compressStart = performance.now();
           payload = await renderCompressed(file, {
             maxSize: UPLOAD_MAX_SIZE,
             quality: UPLOAD_QUALITY,
             output: "blob",
           });
           contentType = "image/jpeg";
-          console.log(
-            `[photos] Compressão concluída em ${(performance.now() - compressStart).toFixed(0)}ms`,
-          );
         } catch (compressError) {
           console.warn(
             "[photos] Falha ao comprimir, subindo original.",
@@ -133,18 +127,10 @@ export const uploadUserPhoto = async (file, { userId, folder }) => {
         }
       }
 
-      const uploadStart = performance.now();
       const fileRef = ref(storage, path);
       await withUploadTimeout(uploadBytes(fileRef, payload, { contentType }));
-      console.log(
-        `[photos] Upload Firebase concluído em ${(performance.now() - uploadStart).toFixed(0)}ms`,
-      );
 
-      const urlStart = performance.now();
       const url = await withUploadTimeout(getDownloadURL(fileRef));
-      console.log(
-        `[photos] URL gerada em ${(performance.now() - urlStart).toFixed(0)}ms (total: ${(performance.now() - startTime).toFixed(0)}ms)`,
-      );
       return url;
     } catch (error) {
       console.warn("[photos] Storage indisponível, comprimindo local.", error);
