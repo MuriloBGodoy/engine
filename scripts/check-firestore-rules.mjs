@@ -277,6 +277,19 @@ await t("o dono marca a propria como lida", () =>
 await t("estranho NAO mexe na notificacao alheia", () =>
   assertFails(updateDoc(doc(outro, "users/dono/notifications/n1"), { read: true })));
 
+// --- usernames (25/09/2026) ------------------------------------------------
+// O cadastro consulta se o nome existe ANTES de criar a conta — por isso `get`
+// é público. `list` fechado: ninguém enumera a base de usuários.
+await semear("usernames/@tomado", { username: "@tomado", userId: "dono" });
+await t("visitante CONSULTA se um nome existe (get)", () =>
+  assertSucceeds(getDoc(doc(visitante, "usernames/@tomado"))));
+await t("visitante NAO lista todos os nomes", () =>
+  assertFails(getDocs(collection(visitante, "usernames"))));
+await t("visitante NAO reserva nome", () =>
+  assertFails(setDoc(doc(visitante, "usernames/@novo"), { username: "@novo", userId: "x" })));
+await t("logado NAO toma nome de outra pessoa", () =>
+  assertFails(updateDoc(doc(outro, "usernames/@tomado"), { userId: "outro" })));
+
 await env.cleanup();
 console.log(`\n${pass} passaram, ${fail} falharam\n`);
 process.exit(fail === 0 ? 0 : 1);
