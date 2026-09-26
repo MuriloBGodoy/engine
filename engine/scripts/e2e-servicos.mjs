@@ -85,7 +85,20 @@ await etapa("Cliente: NÃO vê anúncio ainda não aprovado", B, async () => {
 // Admin aprova (conta descartável no emulador com o e-mail de admin)
 const C = await novaSessao(browser);
 const pc = C.page;
-await etapa("Admin: cadastro com o e-mail de admin", C, async () => {
+await etapa("Admin: entra (ou se cadastra) com o e-mail de admin", C, async () => {
+  // Login primeiro: a conta de admin sobrevive entre rodadas no mesmo
+  // emulador, e tentar cadastrá-la de novo marcava um 400 que não é defeito.
+  const entrar = async () => {
+    await pc.goto(`${BASE}/login`, { waitUntil: "load" });
+    await pc.fill('input[type="email"]', "muxdtuber@gmail.com");
+    await pc.fill('input[type="password"]', "Engine!2026seguro");
+    await pc.click('button[type="submit"]');
+    await pc.waitForTimeout(5000);
+    return !new URL(pc.url()).pathname.startsWith("/login");
+  };
+  const errosAntes = C.erros.length;
+  if (await entrar()) return "entrou";
+  C.erros.length = errosAntes; // a tentativa de login sem conta não é defeito
   await cadastrar(pc, {
     nome: "Admin Teste",
     usuario: `admin_${Date.now().toString(36).slice(-5)}`,
@@ -93,16 +106,8 @@ await etapa("Admin: cadastro com o e-mail de admin", C, async () => {
     senha: "Engine!2026seguro",
     telefone: "11911112222",
   });
-  await pc.waitForTimeout(6000);
-  if (new URL(pc.url()).pathname.startsWith("/register")) {
-    // já existe de uma rodada anterior: entrar
-    await pc.goto(`${BASE}/login`, { waitUntil: "load" });
-    await pc.fill('input[type="email"]', "muxdtuber@gmail.com");
-    await pc.fill('input[type="password"]', "Engine!2026seguro");
-    await pc.click('button[type="submit"]');
-    await pc.waitForTimeout(5000);
-  }
-  return new URL(pc.url()).pathname;
+  await pc.waitForURL((u) => !u.pathname.startsWith("/register"), { timeout: 20000 });
+  return "cadastrou";
 });
 await etapa("Admin: aprova na fila", C, async () => {
   await pc.goto(`${BASE}/services/approvals`, { waitUntil: "load" });
