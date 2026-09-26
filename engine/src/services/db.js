@@ -9,7 +9,9 @@ import {
   doc,
   getDoc,
   getCountFromServer,
+  documentId,
   getDocs,
+  getDocsFromServer,
   increment,
   limit,
   onSnapshot,
@@ -533,6 +535,11 @@ const userNotificationsCollection = (userId = currentUserId) =>
   collection(userDoc(userId), "notifications");
 
 const publicProfilesCollection = () => collection(firestore, PUBLIC_PROFILES_COLLECTION);
+
+// Perfis já lidos nesta sessão. Perfil muda pouco e a mesma pessoa aparece
+// em várias telas (post, comentário, lista de seguidores): ler de novo a
+// cada tela é o custo que a escuta da coleção inteira pagava em dobro.
+const publicProfileCache = new Map();
 
 const publicProfileDoc = (userId) =>
   doc(firestore, PUBLIC_PROFILES_COLLECTION, String(userId));
@@ -1431,40 +1438,106 @@ export const engineDB = {
     );
   },
 
-  subscribePublicProfiles(callback) {
-    if (apiEnabled()) {
-      apiRequest("/community/users")
-        .then((profiles = {}) => {
-          const map = {};
-          Object.values(profiles).forEach((profile) => {
-            const id = profile.userId || profile.id;
-            map[id] = profile;
-          });
-          callback(map);
-        })
-        .catch((error) => {
-          console.warn("[db] subscribePublicProfiles (API)", error);
-          callback({});
-        });
-      return () => {};
-    }
+  // --- perfis públicos: SEMPRE pontuais -----------------------------------
+  //
+  // Até 25/09/2026 existia `subscribePublicProfiles`, uma escuta viva da
+  // coleção INTEIRA, usada por cinco telas. Medido em produção com 6
+  // usuários: 172 KB por abertura da Comunidade, porque os avatares moram em
+  // base64 dentro do perfil. Com ~200 usuários, as aberturas de um dia
+  // esgotavam a cota do plano Spark e o app parava para todo mundo. E o
+  // Perfil decidia "essa pessoa não existe" pela primeira resposta da
+  // escuta — que vem do cache com um documento só (o próprio usuário) — e
+  // redirecionava todo link direto de perfil para a Comunidade.
+  //
+  // Nenhuma tela precisa de todos. Estas três leituras cobrem as cinco, e
+  // `npm run check:escala` trava a volta da escuta.
 
-    return onSnapshot(
-      publicProfilesCollection(),
-      (snapshot) => {
-        const profiles = {};
-        snapshot.docs.forEach((item) => {
-          const data = { id: item.id, ...item.data() };
-          profiles[item.id] = data;
-          if (data.userId) profiles[data.userId] = data;
+  /** Só os perfis pedidos, em lotes de 30 (limite do `in`), com cache. */
+  async getPublicProfilesByIds(ids = []) {
+    const wanted = [...new Set((ids || []).filter(Boolean).map(String))];
+    const missing = wanted.filter((id) => !publicProfileCache.has(id));
+    for (let i = 0; i < missing.length; i += 30) {
+      const chunk = missing.slice(i, i + 30);
+      try {
+        const snapshot = await getDocs(
+          query(publicProfilesCollection(), where(documentId(), "in", chunk)),
+        );
+        snapshot.docs.forEach((item) =>
+          publicProfileCache.set(item.id, { id: item.id, ...item.data() }),
+        );
+        // Quem não voltou não existe: guardar `null` evita pedir de novo.
+        chunk.forEach((id) => {
+          if (!publicProfileCache.has(id)) publicProfileCache.set(id, null);
         });
-        callback(profiles);
-      },
-      (error) => {
-        warnFirestoreFallback("subscribePublicProfiles", error);
-        callback({});
-      },
+      } catch (error) {
+        warnFirestoreFallback("getPublicProfilesByIds", error);
+      }
+    }
+    const result = {};
+    wanted.forEach((id) => {
+      const profile = publicProfileCache.get(id);
+      if (profile) result[id] = profile;
+    });
+    return result;
+  },
+
+  /**
+   * Um perfil pelo @nome, com resposta do SERVIDOR. `null` quer dizer "não
+   * existe" de verdade; erro de leitura é lançado, para a tela distinguir
+   * "não existe" de "não consegui ver" em vez de tratar os dois como sumiço.
+   */
+  async getPublicProfileByUsername(username) {
+    const normalized = normalizeUsername(username);
+    if (!normalized) return null;
+    const snapshot = await getDocsFromServer(
+      query(publicProfilesCollection(), where("username", "==", normalized), limit(1)),
     );
+    if (snapshot.empty) return null;
+    const item = snapshot.docs[0];
+    const profile = { id: item.id, ...item.data() };
+    publicProfileCache.set(item.id, profile);
+    return profile;
+  },
+
+  /**
+   * Busca por prefixo do @nome e do nome exibido, no máximo `max` pessoas.
+   * Sem termo, devolve os perfis atualizados mais recentemente — é o que
+   * aparece como sugestão, e nunca a base inteira.
+   */
+  async searchPublicProfiles(term = "", { max = 20 } = {}) {
+    const raw = String(term || "").trim();
+    try {
+      if (!raw) {
+        const snapshot = await getDocs(
+          query(publicProfilesCollection(), orderBy("updatedAt", "desc"), limit(max)),
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      }
+      const handle = normalizeUsername(raw);
+      const name = raw.charAt(0).toUpperCase() + raw.slice(1);
+      const prefixo = (campo, valor) =>
+        getDocs(
+          query(
+            publicProfilesCollection(),
+            where(campo, ">=", valor),
+            where(campo, "<", `${valor}\uf8ff`),
+            orderBy(campo),
+            limit(max),
+          ),
+        );
+      const [porNome, porHandle] = await Promise.all([
+        prefixo("author", name),
+        handle ? prefixo("username", handle) : Promise.resolve({ docs: [] }),
+      ]);
+      const vistos = new Map();
+      [...porHandle.docs, ...porNome.docs].forEach((item) => {
+        if (!vistos.has(item.id)) vistos.set(item.id, { id: item.id, ...item.data() });
+      });
+      return [...vistos.values()].slice(0, max);
+    } catch (error) {
+      warnFirestoreFallback("searchPublicProfiles", error);
+      return [];
+    }
   },
 
   subscribeServiceListings(callback, options = {}) {

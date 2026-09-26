@@ -1,4 +1,3 @@
-/* global window, PopStateEvent -- usados dentro de page.evaluate(), que roda no navegador */
 /**
  * Passeio de ponta a ponta pelo app LOGADO, contra os emuladores do Firebase.
  *
@@ -391,12 +390,14 @@ if (rodandoDireto) {
   });
 
   await etapa("Bruno: abre o perfil da Ana e segue", B, async () => {
-    // Link direto pro perfil redireciona (achado registrado); o caminho que
-    // funciona é passar antes pela Comunidade, que aquece o cache.
-    await pb.goto(`${BASE}/community`, { waitUntil: "load" });
-    await pb.waitForTimeout(3000);
-    await pb.evaluate((u) => window.history.pushState({}, "", `/community/@${u}`), USUARIOS.a.usuario);
-    await pb.evaluate(() => window.dispatchEvent(new PopStateEvent("popstate")));
+    // LINK DIRETO, como quem recebe o perfil compartilhado. Até 25/09/2026
+    // isto redirecionava para a Comunidade (1ª resposta da escuta vinha do
+    // cache); o roteiro precisava passar antes pela Comunidade.
+    await pb.goto(`${BASE}/community/@${USUARIOS.a.usuario}`, { waitUntil: "load" });
+    await pb.waitForTimeout(4000);
+    if (!new URL(pb.url()).pathname.includes(`@${USUARIOS.a.usuario}`)) {
+      throw new Error(`link direto redirecionou para ${new URL(pb.url()).pathname}`);
+    }
     await pb.waitForTimeout(4000);
     await pb.getByRole("button", { name: /^Seguir$/ }).first().click();
     await pb.waitForTimeout(2500);

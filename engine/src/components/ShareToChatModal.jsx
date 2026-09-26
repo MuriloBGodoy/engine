@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Check, Search, Send, X } from "lucide-react";
-import { engineDB } from "../services/db";
 import {
   attachmentFromGoal,
   conversationPartner,
@@ -14,6 +13,7 @@ import {
 import { ChatAvatar } from "./ChatAvatar";
 import { useToast } from "./ToastProvider";
 import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
+import { useProfileSearch } from "../hooks/useProfileSearch";
 
 const matches = (person, term) =>
   `${person.author || ""} ${person.username || ""}`.toLowerCase().includes(term);
@@ -26,7 +26,6 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
   const { t } = useTranslation();
   const toast = useToast();
   const [conversations, setConversations] = useState([]);
-  const [profiles, setProfiles] = useState({});
   const [search, setSearch] = useState("");
   const [note, setNote] = useState("");
   const [sentTo, setSentTo] = useState([]);
@@ -44,11 +43,6 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
 
   useEffect(() => {
     if (!open) return undefined;
-    return engineDB.subscribePublicProfiles(setProfiles);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
     const onKeyDown = (event) => {
       if (event.key === "Escape") onClose();
     };
@@ -63,6 +57,7 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
   }, [open, onClose]);
 
   const term = search.trim().toLowerCase();
+  const foundProfiles = useProfileSearch(term, { enabled: open, max: 20 });
 
   // Contatos = quem já tem conversa + perfis públicos, sem repetição.
   const contacts = useMemo(() => {
@@ -76,7 +71,7 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
       list.push(partner);
     });
 
-    Object.values(profiles).forEach((profile) => {
+    foundProfiles.forEach((profile) => {
       const id = profile.userId || profile.id;
       if (!id || id === userId || seen.has(id)) return;
       seen.add(id);
@@ -90,7 +85,7 @@ export function ShareToChatModal({ open, goal, user, settings, onClose }) {
     });
 
     return term ? list.filter((person) => matches(person, term)) : list;
-  }, [conversations, profiles, term, userId]);
+  }, [conversations, foundProfiles, term, userId]);
 
   if (!open || !goal) return null;
 

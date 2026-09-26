@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { ClubsTab } from "../components/community/ClubsTab";
 import { getClub } from "../services/clubs";
+import { useProfileSearch } from "../hooks/useProfileSearch";
 import { ClubTag } from "../components/clubs/ClubEmblem";
 import { Events } from "./Events";
 import { engineDB, POST_KIND_POST } from "../services/db";
@@ -2164,9 +2165,10 @@ export function Community({ cars = [], settings, user }) {
   // Diretório de pessoas para a aba "Pessoas": todos os perfis públicos
   // (o mapa vem duplicado por doc id + userId, então deduplicamos), sem eu
   // mesmo, em ordem alfabética.
+  const foundPeople = useProfileSearch(peopleQuery, { enabled: peopleModalOpen, max: 30 });
   const peopleDirectory = useMemo(() => {
     const map = new Map();
-    Object.values(publicProfiles).forEach((profile) => {
+    foundPeople.forEach((profile) => {
       const id = profile.userId || profile.id;
       if (!id || id === user?.uid || map.has(id)) return;
       map.set(id, { ...profile, userId: id });
@@ -2174,7 +2176,7 @@ export function Community({ cars = [], settings, user }) {
     return Array.from(map.values()).sort((a, b) =>
       String(a.author || "").localeCompare(String(b.author || "")),
     );
-  }, [publicProfiles, user?.uid]);
+  }, [foundPeople, user?.uid]);
 
   // Legenda já publicada de cada carro — o modal de publicar usa para
   // pré-preencher a edição.
@@ -2284,10 +2286,32 @@ export function Community({ cars = [], settings, user }) {
     }
   };
 
+  // Autores dos posts e dos comentários que ESTÃO na tela — e só eles. Até
+  // 25/09/2026 isto era uma escuta da coleção inteira de perfis (megabytes
+  // por abertura, a cota do Firebase acabando com poucas centenas de
+  // usuários). O post já nasce com nome e foto do autor; aqui só se
+  // atualiza o retrato de quem mudou depois.
+  const authorIdsKey = useMemo(() => {
+    const ids = new Set();
+    communityGoals.forEach((goal) => {
+      if (goal.ownerId) ids.add(goal.ownerId);
+      (goal.comments || []).forEach((comment) => {
+        if (comment && typeof comment === "object" && comment.userId) ids.add(comment.userId);
+      });
+    });
+    return [...ids].sort().join(",");
+  }, [communityGoals]);
+
   useEffect(() => {
-    const unsubscribe = engineDB.subscribePublicProfiles(setPublicProfiles);
-    return () => unsubscribe();
-  }, []);
+    if (!authorIdsKey) return undefined;
+    let vivo = true;
+    engineDB.getPublicProfilesByIds(authorIdsKey.split(",")).then((found) => {
+      if (vivo) setPublicProfiles((current) => ({ ...current, ...found }));
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [authorIdsKey]);
 
   const openPostId = searchParams.get("goal") || "";
   const openProfileId = searchParams.get("user") || "";

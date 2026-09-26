@@ -14,7 +14,6 @@ import {
   Check,
   CheckCheck,
 } from "lucide-react";
-import { engineDB } from "../services/db";
 import {
   attachmentSummary,
   conversationPartner,
@@ -32,6 +31,7 @@ import {
   subscribeMessages,
 } from "../services/chat";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useProfileSearch } from "../hooks/useProfileSearch";
 import { useToast } from "../components/ToastProvider";
 import { useConfirm } from "../components/ConfirmProvider";
 import { ChatAvatar } from "../components/ChatAvatar";
@@ -63,7 +63,6 @@ export function Messages({ user, settings }) {
   const [conversations, setConversations] = useState([]);
   // Erro de leitura da lista. Sem isto, falha virava "nenhuma conversa".
   const [chatError, setChatError] = useState(null);
-  const [profiles, setProfiles] = useState({});
   const [messages, setMessages] = useState([]);
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
@@ -87,8 +86,6 @@ export function Messages({ user, settings }) {
       setChatError(erro || null);
     });
   }, [userId]);
-
-  useEffect(() => engineDB.subscribePublicProfiles(setProfiles), []);
 
   useEffect(() => {
     if (!conversationId) return undefined;
@@ -114,6 +111,12 @@ export function Messages({ user, settings }) {
   }, [activeConversation, conversationId, messages.length, userId]);
 
   const term = search.trim().toLowerCase();
+  // Sugestões só existem quando se busca ou quando ainda não há conversa;
+  // fora disso nem consulta.
+  const foundProfiles = useProfileSearch(term, {
+    enabled: Boolean(term) || !conversations.length,
+    max: 20,
+  });
 
   const filteredConversations = useMemo(() => {
     if (!term) return conversations;
@@ -133,7 +136,7 @@ export function Messages({ user, settings }) {
     );
     const seen = new Set();
 
-    return Object.values(profiles)
+    return foundProfiles
       .filter((profile) => {
         const id = profile.userId || profile.id;
         if (!id || id === userId || known.has(id) || seen.has(id)) return false;
@@ -142,7 +145,7 @@ export function Messages({ user, settings }) {
         return true;
       })
       .slice(0, 8);
-  }, [conversations, profiles, term, userId]);
+  }, [conversations, foundProfiles, term, userId]);
 
   const openConversationWith = async (profile) => {
     try {

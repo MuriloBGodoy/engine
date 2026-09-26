@@ -375,6 +375,8 @@ const resources = {
         celebration: { share: "Compartilhar", close: "Fechar" },
       },
       profile: {
+        loadFailed: "Não consegui abrir este perfil agora. A pessoa existe; foi a leitura que falhou.",
+        retry: "Tentar de novo",
         tabs: {
           goals: "Metas",
           followers: "Seguidores",
@@ -1950,6 +1952,8 @@ const resources = {
         celebration: { share: "Share", close: "Close" },
       },
       profile: {
+        loadFailed: "Couldn't open this profile right now. The person exists; loading failed.",
+        retry: "Try again",
         tabs: {
           goals: "Goals",
           followers: "Followers",
@@ -3515,6 +3519,8 @@ const resources = {
         celebration: { share: "Compartir", close: "Cerrar" },
       },
       profile: {
+        loadFailed: "No pude abrir este perfil ahora. La persona existe; falló la carga.",
+        retry: "Intentar de nuevo",
         tabs: {
           goals: "Metas",
           followers: "Seguidores",

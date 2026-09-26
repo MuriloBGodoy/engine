@@ -86,18 +86,17 @@ function BlockedUsers({ t, userId }) {
     let alive = true;
     engineDB
       .getBlockedUsers(userId)
-      .then((ids) => {
-        if (alive) setBlocked(ids);
+      .then(async (ids) => {
+        if (!alive) return;
+        setBlocked(ids);
+        // Só os perfis de quem está bloqueado, para mostrar nome e foto.
+        const found = await engineDB.getPublicProfilesByIds(ids);
+        if (alive) setProfiles(found);
       })
       .catch((error) => console.error(error));
 
-    const unsubscribe = engineDB.subscribePublicProfiles((all) => {
-      if (alive) setProfiles(all || {});
-    });
-
     return () => {
       alive = false;
-      unsubscribe?.();
     };
   }, [userId]);
 

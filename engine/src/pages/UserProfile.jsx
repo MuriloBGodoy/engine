@@ -88,6 +88,8 @@ export function UserProfile({ settings = {}, user = null }) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [publicProfiles, setPublicProfiles] = useState(null);
   const isOwnProfile = currentUserId === profile?.userId;
@@ -112,28 +114,33 @@ export function UserProfile({ settings = {}, user = null }) {
     // viva, escrevendo o dado da pessoa anterior por cima do atual a cada
     // atualização de qualquer perfil.
     let vivo = true;
-    let carregadoPara = null;
 
-    const unsubscribe = engineDB.subscribePublicProfiles((profiles) => {
-      if (!vivo) return;
-      setPublicProfiles(profiles || {});
-      const userProfile = Object.values(profiles || {}).find(
-        (p) => (p.username || "").replace(/^@/, "").toLowerCase() === cleanUsername
-      );
-
-      if (!userProfile) {
-        navigate("/community");
+    // UM perfil, pelo @nome, com resposta do servidor. Até 25/09/2026 isto
+    // era uma escuta da coleção inteira, e a decisão "essa pessoa não existe"
+    // saía da PRIMEIRA resposta dela — que vem do cache, com um documento só
+    // (o próprio usuário). Todo link direto de perfil, para quem estava
+    // logado, redirecionava para a Comunidade. Só funcionava depois de passar
+    // pela Comunidade, que enchia o cache — por isso ninguém viu.
+    (async () => {
+      let userProfile = null;
+      try {
+        userProfile = await engineDB.getPublicProfileByUsername(cleanUsername);
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+        if (vivo) {
+          setLoadFailed(true);
+          setLoading(false);
+        }
         return;
       }
+      if (!vivo) return;
 
+      // "Não existe" agora é resposta do servidor, e mostra a tela de perfil
+      // não encontrado em vez de jogar a pessoa em outra página sem dizer nada.
+      setLoadFailed(false);
       setProfile(userProfile);
       setLoading(false);
-
-      // A inscrição é viva: dispara a cada mudança em QUALQUER perfil público.
-      // Só o retrato (nome, foto, bio) precisa acompanhar; metas, seguidores e
-      // conquistas se buscam uma vez por pessoa.
-      if (carregadoPara === userProfile.userId) return;
-      carregadoPara = userProfile.userId;
+      if (!userProfile) return;
 
       // Trocar de pessoa apaga o que era da anterior. Sem isto, o visitante vê
       // os selos e a contagem de quem ele acabou de visitar — e num perfil sem
@@ -163,32 +170,37 @@ export function UserProfile({ settings = {}, user = null }) {
         // regra. O degrau se decide pela contagem da subcoleção.
         engineDB.countLikesReceived(userProfile.userId),
       ])
-        .then(([goals, followersList, followingList, conquistas, curtidas]) => {
+        .then(async ([goals, followersList, followingList, conquistas, curtidas]) => {
           if (!vivo) return;
           setUserGoals(goals || []);
           setFollowers(followersList || []);
           setFollowing(followingList || []);
           setUnlockedAchievements(conquistas || new Set());
           setLikesReceived(curtidas || 0);
+          // Nome e foto só de quem aparece nas abas Seguidores/Seguindo.
+          const ids = [
+            ...(followersList || []).map((item) => item.userId || item.followerId),
+            ...(followingList || []),
+          ];
+          const found = await engineDB.getPublicProfilesByIds(ids);
+          if (vivo) setPublicProfiles(found);
         })
         .catch((error) => {
           console.error("Error loading user profile:", error);
         });
 
-      // Check if current user follows this profile
       if (currentUserId && currentUserId !== userProfile.userId) {
         engineDB.getUserFollowing(currentUserId).then((currentFollowing) => {
           if (!vivo) return;
           setIsFollowing((currentFollowing || []).includes(userProfile.userId));
         });
       }
-    });
+    })();
 
     return () => {
       vivo = false;
-      unsubscribe?.();
     };
-  }, [identifier, currentUserId, navigate]);
+  }, [identifier, currentUserId, navigate, reloadKey]);
 
   const handleFollow = async () => {
     if (!currentUserId || !profile) return;
@@ -222,6 +234,24 @@ export function UserProfile({ settings = {}, user = null }) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-[var(--engine-text-muted)]">{t("common.loading")}</p>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-center">
+        <p className="text-[var(--engine-text)]">{t("profile.loadFailed")}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setLoading(true);
+            setReloadKey((value) => value + 1);
+          }}
+          className="min-h-11 text-[var(--engine-accent)] hover:underline"
+        >
+          {t("profile.retry")}
+        </button>
       </div>
     );
   }
