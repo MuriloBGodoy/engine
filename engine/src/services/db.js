@@ -325,6 +325,21 @@ const FIRESTORE_DOC_LIMIT = 1048576;
 const DOC_SAFE_BUDGET = Math.floor(FIRESTORE_DOC_LIMIT * 0.85);
 const CAR_TOO_LARGE_MESSAGE =
   "As fotos deste carro passaram do limite de armazenamento. Remova alguma foto ou use imagens menores.";
+// Gravações que falham no servidor AVISAM. Até 25/09/2026 cinco delas pegavam
+// o erro do Firestore, guardavam uma cópia no navegador e devolviam sucesso:
+// "Anúncio enviado para aprovação" sem nada ter chegado, admin "aprovando" um
+// status que não mudou (e notificando o prestador), perfil "salvo" que só
+// existia naquele aparelho. O `saveCar` já tinha sido corrigido em agosto;
+// estas seguem o mesmo padrão.
+const SETTINGS_NOT_SYNCED_MESSAGE =
+  "Suas alterações ficaram só neste aparelho e não chegaram ao servidor. Verifique a conexão e salve de novo.";
+const LISTING_NOT_SENT_MESSAGE =
+  "O anúncio não chegou ao servidor e NÃO foi enviado para aprovação. Verifique a conexão e envie de novo — se tiver foto, tente com uma imagem menor.";
+const NOT_DELETED_MESSAGE =
+  "Não foi possível excluir agora: o servidor não confirmou. Verifique a conexão e tente de novo.";
+const MODERATION_NOT_SAVED_MESSAGE =
+  "A decisão não foi gravada no servidor. Nada foi alterado no anúncio; tente de novo.";
+
 const CAR_NOT_SYNCED_MESSAGE =
   "O carro foi salvo neste aparelho, mas não chegou ao servidor. Verifique a conexão e salve de novo — se tiver foto, tente com uma imagem menor.";
 
@@ -1279,6 +1294,9 @@ export const engineDB = {
       ]);
     } catch (error) {
       warnFirestoreFallback("deleteCar", error);
+      // Tirar só daqui faria o carro "voltar" no próximo acesso, sem motivo
+      // aparente. Fica na tela e a pessoa sabe que não excluiu.
+      throw new Error(NOT_DELETED_MESSAGE);
     }
 
     const cars = await getLocalCars();
@@ -1635,6 +1653,7 @@ export const engineDB = {
       updatedAt: new Date().toISOString(),
     });
 
+    let sentToServer = true;
     try {
       await withTimeout(
         setDoc(
@@ -1650,6 +1669,7 @@ export const engineDB = {
       );
     } catch (error) {
       warnFirestoreFallback("saveServiceListing", error);
+      sentToServer = false;
     }
 
     const localListings = (await get("engine_service_listings")) || [];
@@ -1660,6 +1680,11 @@ export const engineDB = {
       localListings.unshift(normalized);
     }
     await set("engine_service_listings", localListings);
+    // A cópia local guarda o rascunho (a pessoa não perde o que escreveu),
+    // mas a tela precisa saber que NÃO foi para a fila de aprovação.
+    if (!sentToServer) {
+      throw new Error(LISTING_NOT_SENT_MESSAGE);
+    }
     return normalized;
   },
 
@@ -1708,6 +1733,10 @@ export const engineDB = {
       });
     } catch (error) {
       warnFirestoreFallback("moderateServiceListing.update", error);
+      // Antes seguia: marcava aprovado na cópia local E notificava o
+      // prestador "seu anúncio foi aprovado" — com o status intacto no
+      // servidor e o anúncio invisível ao público.
+      throw new Error(MODERATION_NOT_SAVED_MESSAGE);
     }
 
     const localListings = (await get("engine_service_listings")) || [];
@@ -1773,6 +1802,7 @@ export const engineDB = {
       );
     } catch (error) {
       warnFirestoreFallback("deleteServiceListing", error);
+      throw new Error(NOT_DELETED_MESSAGE);
     }
 
     const localListings = (await get("engine_service_listings")) || [];
@@ -2669,7 +2699,10 @@ export const engineDB = {
     if (!userId) {
       await this.reserveUsername(mergedSettings.profile.username, userId);
       await setLocalSettings(mergedSettings, userId);
-      return mergedSettings;
+      if (!savedToServer) {
+      throw new Error(SETTINGS_NOT_SYNCED_MESSAGE);
+    }
+    return mergedSettings;
     }
 
     if (apiEnabled()) {
@@ -2682,6 +2715,7 @@ export const engineDB = {
 
     await this.reserveUsername(mergedSettings.profile.username, userId);
 
+    let savedToServer = true;
     try {
       await withTimeout(
         setDoc(userSettingsDoc(userId), serializeForFirestore(mergedSettings), {
@@ -2691,6 +2725,7 @@ export const engineDB = {
       );
     } catch (error) {
       warnFirestoreFallback("saveSettings", error);
+      savedToServer = false;
     }
 
     await setLocalSettings(mergedSettings, userId);

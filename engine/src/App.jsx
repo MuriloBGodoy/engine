@@ -43,6 +43,7 @@ import { ClubsPage } from "./pages/ClubsPage";
 import { ClubDetailPage } from "./pages/ClubDetailPage";
 import { EventDetails } from "./pages/EventDetails";
 import { UserProfile } from "./pages/UserProfile";
+import { useToast } from "./components/ToastProvider";
 
 /**
  * Numa SPA a troca de tela não recarrega a página, então o pageview não sai
@@ -59,6 +60,7 @@ function RouteTracker() {
 }
 
 function App() {
+  const showToast = useToast();
   const { i18n, t } = useTranslation();
   const confirm = useConfirm();
   const [user, setUser] = useState(null);
@@ -312,7 +314,12 @@ function App() {
     });
     if (!ok) return;
 
-    await engineDB.deleteCar(car.id);
+    try {
+      await engineDB.deleteCar(car.id);
+    } catch (error) {
+      showToast(error?.message || t("deleteModal.error"), "error");
+      return;
+    }
     // Se a re-leitura falhar, o carro ja foi apagado no banco: tira da tela
     // pelo id em vez de deixar um fantasma clicavel.
     const atualizados = await recarregarCarros();

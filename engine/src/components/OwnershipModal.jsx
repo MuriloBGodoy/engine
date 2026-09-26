@@ -29,6 +29,7 @@ import {
 import { consumptionFor } from "../services/consumption";
 import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 import { formatCarName, formatFipeYear } from "../services/carDisplay";
+import { useToast } from "./ToastProvider";
 
 /*
  * Redesenho de 16/09/2026 (sessão `ui designs/2026-09-13-simulador`).
@@ -464,6 +465,7 @@ export function OwnershipModal({
 }
 
 function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdate }) {
+  const showToast = useToast();
   const { i18n, t } = useTranslation();
   const [inputs, setInputs] = useState(() =>
     car.ownership
@@ -516,7 +518,9 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
     engineDB
       .saveSettings({ ...settings, budget: { ...next, updatedAt: new Date().toISOString() } })
       .then((saved) => onSettingsUpdate?.(saved))
-      .catch(() => {});
+      // O cálculo segue com a renda digitada (está no estado); o que falhou
+      // foi guardar para as próximas simulações, e a pessoa precisa saber.
+      .catch((error) => showToast(error?.message || t("ownership.budget.saveError"), "error"));
   };
 
   // A renda mora em `settings.budget`, mas o motor continua recebendo pelos

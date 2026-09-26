@@ -48,7 +48,9 @@ export function Topbar({ settings, onSettingsUpdate, user }) {
     };
 
     onSettingsUpdate(updatedSettings);
-    await engineDB.saveSettings(updatedSettings);
+    // O tema já trocou na tela; se não chegar ao servidor, volta ao padrão
+    // no próximo aparelho — não vale um alerta por isso.
+    await engineDB.saveSettings(updatedSettings).catch(() => {});
   };
 
   const markAllRead = () => {

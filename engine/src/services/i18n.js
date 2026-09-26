@@ -1006,6 +1006,7 @@ const resources = {
           work: "Rodo pra trabalhar",
         },
         budget: {
+          saveError: "Não consegui guardar sua renda para as próximas simulações. O cálculo desta tela continua valendo.",
           title: "Sobra ou não sobra",
           income: "Sua renda por mês",
           expenses: "Suas contas por mês",
@@ -1229,6 +1230,7 @@ const resources = {
         emptyError: "Imagem vazia. Tente novamente.",
       },
       deleteModal: {
+        error: "Não foi possível excluir o carro agora. Tente de novo.",
         title: "Espere um segundo",
         keep: "Não, manter",
         message:
@@ -2584,6 +2586,7 @@ const resources = {
           work: "I drive for work",
         },
         budget: {
+          saveError: "Couldn't save your income for future simulations. This screen's calculation still holds.",
           title: "Does it fit?",
           income: "Your monthly income",
           expenses: "Your monthly bills",
@@ -2796,6 +2799,7 @@ const resources = {
         emptyError: "Empty image. Please try again.",
       },
       deleteModal: {
+        error: "Couldn't delete the car right now. Try again.",
         title: "Wait a second",
         keep: "No, keep it",
         message:
@@ -4152,6 +4156,7 @@ const resources = {
           work: "Manejo por trabajo",
         },
         budget: {
+          saveError: "No pude guardar tu ingreso para las próximas simulaciones. El cálculo de esta pantalla sigue valiendo.",
           title: "¿Alcanza o no?",
           income: "Tu ingreso mensual",
           expenses: "Tus gastos mensuales",
@@ -4365,6 +4370,7 @@ const resources = {
         emptyError: "Imagen vacía. Inténtalo de nuevo.",
       },
       deleteModal: {
+        error: "No se pudo eliminar el auto ahora. Inténtalo de nuevo.",
         title: "Espera un segundo",
         keep: "No, mantener",
         message:

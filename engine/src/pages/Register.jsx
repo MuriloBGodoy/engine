@@ -85,6 +85,10 @@ export function Register() {
       });
 
       const settings = engineDB.getDefaultSettings();
+      // Conta e nome já existem neste ponto. Se as configurações não
+      // chegarem ao servidor, a pessoa entra mesmo assim (ficam neste
+      // aparelho e sobem no próximo salvamento) — travar aqui recriaria a
+      // conta órfã que o cadastro acabou de deixar de criar.
       await engineDB.saveSettings(
         {
           ...settings,
@@ -98,7 +102,7 @@ export function Register() {
           },
         },
         userCredential.user.uid,
-      );
+      ).catch((error) => console.warn("[register] configurações só locais", error));
 
       navigate("/");
     } catch (err) {

@@ -2434,7 +2434,7 @@ export function Services({ user, settings }) {
       closeEditor();
     } catch (error) {
       console.error(error);
-      flash(t("settings.status.saveError"));
+      flash(error?.message || t("settings.status.saveError"));
     } finally {
       setSaving(false);
     }
