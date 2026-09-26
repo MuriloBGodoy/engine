@@ -1410,6 +1410,7 @@ function ListingEditorModal({
             <TextInput
               value={form.title}
               onChange={(event) => onChange("title", event.target.value)}
+              id="svc-title"
               placeholder={t("services.placeholders.title")}
             />
           </Field>
@@ -1434,6 +1435,7 @@ function ListingEditorModal({
             <TextArea
               value={form.description}
               onChange={(event) => onChange("description", event.target.value)}
+              id="svc-description"
               placeholder={t("services.placeholders.description")}
             />
           </Field>
@@ -1524,7 +1526,8 @@ function ListingEditorModal({
               <TextInput
                 value={form.address}
                 onChange={(event) => onChange("address", event.target.value)}
-                placeholder={t("services.placeholders.address")}
+                id="svc-address"
+              placeholder={t("services.placeholders.address")}
               />
             </Field>
           )}
@@ -1533,7 +1536,8 @@ function ListingEditorModal({
               <TextInput
                 value={form.serviceArea}
                 onChange={(event) => onChange("serviceArea", event.target.value)}
-                placeholder={t("services.placeholders.serviceArea")}
+                id="svc-service-area"
+              placeholder={t("services.placeholders.serviceArea")}
               />
             </Field>
           )}
@@ -2401,16 +2405,24 @@ export function Services({ user, settings }) {
       setPaywallOpen(true);
       return;
     }
+    // O aviso é um toast no topo, e o formulário é longo: no celular a pessoa
+    // está lá embaixo, no botão. Além de avisar, leva até o campo que falta.
+    const faltando = (id, mensagem) => {
+      flash(mensagem);
+      const campo = document.getElementById(id);
+      campo?.scrollIntoView({ block: "center", behavior: "smooth" });
+      campo?.focus({ preventScroll: true });
+    };
     if (!form.title.trim() || !form.description.trim()) {
-      flash(t("services.flash.titleDescriptionRequired"));
+      faltando(form.title.trim() ? "svc-description" : "svc-title", t("services.flash.titleDescriptionRequired"));
       return;
     }
     if (["place","hybrid"].includes(form.serviceMode) && !form.address.trim()) {
-      flash(t("services.flash.addressRequired"));
+      faltando("svc-address", t("services.flash.addressRequired"));
       return;
     }
     if (["mobile","hybrid"].includes(form.serviceMode) && !form.serviceArea.trim()) {
-      flash(t("services.flash.areaRequired"));
+      faltando("svc-service-area", t("services.flash.areaRequired"));
       return;
     }
     if (form.city.trim() && !isCityInCountry(form.country, form.city)) {
