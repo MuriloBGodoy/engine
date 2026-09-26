@@ -33,3 +33,6 @@ scripts/.cache/
 *.njsproj
 *.sln
 *.sw?
+
+# Capturas do passeio de ponta a ponta (scripts/e2e-*.mjs)
+e2e-out/
