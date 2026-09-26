@@ -5,7 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'public/dist']),
+  // Backups de design são guardados de propósito (DESIGN_BACKUPS.md) e não
+  // são importados por nada; os bancos de prova (*-preview.jsx) são
+  // entradas de desenvolvimento, fora do build.
+  globalIgnores(['dist', 'public/dist', 'src/pages/*.backup*.jsx', 'src/*-preview.jsx']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

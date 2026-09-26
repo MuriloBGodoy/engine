@@ -172,7 +172,7 @@ export function CreateEventForm({ onSuccess, onCancel }) {
           photos: [...prev.photos, url],
         }));
       }
-    } catch (error) {
+    } catch {
       showToast(t("events.toast.uploadError"), "error");
     } finally {
       setPhotoUploading(false);

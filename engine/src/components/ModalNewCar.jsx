@@ -113,19 +113,10 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
 
     setUploading(true);
     try {
-      console.log("[ModalNewCar] Iniciando upload:", {
-        name: croppedFile.name,
-        size: croppedFile.size,
-        type: croppedFile.type,
-      });
-
-      // Upload the cropped file
       const url = await uploadUserPhoto(croppedFile, {
         userId: auth.currentUser?.uid,
         folder: "cars",
       });
-
-      console.log("[ModalNewCar] Upload concluído, URL:", url);
 
       setPhotos((current) => [...current, url].slice(0, MAX_CAR_PHOTOS));
       setFileForCropping(null);

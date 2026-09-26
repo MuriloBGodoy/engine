@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, firestore, storage } from '../services/firebase';
+import { auth, firestore } from '../services/firebase';
 import { countries, getStates } from '../services/locations';
 import { AVATAR, BANNER, reduzirImagem } from '../services/imagens';
 import { useToast } from './ToastProvider';
@@ -28,10 +27,6 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
     banner: profileSettings?.bannerURL || profileSettings?.profile?.bannerURL || null,
   });
 
-  const [files, setFiles] = useState({
-    avatar: null,
-    banner: null,
-  });
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -42,7 +37,6 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
 
   const countryObj = countries.find(c => c.code === formData.country);
   const stateOptions = countryObj ? getStates(formData.country) : [];
-  const cityOptions = stateOptions.find(s => s.code === formData.state)?.cities || [];
 
   const handleFieldChange = (field, value) => {
     setFormData(prev => ({
@@ -141,7 +135,7 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
       newErrors.username = 'Apenas letras, números e underscore';
     }
 
-    if (formData.phone && !/^[\d\s\-\(\)]*$/.test(formData.phone)) {
+    if (formData.phone && !/^[\d\s()-]*$/.test(formData.phone)) {
       newErrors.phone = 'Formato de telefone inválido';
     }
 
@@ -161,8 +155,6 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
       showToast('Escolha um arquivo de imagem.', { tone: 'warning' });
       return;
     }
-
-    setFiles(prev => ({ ...prev, [field]: file }));
 
     try {
       const reduzida = await reduzirImagem(file, field === 'avatar' ? AVATAR : BANNER);
@@ -199,18 +191,6 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
     }
   };
 
-  const uploadFile = async (file, path) => {
-    try {
-      const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
-    } catch (err) {
-      console.error('Upload error:', err);
-      throw new Error('Erro ao fazer upload da imagem');
-    }
-  };
-
   const handleSave = async () => {
     if (!validateForm()) {
       console.error('Por favor, corrija os erros no formulário');
@@ -219,18 +199,10 @@ export function EditProfileModal({ isOpen, onClose, onSave, profileSettings = {}
 
     setLoading(true);
     try {
-      // TODO: Ativar upload quando Firebase Storage estiver habilitado
-      // Por enquanto, usa apenas as imagens do preview (local)
+      // A foto é a versão reduzida do preview (ver handleFileInput); quando o
+      // Storage for ligado, é aqui que ela passa a subir como arquivo.
       let photoURL = preview.avatar || null;
       let bannerURL = preview.banner || null;
-
-      // Descomentar quando Storage estiver pronto:
-      // if (files.avatar) {
-      //   photoURL = await uploadFile(files.avatar, `users/${user.uid}/avatar-${Date.now()}`);
-      // }
-      // if (files.banner) {
-      //   bannerURL = await uploadFile(files.banner, `users/${user.uid}/banner-${Date.now()}`);
-      // }
 
       // O `photoURL` do Auth so aceita URL curta; um data URI de foto passa do
       // limite e derruba o salvamento inteiro, inclusive os campos de texto.

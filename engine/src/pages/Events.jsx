@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Loader2, CalendarCheck } from "lucide-react";
 import { SubTabsHeader } from "../components/community/SubTabsHeader";
@@ -48,11 +48,7 @@ export function Events({ embedded = false, user = null }) {
 
   const activeTab = signedIn ? subTab : "discover";
 
-  useEffect(() => {
-    loadEvents();
-  }, [filters, activeTab]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === "mine") {
@@ -72,7 +68,11 @@ export function Events({ embedded = false, user = null }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, filters, showToast, t]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
 
   const handleCreateSuccess = () => {
     setShowCreateForm(false);

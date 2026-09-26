@@ -25,8 +25,11 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
   const [tool, setTool] = useState(null);
   const [brushSize, setBrushSize] = useState(5);
   const [brushColor, setBrushColor] = useState("#FF3B30");
-  const [fontSize, setFontSize] = useState(24);
   const [rotation, setRotation] = useState(0);
+  // Tamanho do canvas em estado, não lido da ref durante o render: ler
+  // `canvasRef.current.width` no JSX não re-renderiza quando a imagem
+  // carrega, e o limite dos controles X/Y ficava no valor antigo.
+  const [canvasSize, setCanvasSize] = useState({ width: 500, height: 500 });
   const [filter, setFilter] = useState("Original");
   const [isDrawing, setIsDrawing] = useState(false);
   const [textInput, setTextInput] = useState("");
@@ -45,7 +48,6 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
   const [currentLine, setCurrentLine] = useState([]);
   const [draggingTextId, setDraggingTextId] = useState(null);
   const [editingTextId, setEditingTextId] = useState(null);
-  const [resizingTextId, setResizingTextId] = useState(null);
 
   const lastTouchRef = useRef({ x: 0, y: 0, time: 0 });
 
@@ -67,34 +69,8 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
     };
   }, [tool, brushSize, brushColor, isDrawing]);
 
-  useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
 
-      const maxWidth = Math.min(500, window.innerWidth - 48);
-      const maxHeight = window.innerHeight * 0.5;
-      const aspectRatio = img.height / img.width;
-
-      let displayWidth = maxWidth;
-      let displayHeight = maxWidth * aspectRatio;
-
-      if (displayHeight > maxHeight) {
-        displayHeight = maxHeight;
-        displayWidth = maxHeight / aspectRatio;
-      }
-
-      canvas.width = displayWidth;
-      canvas.height = displayHeight;
-
-      stateRef.current.image = img;
-      renderCanvas([]);
-    };
-    img.src = imageUrl;
-  }, [imageUrl]);
-
-  const renderCanvas = (elementsToRender = elements) => {
+  function renderCanvas(elementsToRender = elements) {
     const canvas = canvasRef.current;
     if (!canvas || !stateRef.current.image) return;
 
@@ -145,7 +121,38 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
         ctx.shadowColor = "transparent";
       }
     });
-  };
+  }
+
+  // Carrega a imagem e desenha. Fica DEPOIS de `renderCanvas` porque a
+  // chama: antes dela, o compilador do React acusava acesso antes da
+  // declaração.
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const maxWidth = Math.min(500, window.innerWidth - 48);
+      const maxHeight = window.innerHeight * 0.5;
+      const aspectRatio = img.height / img.width;
+
+      let displayWidth = maxWidth;
+      let displayHeight = maxWidth * aspectRatio;
+
+      if (displayHeight > maxHeight) {
+        displayHeight = maxHeight;
+        displayWidth = maxHeight / aspectRatio;
+      }
+
+      canvas.width = displayWidth;
+      canvas.height = displayHeight;
+      setCanvasSize({ width: canvas.width, height: canvas.height });
+
+      stateRef.current.image = img;
+      renderCanvas([]);
+    };
+    img.src = imageUrl;
+  }, [imageUrl]);
 
   useEffect(() => {
     if (!isDrawing) {
@@ -659,7 +666,7 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
                 <input
                   type="range"
                   min="0"
-                  max={canvasRef.current?.width || 500}
+                  max={canvasSize.width}
                   value={textX}
                   onChange={(e) => setTextX(Number(e.target.value))}
                   className="w-full h-2 rounded"
@@ -672,7 +679,7 @@ export function ImageEditor({ imageUrl, onClose, onSave }) {
                 <input
                   type="range"
                   min="0"
-                  max={canvasRef.current?.height || 500}
+                  max={canvasSize.height}
                   value={textY}
                   onChange={(e) => setTextY(Number(e.target.value))}
                   className="w-full h-2 rounded"

@@ -19,7 +19,12 @@
  */
 
 /** Avatar aparece no máximo a ~120px; 2x cobre tela retina. */
-export const AVATAR = { largura: 256, altura: 256, qualidade: 0.85, tetoBytes: 200 * 1024 };
+// Teto de 48 KB (era 200 KB): o avatar é copiado para o perfil público E
+// para cada post da pessoa, e 256 px em JPEG saem com 20–35 KB. O teto
+// folgado deixava passar foto ruidosa — medido em produção em 25/09/2026,
+// um avatar de 98 KB. No pior caso cai para qualidade 0,4, que num quadrado
+// de 256 px sempre cabe.
+export const AVATAR = { largura: 256, altura: 256, qualidade: 0.85, tetoBytes: 48 * 1024 };
 /** Banner ocupa a largura toda numa faixa baixa. */
 export const BANNER = { largura: 1280, altura: 420, qualidade: 0.82, tetoBytes: 400 * 1024 };
 

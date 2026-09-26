@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -46,11 +46,7 @@ export function EventDetails() {
     carYear: "",
   });
 
-  useEffect(() => {
-    loadEvent();
-  }, [eventId]);
-
-  const loadEvent = async () => {
+  const loadEvent = useCallback(async () => {
     try {
       const [data, participantCount] = await Promise.all([
         engineEvents.getEventById(eventId),
@@ -68,7 +64,11 @@ export function EventDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId, navigate, showToast, t]);
+
+  useEffect(() => {
+    loadEvent();
+  }, [loadEvent]);
 
   const handleRsvp = async (e) => {
     e.preventDefault();

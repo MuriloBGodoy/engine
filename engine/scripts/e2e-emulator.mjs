@@ -258,8 +258,8 @@ if (rodandoDireto) {
 
   await etapa("Ana: fecha o simulador pelo X", A, async () => {
     // Esc não fecha (achado registrado); aqui o caminho que existe.
-    // O X do simulador tem aria-label "Cancelar".
-    await page.getByRole("button", { name: "Cancelar" }).first().click();
+    // O X do simulador se chama "Fechar" (até 25/09/2026 era "Cancelar").
+    await page.getByRole("button", { name: "Fechar", exact: true }).first().click();
     await page.waitForTimeout(1500);
     return "fechou";
   });
@@ -429,7 +429,6 @@ if (rodandoDireto) {
     await pb.getByRole("button", { name: /^Seguir$/ }).first().click();
     await pb.waitForTimeout(2500);
     const t = await textoDaPagina(pb);
-    const antes = (t.match(/(\d+) SEGUIDORES/i)?.[1] ?? "?");
     await pb.waitForTimeout(3000);
     const depois = ((await textoDaPagina(pb)).match(/(\d+) SEGUIDORES/i)?.[1] ?? "?");
     if (!/SEGUINDO/i.test(t)) throw new Error("botão não virou Seguindo");

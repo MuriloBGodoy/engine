@@ -1,3 +1,4 @@
+/* global document -- usado dentro de page.evaluate(), que roda no navegador */
 /**
  * Gravação que falha AVISA — o caminho do erro, provado.
  *

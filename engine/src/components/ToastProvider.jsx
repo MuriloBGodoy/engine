@@ -18,6 +18,9 @@ import { useTranslation } from "react-i18next";
  */
 const ToastContext = createContext(() => {});
 
+// O hook mora com o provider de propósito (um import só para quem usa); o
+// custo é só o hot reload em dev.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   return useContext(ToastContext);
 }

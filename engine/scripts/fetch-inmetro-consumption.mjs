@@ -40,9 +40,7 @@ import {
 } from "../src/services/fipeVersion.js";
 import {
   aspirationMark,
-  buildNameIndex,
   modelKey,
-  resolveName,
   versionKey,
 } from "../src/services/consumptionKey.js";
 

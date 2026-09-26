@@ -218,7 +218,7 @@ export function Messages({ user, settings }) {
     }
   };
 
-  const handleImagePreviewSend = async (imageUrl, caption, rotation) => {
+  const handleImagePreviewSend = async (imageUrl, caption) => {
     if (!conversationId) return;
 
     setCompressing(true);

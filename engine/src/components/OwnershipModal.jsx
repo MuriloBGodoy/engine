@@ -905,7 +905,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
           </div>
           <button
             onClick={onClose}
-            aria-label={t("common.cancel")}
+            aria-label={t("common.close")}
             className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--engine-text-muted)] transition-colors hover:bg-[var(--engine-surface-2)] hover:text-[var(--engine-text)] sm:h-10 sm:w-10"
           >
             <X size={20} />

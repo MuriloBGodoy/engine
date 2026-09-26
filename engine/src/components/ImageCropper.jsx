@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { X, ZoomIn, ZoomOut, RotateCw, RotateCcw, Save } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,6 @@ export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
   const [error, setError] = useState("");
 
   // Read image file and set as src
-  const fileReaderRef = useRef(null);
 
   const handleCropComplete = useCallback((croppedArea, croppedAreaPixelsData) => {
     setCroppedAreaPixels(croppedAreaPixelsData);
@@ -107,16 +106,10 @@ export function ImageCropper({ imageFile, isOpen, onClose, onSave }) {
         return;
       }
 
-      console.log("[ImageCropper] Blob criado com sucesso:", {
-        size: croppedBlob.size,
-        type: croppedBlob.type,
-      });
-
       // Cria um File object a partir do blob para compatibilidade com uploadUserPhoto
       const fileName = `cropped-${Date.now()}.jpg`;
       const file = new File([croppedBlob], fileName, { type: "image/jpeg" });
 
-      console.log("[ImageCropper] Chamando onSave com File object");
       const result = await onSave(file);
 
       if (result === false) {

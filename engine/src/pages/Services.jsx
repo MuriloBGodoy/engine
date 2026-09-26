@@ -610,9 +610,8 @@ function ServiceCard({ listing, isMine, onEdit, onDelete, onOpen }) {
   const stopAction = (event) => event.stopPropagation();
   const activePhoto = photos[activePhotoIndex] || photos[0];
 
-  useEffect(() => {
-    setActivePhotoIndex(0);
-  }, [listing.id]);
+  // Sem efeito para zerar a foto: a lista monta cada card com `key` do
+  // anúncio, então anúncio novo já nasce com a primeira foto.
 
   const movePhoto = (event, direction) => {
     stopAction(event);
@@ -857,11 +856,8 @@ function ServiceDetailModal({ listing, isMine, onClose, onEdit, onDelete }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
 
-  useEffect(() => {
-    setActivePhotoIndex(0);
-    setLightboxOpen(false);
-    setZoom(1);
-  }, [listing?.id]);
+  // Zerar foto, lightbox e zoom ao trocar de anúncio é feito remontando:
+  // quem abre este modal passa `key` com o id do anúncio.
 
   if (!listing) return null;
 
@@ -2458,28 +2454,6 @@ export function Services({ user, settings }) {
     }
   };
 
-  const approveListing = async (listing) => {
-    try {
-      await engineDB.moderateServiceListing(listing.id,"approved","", user?.uid);
-      flash(t("services.flash.approved"));
-    } catch (error) {
-      console.error(error);
-      flash(t("services.flash.approveError"));
-    }
-  };
-
-  const openReturnListing = (listing) => {
-    setModerationAction("changes_requested");
-    setRejectionTarget(listing);
-    setRejectionNote(listing.moderationNote ||"");
-  };
-
-  const openRejectListing = (listing) => {
-    setModerationAction("rejected");
-    setRejectionTarget(listing);
-    setRejectionNote(listing.moderationNote ||"");
-  };
-
   const confirmRejectListing = async () => {
     if (!rejectionTarget) return;
     if (!rejectionNote.trim()) {
@@ -2867,6 +2841,7 @@ export function Services({ user, settings }) {
       )}
 
       <ServiceDetailModal
+        key={detailListing?.id || "nenhum"}
         listing={detailListing}
         isMine={detailListing?.ownerId === user?.uid}
         onClose={() => setDetailListing(null)}
@@ -3012,6 +2987,7 @@ export function ServiceApprovals({ user }) {
       />
 
       <ServiceDetailModal
+        key={detailListing?.id || "nenhum"}
         listing={detailListing}
         isMine={false}
         onClose={() => setDetailListing(null)}
