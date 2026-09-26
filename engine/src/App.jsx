@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { useTranslation } from "react-i18next";
@@ -9,41 +9,50 @@ import { captureError, identifyUser, resetUser, trackPageView } from "./services
 import { AchievementAnnouncer } from "./components/achievements/AchievementAnnouncer";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { UpdateBanner } from "./components/UpdateBanner";
-import { ContributionModal } from "./components/ContributionModal";
-import { ExpensesModal } from "./components/ExpensesModal";
-import { Terms } from "./pages/Terms";
-import { Privacy } from "./pages/Privacy";
-import { PostPage } from "./pages/PostPage";
 import "./index.css";
 
 import { Sidebar } from "./components/Sidebar";
 import { TopNav } from "./components/TopNav";
 import { MobileNav } from "./components/MobileNav";
 import { Topbar } from "./components/TopBar"; // Importando em .jsx
-import { ModalNewCar } from "./components/ModalNewCar";
-import { OwnershipModal } from "./components/OwnershipModal";
-import { SpecSheetModal } from "./components/specsheet/SpecSheetModal";
 import { RequireAuth } from "./components/RequireAuth";
 import { Footer } from "./components/Footer";
 import { RegionPicker } from "./components/RegionPicker";
 import { useConfirm } from "./components/ConfirmProvider";
 import { Home } from "./pages/Home";
 import { Garagem } from "./pages/Garagem";
-import { DashboardPage } from "./pages/DashboardPage";
-import { Settings } from "./pages/Settings";
-import { Community } from "./pages/Community";
-import { Messages } from "./pages/Messages";
-import { ServiceApprovals, Services } from "./pages/Services";
 
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
-import { ResetPassword } from "./pages/ResetPassword";
-import { Events } from "./pages/Events";
-import { ClubsPage } from "./pages/ClubsPage";
-import { ClubDetailPage } from "./pages/ClubDetailPage";
-import { EventDetails } from "./pages/EventDetails";
-import { UserProfile } from "./pages/UserProfile";
 import { useToast } from "./components/ToastProvider";
+
+// Carregamento sob demanda. Até 25/09/2026 o app inteiro era UM arquivo de
+// 2,9 MB (870 KB gzip) — nada pintava antes dele baixar e ser lido, e a Mia
+// mediu ~7 s até a primeira tela num Moto G com 4G. Ficam no pacote inicial
+// só as portas de entrada (Início, Garagem, Login, Cadastro); cada outra
+// página, e cada modal global, vem quando é usada. O ECharts, sozinho
+// 1,1 MB, só baixa no Painel.
+const lazyNamed = (loader, name) => lazy(() => loader().then((module) => ({ default: module[name] })));
+const ContributionModal = lazyNamed(() => import("./components/ContributionModal"), "ContributionModal");
+const ExpensesModal = lazyNamed(() => import("./components/ExpensesModal"), "ExpensesModal");
+const Terms = lazyNamed(() => import("./pages/Terms"), "Terms");
+const Privacy = lazyNamed(() => import("./pages/Privacy"), "Privacy");
+const PostPage = lazyNamed(() => import("./pages/PostPage"), "PostPage");
+const ModalNewCar = lazyNamed(() => import("./components/ModalNewCar"), "ModalNewCar");
+const OwnershipModal = lazyNamed(() => import("./components/OwnershipModal"), "OwnershipModal");
+const SpecSheetModal = lazyNamed(() => import("./components/specsheet/SpecSheetModal"), "SpecSheetModal");
+const DashboardPage = lazyNamed(() => import("./pages/DashboardPage"), "DashboardPage");
+const Settings = lazyNamed(() => import("./pages/Settings"), "Settings");
+const Community = lazyNamed(() => import("./pages/Community"), "Community");
+const Messages = lazyNamed(() => import("./pages/Messages"), "Messages");
+const ResetPassword = lazyNamed(() => import("./pages/ResetPassword"), "ResetPassword");
+const Events = lazyNamed(() => import("./pages/Events"), "Events");
+const ClubsPage = lazyNamed(() => import("./pages/ClubsPage"), "ClubsPage");
+const ClubDetailPage = lazyNamed(() => import("./pages/ClubDetailPage"), "ClubDetailPage");
+const EventDetails = lazyNamed(() => import("./pages/EventDetails"), "EventDetails");
+const UserProfile = lazyNamed(() => import("./pages/UserProfile"), "UserProfile");
+const Services = lazyNamed(() => import("./pages/Services"), "Services");
+const ServiceApprovals = lazyNamed(() => import("./pages/Services"), "ServiceApprovals");
 
 /**
  * Numa SPA a troca de tela não recarrega a página, então o pageview não sai
@@ -494,6 +503,15 @@ function App() {
  * acessível a visitantes sem login — as rotas pessoais se protegem sozinhas
  * via RequireAuth.
  */
+/** Enquanto a página pedida baixa. Curto e sem texto: aparece por instantes. */
+function PageLoading() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center" aria-busy="true">
+      <span className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--engine-border)] border-t-[var(--engine-accent)]" />
+    </div>
+  );
+}
+
 function AppLayout({
   user,
   settings,
@@ -587,7 +605,9 @@ function AppLayout({
           <div
             className={`engine-container flex flex-1 flex-col ${isTopNav ? "" : "lg:mt-6"}`}
           >
-            <Outlet />
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
           </div>
         )}
 
@@ -597,23 +617,30 @@ function AppLayout({
 
       {/* A key remonta o formulário a cada carro: sem isso o modal fica
           montado e carrega marca/modelo/ano/preço do carro anterior. */}
-      <ModalNewCar
-        key={carToEdit?.id ?? "new"}
-        isOpen={isModalOpen}
-        onClose={onCloseModal}
-        onSave={onSaveCar}
-        carToEdit={carToEdit}
-      />
+      {/* Modais globais só existem quando abertos: é o que deixa cada um
+          vir sob demanda. A key segue remontando o formulário a cada carro. */}
+      <Suspense fallback={null}>
+      {isModalOpen && (
+        <ModalNewCar
+          key={carToEdit?.id ?? "new"}
+          isOpen={isModalOpen}
+          onClose={onCloseModal}
+          onSave={onSaveCar}
+          carToEdit={carToEdit}
+        />
+      )}
 
-      <OwnershipModal
-        isOpen={Boolean(ownershipCar)}
-        car={ownershipCar}
-        cars={cars}
-        settings={settings}
-        onSettingsUpdate={onSettingsUpdate}
-        onClose={onCloseOwnership}
-        onSave={onSaveOwnership}
-      />
+      {ownershipCar && (
+        <OwnershipModal
+          isOpen={Boolean(ownershipCar)}
+          car={ownershipCar}
+          cars={cars}
+          settings={settings}
+          onSettingsUpdate={onSettingsUpdate}
+          onClose={onCloseOwnership}
+          onSave={onSaveOwnership}
+        />
+      )}
 
       {contributionCar && (
         <ContributionModal
@@ -638,6 +665,7 @@ function AppLayout({
           onSave={(specs) => onSaveSpecs(specsCar, specs)}
         />
       )}
+      </Suspense>
 
       {/* Conquista e concedida no fundo, de tres telas diferentes. O aviso mora
           aqui em cima para nao depender de qual delas estava aberta. */}
