@@ -418,7 +418,9 @@ if (rodandoDireto) {
     const antes = (t.match(/(\d+) SEGUIDORES/i)?.[1] ?? "?");
     await pb.waitForTimeout(3000);
     const depois = ((await textoDaPagina(pb)).match(/(\d+) SEGUIDORES/i)?.[1] ?? "?");
-    return `${/SEGUINDO/i.test(t) ? "virou Seguindo" : "botão não mudou"} · seguidores logo após: ${antes} · 3s depois: ${depois}`;
+    if (!/SEGUINDO/i.test(t)) throw new Error("botão não virou Seguindo");
+    if (depois !== "1") throw new Error(`contador de seguidores ficou em ${depois}`);
+    return "virou Seguindo · 1 seguidor";
   });
 
   await etapa("Bruno: entra no clube da Ana", B, async () => {
@@ -454,19 +456,19 @@ if (rodandoDireto) {
     return (t.match(/\d+ confirmados?/) || ["confirmado"])[0];
   });
 
-  await etapa("Bruno: manda mensagem pra Ana", B, async () => {
-    await pb.goto(`${BASE}/messages`, { waitUntil: "load" });
-    await pb.waitForTimeout(3500);
-    await pb.getByPlaceholder("Buscar pessoas ou conversas").fill(USUARIOS.a.usuario);
-    await pb.waitForTimeout(1500);
-    await pb.getByText(`@${USUARIOS.a.usuario}`).first().click();
-    await pb.waitForTimeout(3000);
+  await etapa("Bruno: manda mensagem pelo botão do perfil", B, async () => {
+    await pb.goto(`${BASE}/community/@${USUARIOS.a.usuario}`, { waitUntil: "load" });
+    await pb.waitForTimeout(4000);
+    await pb.getByRole("button", { name: /^Mensagem$/i }).first().click();
+    await pb.waitForURL((u) => /\/messages\/.+/.test(u.pathname), { timeout: 15000 });
+    await pb.waitForTimeout(2500);
     const caixa = pb.locator("textarea").last();
     await caixa.fill(`Oi Ana, bora no encontro? ${SUFIXO}`);
     await pb.locator('button[type="submit"]').last().click();
     await pb.waitForTimeout(3000);
     const t = await textoDaPagina(pb);
-    return t.includes(`bora no encontro? ${SUFIXO}`) ? "mensagem enviada" : `NÃO aparece na conversa — ${t.slice(0, 200)}`;
+    if (!t.includes(`bora no encontro? ${SUFIXO}`)) throw new Error(`não aparece na conversa — ${t.slice(0, 160)}`);
+    return `conversa aberta direto (${new URL(pb.url()).pathname.slice(0, 22)}…)`;
   });
 
   // ---------------- Ana recebe ----------------
@@ -479,7 +481,8 @@ if (rodandoDireto) {
     const curtiu = /curtiu/i.test(t);
     const seguiu = /começou a seguir|seguiu você|novo seguidor/i.test(t);
     const painel = (await page.locator('[role="dialog"], aside').last().innerText().catch(() => "")).replace(/\s+/g, " ");
-    return `curtida: ${curtiu ? "sim" : "NÃO"} · seguidor: ${seguiu ? "sim" : "NÃO"} · painel: ${painel.slice(0, 220)}`;
+    if (!curtiu || !seguiu) throw new Error(`curtida: ${curtiu ? "sim" : "NÃO"} · seguidor: ${seguiu ? "sim" : "NÃO"} · painel: ${painel.slice(0, 200)}`);
+    return "curtida e novo seguidor notificados";
   });
 
   await etapa("Ana: recebe a mensagem do Bruno", A, async () => {

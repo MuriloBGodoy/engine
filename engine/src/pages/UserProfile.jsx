@@ -16,6 +16,7 @@ import { auth } from "../services/firebase";
 import { EditProfileModal } from "../components/EditProfileModal";
 import { AchievementsTab } from "../components/achievements/AchievementsTab";
 import { listAchievements } from "../services/achievements";
+import { profileCardFromSettings, startConversation } from "../services/chat";
 
 // Banner will be solid color gradient - no default image
 const DEFAULT_BANNER_GRADIENT = "from-[var(--engine-accent)] to-[var(--engine-accent)]/70";
@@ -211,6 +212,14 @@ export function UserProfile({ settings = {}, user = null }) {
         await engineDB.followUser(currentUserId, profile.userId);
       }
       setIsFollowing(!isFollowing);
+      // O contador é o tamanho da lista de seguidores, lida uma vez ao abrir
+      // o perfil: sem mexer nela aqui, seguir mudava o botão e o número
+      // continuava 0 (conferido no emulador com o vínculo já gravado).
+      setFollowers((current) =>
+        isFollowing
+          ? current.filter((item) => (item.userId || item.followerId) !== currentUserId)
+          : [...current, { userId: currentUserId, followerId: currentUserId }],
+      );
     } catch (error) {
       console.error("Error updating follow status:", error);
     }
@@ -219,8 +228,17 @@ export function UserProfile({ settings = {}, user = null }) {
   const handleMessage = async () => {
     if (!currentUserId || !profile) return;
     try {
-      // Navigate to messages - conversation creation can happen on the Messages page
-      navigate(`/messages?user=${profile.userId}`);
+      // Abre (ou reabre) a conversa e vai direto para ela. Antes navegava
+      // para `/messages?user=<id>`, mas Mensagens nunca leu esse parâmetro:
+      // a pessoa caía na lista e tinha que achar o outro de novo.
+      const id = await startConversation(profileCardFromSettings(settings, user), {
+        userId: profile.userId,
+        author: profile.author,
+        username: profile.username,
+        avatar: profile.avatar,
+        avatarInitials: profile.avatarInitials,
+      });
+      navigate(`/messages/${id}`);
     } catch (error) {
       console.error("Error starting conversation:", error);
     }

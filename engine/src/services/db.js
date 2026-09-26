@@ -2198,6 +2198,16 @@ export const engineDB = {
       } catch (error) {
         warnFirestoreFallback("marco de seguidores", error);
       }
+      // A notificação mora AQUI, e não em quem chama. Havia dois botões de
+      // seguir: o do card no feed chamava setFollow + notifyFollow; o da
+      // página de perfil chamava só followUser → setFollow. Mesmo vínculo
+      // gravado, mas "Novo seguidor" só saía por um deles (auditoria de
+      // 25/09/2026). Só notifica quando quem segue é quem está no app.
+      if (followerId === currentUserId) {
+        await this.notifyFollow(targetUserId).catch((error) =>
+          warnFirestoreFallback("notifyFollow", error),
+        );
+      }
     } else {
       await Promise.all([
         deleteDoc(followerRef),
@@ -2374,7 +2384,7 @@ export const engineDB = {
       targetPath: `/community?user=${encodeURIComponent(currentUserId)}`,
       notificationTitle: "Novo seguidor",
       notificationBody: `${actor.author} começou a seguir sua garagem.`,
-      text: `${actor.author} comecou a seguir sua garagem.`,
+      text: `${actor.author} começou a seguir sua garagem.`,
     });
   },
 

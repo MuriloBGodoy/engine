@@ -2514,11 +2514,6 @@ export function Community({ cars = [], settings, user }) {
         .catch((error) => console.error(error));
     }
 
-    if (!wasFollowing && ownerId && ownerId !== user?.uid) {
-      engineDB
-        .notifyFollow(ownerId)
-        .catch((error) => console.error(error));
-    }
   };
 
   const handleOpenProfile = async (profileUserId, fallback = {}) => {
