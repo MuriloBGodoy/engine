@@ -41,19 +41,14 @@ export function NotificationsPanel({
   useEffect(() => {
     if (!open) return undefined;
 
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
-    };
+    // Esc agora vem do useHistoryDismiss (um ouvinte só, fecha o topo).
     const previousOverflow = document.body.style.overflow;
-
-    window.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

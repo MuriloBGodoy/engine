@@ -264,6 +264,20 @@ if (rodandoDireto) {
     return "fechou";
   });
 
+  await etapa("Ana: Esc fecha o simulador e o cadastro de carro", A, async () => {
+    await page.getByRole("button", { name: /Simular/ }).first().click();
+    await page.waitForTimeout(2000);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(1200);
+    if (await page.getByText("O VEREDITO").count()) throw new Error("Esc não fechou o simulador");
+    await page.getByRole("button", { name: /Adicionar carro/ }).first().click();
+    await page.waitForTimeout(1500);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(1200);
+    if (await page.getByText("Cadastrar carro").count()) throw new Error("Esc não fechou o cadastro de carro");
+    return "os dois fecham com Esc";
+  });
+
   await etapa("Ana: registra aporte", A, async () => {
     await page.getByRole("button", { name: /Registrar aporte|^Aporte$/ }).first().click();
     await page.waitForTimeout(1500);

@@ -78,10 +78,24 @@ function handlePopState(event) {
   }
 }
 
+// Esc fecha o overlay do TOPO — o mesmo que o voltar do Android faz. Até
+// 25/09/2026 só 2 dos 16 overlays tratavam Esc (auditoria): no desktop, o
+// simulador, o cadastro de carro e os demais ignoravam a tecla. Morar aqui,
+// num ouvinte só, é o que conserta os que já usam este hook de uma vez e
+// mantém a ordem certa quando um overlay abre por cima de outro.
+function handleKeyDown(event) {
+  if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+  const top = stack[stack.length - 1];
+  if (!top || top.dismissed) return;
+  event.preventDefault();
+  top.dismiss();
+}
+
 function ensureListener() {
   if (listening) return;
   listening = true;
   window.addEventListener("popstate", handlePopState);
+  window.addEventListener("keydown", handleKeyDown);
 }
 
 export function useHistoryDismiss(open, onDismiss) {

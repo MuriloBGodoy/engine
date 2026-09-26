@@ -8,6 +8,7 @@ import { useToast } from "./ToastProvider";
 import { eventTypeOptions } from "../services/eventTypes";
 import { engineEvents } from "../services/events";
 import { countries, getStates, getCities } from "../services/locations";
+import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
 
 const mapQuery = (event) =>
   [event.address, event.city].filter(Boolean).join(",");
@@ -97,6 +98,10 @@ function MapPreview({ event, compact = false }) {
 export function CreateEventForm({ onSuccess, onCancel }) {
   const { t } = useTranslation();
   const showToast = useToast();
+  // Só existe montado quando aberto. Voltar no Android (e Esc no desktop)
+  // fecha o formulário em vez de sair da tela de Eventos — era o único
+  // overlay que tinha ficado de fora da passada da Mia.
+  useHistoryDismiss(true, onCancel);
 
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
