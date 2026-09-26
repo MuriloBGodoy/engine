@@ -792,6 +792,7 @@ const resources = {
         retry: "Tentar de novo",
       },
       car: {
+        zeroKm: "0 km",
         progress: "Progresso",
         remaining: "Falta",
         owned: "Na garagem",
@@ -2369,6 +2370,7 @@ const resources = {
         retry: "Try again",
       },
       car: {
+        zeroKm: "New",
         progress: "Progress",
         remaining: "Remaining",
         owned: "In the garage",
@@ -3936,6 +3938,7 @@ const resources = {
         retry: "Intentar de nuevo",
       },
       car: {
+        zeroKm: "0 km",
         progress: "Progreso",
         remaining: "Falta",
         owned: "En el garaje",

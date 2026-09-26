@@ -28,6 +28,7 @@ import {
 } from "../services/locations";
 import { consumptionFor } from "../services/consumption";
 import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
+import { formatCarName, formatFipeYear } from "../services/carDisplay";
 
 /*
  * Redesenho de 16/09/2026 (sessão `ui designs/2026-09-13-simulador`).
@@ -724,8 +725,8 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
       : Math.max(result.value - (Number(car.savedValue) || 0), 0);
   const isFinance = inputs.purchaseMode === "finance";
   const defaultConsumption = DEFAULT_CONSUMPTION[inputs.fuelType];
-  const carName = `${car.brand} ${car.model}`;
-  const carYear = String(car.year || "").split(" ")[0];
+  const carName = formatCarName(car);
+  const carYear = formatFipeYear(String(car.year || "").split(" ")[0], t("car.zeroKm"));
 
   // De onde vem o km/l que está valendo. Três coisas diferentes que não podem
   // parecer a mesma: o que a pessoa mediu, o que o INMETRO mediu nesta versão
@@ -1274,7 +1275,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                       {reference.isSelf
                         ? t("ownership.real.selfToday")
                         : t("ownership.real.today", {
-                            car: `${reference.car.brand} ${reference.car.model}`,
+                            car: formatCarName(reference.car),
                           })}
                     </p>
                     <p className="mt-1 font-display text-xl font-bold tabular-nums tracking-tight text-[var(--engine-text)]">
@@ -1536,7 +1537,7 @@ function OwnershipDialog({ car, cars, settings, onClose, onSave, onSettingsUpdat
                       {t("ownership.budget.currentCarNotice", {
                         total: money(declaredExpenses),
                         amount: money(currentCarCost),
-                        car: `${reference.car.brand} ${reference.car.model}`,
+                        car: formatCarName(reference.car),
                       })}
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-2">

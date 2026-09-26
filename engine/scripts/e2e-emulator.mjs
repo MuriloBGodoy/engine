@@ -198,6 +198,8 @@ if (rodandoDireto) {
     await esperarOpcoes(selects.nth(1), 2);
     const modelo = await escolherPorTexto(selects.nth(1), /Pulse/i);
     await esperarOpcoes(selects.nth(2), 2);
+    const opcoesAno = await selects.nth(2).locator("option").allTextContents();
+    if (opcoesAno.some((o) => o.includes("32000"))) throw new Error(`select mostra "32000": ${opcoesAno.slice(0, 3).join(" | ")}`);
     const ano = await escolherPorTexto(selects.nth(2), /2023|2024/);
     await page.waitForTimeout(2500);
     // O formulário exige foto, e escolher uma abre o recorte antes de voltar.
@@ -220,8 +222,10 @@ if (rodandoDireto) {
   await etapa("Ana: fecha a celebração e lê o card", A, async () => {
     await fecharSobreposicoes(page);
     const card = await textoDaPagina(page);
-    const ano = (card.match(/32000|0 ?km|zero ?km|20\d\d/i) || ["(nenhum ano visível)"])[0];
-    return `ano exibido no card: ${ano}`;
+    if (/32000/.test(card)) throw new Error("card mostra o ano 32000");
+    // Sem aporte, falta tudo: o card tem que dizer 100%.
+    if (!/FALTA\s*100\s*%/i.test(card)) throw new Error(`"falta" não é 100% — ${(card.match(/FALTA[^R]*/i) || [""])[0]}`);
+    return `ano: ${(card.match(/0 ?km|20\d\d/i) || ["?"])[0]} · falta 100%`;
   });
 
   await etapa("Ana: simulador abre e pede renda", A, async () => {
@@ -379,6 +383,15 @@ if (rodandoDireto) {
     const t = await textoDaPagina(pb);
     if (!t.includes(TEXTO_POST)) throw new Error(`post da Ana não aparece — ${t.slice(0, 200)}`);
     return "aparece";
+  });
+
+  await etapa("Bruno: ?tab=feed (link do mural do clube) mostra o feed", B, async () => {
+    await pb.goto(`${BASE}/community?tab=feed`, { waitUntil: "load" });
+    await pb.waitForTimeout(4000);
+    if (!(await textoDaPagina(pb)).includes(TEXTO_POST)) throw new Error("feed vazio com ?tab=feed");
+    await pb.goto(`${BASE}/community`, { waitUntil: "load" });
+    await pb.waitForTimeout(3000);
+    return "feed renderiza";
   });
 
   await etapa("Bruno: curte o post da Ana", B, async () => {

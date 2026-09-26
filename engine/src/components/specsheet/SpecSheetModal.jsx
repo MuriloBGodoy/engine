@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { canEditSpecSheet, resolveVehicleSpecSheet } from "../../services/carSpecSheet";
 import { SpecSheetEditor } from "./SpecSheetEditor";
 import { SpecSheetView } from "./SpecSheetView";
+import { formatFipeYear } from "../../services/carDisplay";
 
 /**
  * A ficha tecnica, nas tres entradas.
@@ -95,7 +96,7 @@ export function SpecSheetModal({ car, onClose, onSave }) {
             </h2>
             {car.year ? (
               <p className="text-[11.5px] font-semibold text-[var(--engine-text-muted)]">
-                {car.year}
+                {formatFipeYear(car.year, t("car.zeroKm"))}
               </p>
             ) : null}
           </div>

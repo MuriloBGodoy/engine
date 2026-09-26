@@ -6,6 +6,7 @@ import { FaInstagram } from "react-icons/fa6";
 import { ClubTag } from "./ClubEmblem";
 import { ClubEmptyState } from "./ClubHeader";
 import { clubPlaceLabel, clubStyleLabel } from "../../services/clubStyles";
+import { formatFipeYear } from "../../services/carDisplay";
 
 /**
  * Os quatro painéis internos da página do clube — mural, garagem, encontros,
@@ -164,7 +165,7 @@ export function ClubGarage({ cars, loading, isMember, hasOwnCar, onPublish }) {
                 <p className="text-[12.5px] font-bold leading-tight text-[var(--engine-text)]">
                   {car.name || `${car.brand} ${car.model}`}
                 </p>
-                <p className="mt-0.5 text-[11px] text-[var(--engine-text-muted)]">{car.year}</p>
+                <p className="mt-0.5 text-[11px] text-[var(--engine-text-muted)]">{formatFipeYear(car.year, t("car.zeroKm"))}</p>
                 <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[var(--engine-text-muted)]">
                   <Avatar name={car.ownerName} avatar={car.ownerAvatar} size={20} />
                   <span className="truncate">{car.ownerName}</span>

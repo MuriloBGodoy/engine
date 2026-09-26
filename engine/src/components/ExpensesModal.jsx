@@ -6,6 +6,7 @@ import { engineDB } from "../services/db";
 import { EXPENSE_CATEGORIES, expenseInsights } from "../services/expenses";
 import { trackEvent } from "../services/observability";
 import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
+import { formatCarName } from "../services/carDisplay";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -127,7 +128,7 @@ export function ExpensesModal({ car, onClose, onSaved }) {
                 {t("expenses.title")}
               </h2>
               <p className="truncate text-xs text-[var(--engine-text-muted)]">
-                {car.brand} {car.model}
+                {formatCarName(car)}
               </p>
             </div>
           </div>

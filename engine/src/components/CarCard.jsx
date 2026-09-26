@@ -15,6 +15,7 @@ import { estimateOwnership } from "../services/ownership";
 import { forecastCompletion } from "../services/forecast";
 import { expenseInsights } from "../services/expenses";
 import { CAR_TYPE_OWNED } from "../services/db";
+import { formatCarBrand, formatFipeYear } from "../services/carDisplay";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=600";
@@ -24,18 +25,26 @@ const FALLBACK_IMAGE =
  * mesma faixa em vez de virarem tres blocos empilhados. O mesmo conteudo
  * ocupava tres linhas e ~100px na versao anterior do card.
  */
-function ProgressStrip({ car, t, percentage, money, hideValues }) {
+function ProgressStrip({ car, t, percentage, money, hideValues, locale }) {
+  // O rótulo diz "Falta", então o número é o que FALTA. Até 25/09/2026 ele
+  // mostrava o que já tinha sido juntado: com R$ 5 mil de R$ 118 mil o card
+  // dizia "FALTA 4.2%" — quando faltavam 95,8%. A barra continua sendo o
+  // progresso (o preenchido é o que já se juntou); o valor em reais ao lado
+  // já era o que falta e não mudou.
+  const remaining = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(
+    Math.max(0, 100 - Number(percentage)),
+  );
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--engine-text-muted)]">
           {t("car.remaining")}{" "}
           <span className="tabular-nums text-[var(--engine-accent)]">
-            {percentage}%
+            {remaining}%
           </span>
         </span>
         <span className="text-base font-extrabold tabular-nums text-[var(--engine-text)]">
-          {hideValues ? "R$ --" : money(car.targetValue - car.savedValue)}
+          {hideValues ? "R$ --" : money(Math.max(0, car.targetValue - car.savedValue))}
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--engine-surface-2)]">
@@ -228,7 +237,7 @@ export function CarCard({
   const identity = (
     <>
       <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">
-        {car.brand?.toUpperCase()} · {car.year}
+        {formatCarBrand(car.brand).toUpperCase()} · {formatFipeYear(car.year, t("car.zeroKm"))}
       </span>
       {/* Duas linhas, nao truncado: a ficha e o lugar onde o nome completo da
           versao cabe, mas "Onix Hatch LT 1.0 12V Flex 5p M..." na vitrine ainda
@@ -333,6 +342,7 @@ export function CarCard({
             percentage={percentage}
             money={money}
             hideValues={hideValues}
+            locale={i18n.language}
           />
         )}
 

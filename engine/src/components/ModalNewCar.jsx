@@ -7,6 +7,7 @@ import { CAR_TYPE_GOAL, CAR_TYPE_OWNED, MAX_CAR_PHOTOS } from "../services/db";
 import { isFileTooBig, isImageFile, uploadUserPhoto } from "../services/photos";
 import { ImageCropper } from "./ImageCropper";
 import { useHistoryDismiss } from "../hooks/useHistoryDismiss";
+import { formatFipeYear } from "../services/carDisplay";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--engine-border)] bg-[var(--engine-surface-2)] px-4 py-3 text-[var(--engine-text)] outline-none transition-colors focus:border-[var(--engine-accent)] disabled:opacity-40";
@@ -473,7 +474,7 @@ export function ModalNewCar({ isOpen, onClose, onSave, carToEdit = null }) {
                 </option>
                 {years.map((y) => (
                   <option key={y.codigo} value={y.codigo}>
-                    {y.nome}
+                    {formatFipeYear(y.nome, t("car.zeroKm"))}
                   </option>
                 ))}
               </select>

@@ -54,6 +54,7 @@ import { CreateFeedPostModal } from "../components/CreateFeedPostModal";
 import { useRegion } from "../hooks/RegionProvider";
 import { applyRegionFilter } from "../services/region";
 import { profileCardFromSettings, startConversation } from "../services/chat";
+import { formatFipeYear } from "../services/carDisplay";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1598209279122-8541213a0387?q=80&w=900";
@@ -174,6 +175,8 @@ const getVehicleTitle = (goal = {}) => {
  * corta nada — chutar onde a versão começa seria pior que o nome comprido.
  */
 const VERSION_START = /\s\d+[.,]\d.*$/;
+
+const GOALS_SUBTABS = ["feed", "videos", "ranking"];
 
 const getVehicleTitleShort = (goal = {}) => {
   const brand = normalizeFipeBrand(goal.brand);
@@ -880,7 +883,7 @@ export function GoalCard({
               <span className="font-bold italic text-[var(--engine-text)]">
                 {isModal ? getVehicleTitle(goal) : getVehicleTitleShort(goal)}
               </span>
-              {goal.year ? <span>{` · ${goal.year}`}</span> : null}
+              {goal.year ? <span>{` · ${formatFipeYear(goal.year, t("car.zeroKm"))}`}</span> : null}
             </span>
             <ChevronRight
               size={14}
@@ -2107,9 +2110,17 @@ export function Community({ cars = [], settings, user }) {
   // tela, e com ele o "Top da semana".
   const hasRail = useMediaQuery("(min-width: 1280px)");
   const [searchParams, setSearchParams] = useSearchParams();
-  const topLevelTab = searchParams.get("tab") || "goals";
+  // `?tab=` aceita as abas de primeiro nível e também as sub-abas do feed.
+  // Até 25/09/2026, `?tab=feed` (que o "Postar no mural" do clube gera)
+  // destacava a aba FEED e não renderizava nada: o corpo só aparecia com
+  // `tab === "goals"`. Valor desconhecido também cai no feed em vez de numa
+  // página vazia.
+  const rawTab = searchParams.get("tab") || "goals";
+  const topLevelTab = ["clubes", "eventos"].includes(rawTab) ? rawTab : "goals";
   const composeClubId = searchParams.get("compose") ? searchParams.get("club") || "" : "";
-  const [activeSubTab, setActiveSubTab] = useState("feed");
+  const [activeSubTab, setActiveSubTab] = useState(() =>
+    GOALS_SUBTABS.includes(rawTab) ? rawTab : "feed",
+  );
   const [query, setQuery] = useState("");
   const [peopleQuery, setPeopleQuery] = useState("");
   const [remoteGoal, setRemoteGoal] = useState(null);
@@ -3267,7 +3278,7 @@ function SidebarRanking({ ranking, t }) {
                 {getVehicleTitleShort(goal)}
                 {goal.year && (
                   <span className="font-bold text-[var(--engine-text-subtle)]">
-                    {` · ${goal.year}`}
+                    {` · ${formatFipeYear(goal.year, t("car.zeroKm"))}`}
                   </span>
                 )}
               </p>

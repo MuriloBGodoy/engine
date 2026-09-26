@@ -7,6 +7,7 @@ import { useIsDark } from "../hooks/useIsDark";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { estimateOwnership } from "../services/ownership";
 import { CAR_TYPE_OWNED } from "../services/db";
+import { formatCarName } from "../services/carDisplay";
 
 export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
   const { i18n, t } = useTranslation();
@@ -62,7 +63,7 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
       cars
         .filter((car) => car.type !== CAR_TYPE_OWNED)
         .map((car) => ({
-          name: `${car.brand} ${car.model}`,
+          name: formatCarName(car),
           value: car.targetValue
             ? Math.round((car.savedValue / car.targetValue) * 100)
             : 0,
@@ -203,7 +204,7 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-[var(--engine-text)]">
-                        {row.car.brand} {row.car.model}
+                        {formatCarName(row.car)}
                       </p>
                       <span className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--engine-text-subtle)]">
                         <Calculator size={11} />
@@ -296,7 +297,7 @@ export function DashboardPage({ cars = [], settings, onOpenOwnership }) {
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-[var(--engine-text)]">
-                          {row.car.brand} {row.car.model}
+                          {formatCarName(row.car)}
                         </span>
                         {index === 0 && comparison.length > 1 && (
                           <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
