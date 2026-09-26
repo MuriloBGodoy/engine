@@ -168,7 +168,12 @@ service cloud.firestore {
     }
 
     match /usernames/{username} {
-      allow read: if signedIn();
+      // `get` público: o cadastro precisa saber se o nome existe ANTES de
+      // criar a conta (senão nasce conta órfã que prende o e-mail). O doc só
+      // tem nome → id, e o id já é público pelo publicProfiles. `list` segue
+      // fechado: ninguém enumera a base de usuários por aqui.
+      allow get: if true;
+      allow list: if signedIn();
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if signedIn() && resource.data.userId == request.auth.uid;
     }

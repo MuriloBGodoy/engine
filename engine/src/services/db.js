@@ -496,6 +496,12 @@ const setLocalSettings = async (settings, userId = currentUserId) => {
   await set(LEGACY_SETTINGS_KEY, settings);
 };
 
+// Nome repetido carrega um código, não só uma frase: a tela reagia procurando
+// "usuario" na mensagem, que dizia "usuário" com acento — a frase certa nunca
+// aparecia e a pessoa via o erro genérico.
+const usernameTakenError = () =>
+  Object.assign(new Error("Este usuário já está em uso."), { code: "username-taken" });
+
 const warnFirestoreFallback = (operation, error) => {
   console.warn(`Firestore indisponivel em ${operation}. Usando fallback local.`, error);
 };
@@ -2637,7 +2643,7 @@ export const engineDB = {
       const owner = registry[normalized];
 
       if (owner && owner !== userId && owner !== "pending") {
-        throw new Error("Este usuário já está em uso.");
+        throw usernameTakenError();
       }
 
       await set(USERNAME_REGISTRY_KEY, {
@@ -2654,7 +2660,7 @@ export const engineDB = {
       const owner = snapshot.exists() ? snapshot.data().userId : null;
 
       if (owner && owner !== userId) {
-        throw new Error("Este usuário já está em uso.");
+        throw usernameTakenError();
       }
 
       transaction.set(usernameRef, {
@@ -2665,6 +2671,30 @@ export const engineDB = {
     });
 
     return normalized;
+  },
+
+  /**
+   * O nome já é de alguém? Consultado ANTES de criar a conta no Auth.
+   *
+   * Até 25/09/2026 o cadastro criava a conta primeiro e só depois descobria
+   * que o nome era repetido: a conta nascia órfã (sem nome, sem perfil), a
+   * tela dizia "não foi possível criar sua conta", e na segunda tentativa —
+   * com outro nome — a pessoa recebia "este e-mail já está cadastrado".
+   * Preso fora do app com o próprio e-mail.
+   *
+   * Devolve `null` quando não dá pra saber (regra antiga ainda publicada, sem
+   * rede): quem chama segue, e a reserva transacional depois da criação da
+   * conta continua sendo a trava de verdade.
+   */
+  async isUsernameAvailable(username) {
+    const normalized = normalizeUsername(username);
+    if (!normalized) return false;
+    try {
+      const snapshot = await getDoc(doc(firestore, USERNAMES_COLLECTION, usernameDocId(normalized)));
+      return !snapshot.exists();
+    } catch {
+      return null;
+    }
   },
 
   async releasePendingUsername(username) {

@@ -49,8 +49,16 @@ export function Register() {
 
     setLoading(true);
 
+    let createdUser = null;
     try {
       const normalizedUsername = engineDB.normalizeUsername(username);
+
+      // Nome repetido é pego AQUI, antes de existir conta. `null` = não deu
+      // pra saber; segue, e a reserva abaixo decide.
+      if ((await engineDB.isUsernameAvailable(normalizedUsername)) === false) {
+        setError(t("auth.usernameInUse"));
+        return;
+      }
       await engineDB.reserveUsername(normalizedUsername, "pending");
 
       const userCredential = await createUserWithEmailAndPassword(
@@ -58,9 +66,20 @@ export function Register() {
         email.trim(),
         password,
       );
+      createdUser = userCredential.user;
 
       engineDB.setCurrentUser(userCredential.user.uid);
-      await engineDB.reserveUsername(normalizedUsername, userCredential.user.uid);
+      try {
+        await engineDB.reserveUsername(normalizedUsername, userCredential.user.uid);
+      } catch (reserveError) {
+        // Perdeu a corrida pelo nome (alguém reservou no mesmo instante).
+        // Desfaz a conta: uma conta sem nome prende o e-mail — a próxima
+        // tentativa diria "e-mail já cadastrado" e a pessoa não entraria mais.
+        await createdUser.delete().catch(() => {});
+        createdUser = null;
+        engineDB.setCurrentUser(null);
+        throw reserveError;
+      }
       await updateProfile(userCredential.user, {
         displayName: name.trim(),
       });
@@ -88,7 +107,7 @@ export function Register() {
         setError(t("auth.emailInUse"));
       } else if (err.code === "auth/weak-password") {
         setError(t("auth.weakPassword"));
-      } else if (err.message?.includes("usuario")) {
+      } else if (err.code === "username-taken") {
         setError(t("auth.usernameInUse"));
       } else {
         setError(t("auth.genericRegisterError"));
