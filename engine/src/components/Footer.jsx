@@ -18,30 +18,39 @@ import { LogoMark } from "./Logo";
  * pela URL real quando cada página/rede/loja existir. Links internos que já
  * são rotas do app (ex.: "/settings") funcionam de imediato.
  */
+// Link sem destino não aparece. Até 25/09/2026, 12 dos 14 links do rodapé —
+// em TODA página — iam para "#": central de ajuda, fale conosco, sobre, vagas,
+// seis redes sociais e duas lojas de app que ainda não existem. Clicar não
+// fazia nada, e o usuário não tinha como falar com o Engine. Preencher um
+// endereço aqui é o que faz o item voltar; nada mais precisa mudar.
+const SEM_DESTINO = "";
+const temDestino = (href) => Boolean(href) && href !== "#";
+
 const LINKS = {
   help: {
-    center: "#", // TODO: central de ajuda
-    contact: "#", // TODO: fale conosco / suporte
+    center: SEM_DESTINO, // central de ajuda
+    // O mesmo endereço que Termos e Privacidade já declaram como contato.
+    contact: "mailto:muxdtuber@gmail.com",
   },
   company: {
-    about: "#", // TODO: página institucional "Sobre"
-    careers: "#", // TODO: trabalhe com a gente / vagas
+    about: SEM_DESTINO, // página institucional "Sobre"
+    careers: SEM_DESTINO, // trabalhe com a gente / vagas
   },
   legal: {
     terms: "/termos",
     privacy: "/privacidade",
   },
   social: {
-    linkedin: "#",
-    facebook: "#",
-    instagram: "#",
-    tiktok: "#",
-    x: "#",
-    youtube: "#",
+    linkedin: SEM_DESTINO,
+    facebook: SEM_DESTINO,
+    instagram: SEM_DESTINO,
+    tiktok: SEM_DESTINO,
+    x: SEM_DESTINO,
+    youtube: SEM_DESTINO,
   },
   app: {
-    googlePlay: "#", // TODO: link da Google Play
-    appStore: "#", // TODO: link da App Store
+    googlePlay: SEM_DESTINO, // link da Google Play (TWA)
+    appStore: SEM_DESTINO, // link da App Store
   },
 };
 
@@ -119,11 +128,18 @@ export function Footer() {
         { label: t("footer.legal.privacy"), href: LINKS.legal.privacy },
       ],
     },
-  ];
+  ]
+    .map((column) => ({ ...column, items: column.items.filter((item) => temDestino(item.href)) }))
+    .filter((column) => column.items.length);
+
+  const redes = SOCIAL.filter((social) => temDestino(social.href));
+  const lojas = [LINKS.app.googlePlay, LINKS.app.appStore].some(temDestino);
 
   return (
     <footer className="mt-12 border-t border-[var(--engine-border)] pt-8">
-      <div className="engine-container grid gap-8 pb-8 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)]">
+      {/* Flex e não grade fixa: o número de colunas depende de quantos links
+          têm destino (ver `temDestino`), e grade de 5 colunas deixava buraco. */}
+      <div className="engine-container grid gap-8 pb-8 md:flex md:flex-wrap md:justify-between md:gap-12">
         {/* Marca + redes sociais */}
         <div>
           <div className="flex items-center gap-2.5">
@@ -135,8 +151,9 @@ export function Footer() {
           <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-[var(--engine-text-muted)]">
             {t("footer.tagline")}
           </p>
+          {redes.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {SOCIAL.map((social) => {
+            {redes.map((social) => {
               const { key, href, label, Icon } = social;
               return (
                 <a
@@ -153,6 +170,7 @@ export function Footer() {
               );
             })}
           </div>
+          )}
         </div>
 
         {/* Colunas de links */}
@@ -171,26 +189,32 @@ export function Footer() {
           </div>
         ))}
 
-        {/* Baixe o app */}
+        {/* Baixe o app — só quando existir app publicado */}
+        {lojas && (
         <div>
           <h3 className="mb-3 text-[11px] font-black uppercase tracking-widest text-[var(--engine-text-subtle)]">
             {t("footer.app.title")}
           </h3>
           <div className="flex flex-col gap-2.5">
+            {temDestino(LINKS.app.googlePlay) && (
             <StoreBadge
               href={LINKS.app.googlePlay}
               topLabel={t("footer.app.androidTop")}
               brand="Google Play"
               Icon={Play}
             />
+            )}
+            {temDestino(LINKS.app.appStore) && (
             <StoreBadge
               href={LINKS.app.appStore}
               topLabel={t("footer.app.iosTop")}
               brand="App Store"
               Icon={Apple}
             />
+            )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Barra de copyright */}
